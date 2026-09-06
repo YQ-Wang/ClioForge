@@ -989,8 +989,25 @@ void test('official LED historical sample runs search, comparison, analysis and 
     await new TeamStore(db, person.owner).respond(invitation, true);
   }
   const reviewStore = new MissionStore(db, reviewer.owner);
+  const firstBatch = await importLedSample(store, files, project.id, {
+    offset: 0,
+    limit: 4,
+  });
+  assert.equal(firstBatch.imported, 4);
+  assert.equal(firstBatch.next, 4);
+  assert.equal(firstBatch.total, 40);
+  const repeatedBatch = await importLedSample(store, files, project.id, {
+    offset: 0,
+    limit: 4,
+  });
+  assert.equal(repeatedBatch.imported, 0);
+  assert.equal(repeatedBatch.skipped, 4);
+  await assert.rejects(
+    importLedSample(store, files, project.id, { offset: -1, limit: 4 }),
+  );
   const imported = await importLedSample(store, files, project.id);
-  assert.equal(imported.imported, 40);
+  assert.equal(imported.imported, 36);
+  assert.equal(imported.skipped, 4);
   assert.equal((await importLedSample(store, files, project.id)).skipped, 40);
   const hits = await searchPages(store, project.id, 'Dis Manibus');
   assert.equal(hits.length, 1);
@@ -4856,4 +4873,44 @@ void test('research inbox receipts are personal, revisions resurface and revoked
     .bind(f.a.project.id, reviewer.owner)
     .run();
   assert.equal((await researchInbox(reviewer)).items.length, 0);
+});
+
+void test('writing page citations are resolved from the authorized project and never from arbitrary links', async () => {
+  const { writingSources } = await import('../lib/writing-sources');
+  const { writingPageReferences } = await import('../lib/writing-export');
+  const owner = await user(),
+    other = await user(),
+    item = await source(owner);
+  const path = `/?project=${item.project.id}&tab=sources&version=${item.versionId}&page=1`;
+  const keys = writingPageReferences(
+    `[1](${path})\n[missing](${path.replace('page=1', 'page=99')})`,
+    null,
+    'https://canwoo.com',
+  );
+  const data = await writingSources(
+    owner,
+    item.project.id,
+    'https://canwoo.com',
+    keys,
+  );
+  assert.equal(data.evidence.length, 0);
+  assert.equal(data.citations.length, 1);
+  assert.match(data.citations[0].text, /航运记录/);
+  assert.ok(data.citations[0].href.endsWith('page=1'));
+  await assert.rejects(
+    writingSources(other, item.project.id, 'https://canwoo.com', keys),
+    /不存在/,
+  );
+  const unrelated = await source(owner);
+  assert.equal(
+    (
+      await writingSources(
+        owner,
+        unrelated.project.id,
+        'https://canwoo.com',
+        keys,
+      )
+    ).citations.length,
+    0,
+  );
 });

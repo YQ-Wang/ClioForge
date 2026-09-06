@@ -48,11 +48,13 @@ export default function TaskConversation({
   models,
   sources,
   versions,
+  onOpenSource,
 }: {
   taskId: string;
   models: Model[];
   sources: Source[];
   versions: SourceVersion[];
+  onOpenSource?: (source: string, version: string, page: number) => void;
 }) {
   const { locale } = useI18n(),
     L = (zh: string, en: string) => (locale === 'en' ? en : zh);
@@ -371,8 +373,8 @@ export default function TaskConversation({
       {submittedId && !draft.question && (
         <output className="task-conversation-feedback">
           {L(
-            '追问已提交，助手将继续研究。',
-            'Follow-up submitted. The assistant will continue the research.',
+            '追问已提交。请在下方查看执行状态、回答与需处理的事项。',
+            'Follow-up submitted. Its status, answer and any issues appear below.',
           )}
         </output>
       )}
@@ -429,6 +431,29 @@ export default function TaskConversation({
                                   citation.version_id,
                                   citation.page,
                                 )}
+                                onClick={(event) => {
+                                  // Keep modified clicks as ordinary links, while
+                                  // normal reading preserves the task return path.
+                                  const version = versions.find(
+                                    (item) => item.id === citation.version_id,
+                                  );
+                                  if (
+                                    !onOpenSource ||
+                                    !version ||
+                                    event.button !== 0 ||
+                                    event.metaKey ||
+                                    event.ctrlKey ||
+                                    event.shiftKey ||
+                                    event.altKey
+                                  )
+                                    return;
+                                  event.preventDefault();
+                                  onOpenSource(
+                                    version.source_id,
+                                    version.id,
+                                    citation.page,
+                                  );
+                                }}
                               >
                                 {citation.quote} · {L('页', 'p.')}{' '}
                                 {citation.page}
@@ -710,10 +735,24 @@ export default function TaskConversation({
                     '当前追问已暂停，继续调度后才能完成。',
                     'The current follow-up is paused. Resume it to continue.',
                   )
-                : L(
-                    '当前追问仍在处理。你可以先写好下一条。',
-                    'A follow-up is in progress. You can draft the next question now.',
-                  )}
+                : active.status === 'blocked'
+                  ? L(
+                      '当前追问正在等待前置步骤，请打开任务查看需处理的事项。你可以先写好下一条。',
+                      'This follow-up is waiting for an earlier step. Open the task to see what needs attention; you can draft the next question now.',
+                    )
+                  : L(
+                      '当前追问仍在处理。你可以先写好下一条。',
+                      'A follow-up is in progress. You can draft the next question now.',
+                    )}
+              {active.id !== taskId && (
+                <Link
+                  className="task-conversation-active-link"
+                  href={taskHref(active)}
+                >
+                  {L('查看当前追问', 'Open current follow-up')}
+                  <ExternalLink size={13} />
+                </Link>
+              )}
             </p>
           )}
           {atLimit && (

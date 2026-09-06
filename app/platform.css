@@ -1664,6 +1664,18 @@
   min-width: 0;
 }
 
-.mission-detail-heading > div:first-child { min-width: 0; }
-.mission-detail-heading h2 { font-size: clamp(1.25rem, 2.3vw, 1.65rem); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.mission-detail-heading p { font-size: .875rem; line-height: 1.65; }
+.mission-detail-heading > div:first-child {
+  min-width: 0;
+}
+.mission-detail-heading h2 {
+  font-size: clamp(1.25rem, 2.3vw, 1.65rem);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mission-detail-heading p {
+  font-size: 0.875rem;
+  line-height: 1.65;
+}

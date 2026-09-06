@@ -1,78 +1,76 @@
-// Eleven gold-paper folds with an arched hem and fine exposed fan bones.
-export function CanwooMark({ className = '' }: { className?: string }) {
+import { compactFanArt, fanArt, wordmarkPaths } from '@/lib/brand-art';
+
+export function CanwooMark({
+  className = '',
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
+  const art = compact ? compactFanArt : fanArt;
   return (
-    <svg className={className} viewBox="0 0 80 64" aria-hidden="true">
+    <svg className={className} viewBox="0 0 112 72" aria-hidden="true">
+      {art.folds.map((fold, index) => (
+        <path
+          key={index}
+          d={fold.d}
+          fill={'shade' in fold ? '#201b12' : 'currentColor'}
+          opacity={fold.opacity}
+        />
+      ))}
       <path
-        d="M38.42 53.78L26.93 44.92M38.70 53.48L29.23 42.50M39.03 53.25L31.98 40.58M39.40 53.09L35.05 39.26M39.80 53.01L38.33 38.58M40.20 53.01L41.67 38.58M40.60 53.09L44.95 39.26M40.97 53.25L48.02 40.58M41.30 53.48L50.77 42.50M41.58 53.78L53.07 44.92"
+        d={art.ribs}
         fill="none"
         stroke="currentColor"
-        strokeWidth="0.72"
+        strokeWidth={compact ? 1.3 : 0.8}
         strokeLinecap="round"
       />
       <path
-        d="M2.39 36.31A42 42 0 0 1 6.55 29.60L27.66 45.63A15.5 15.5 0 0 0 26.12 48.10Z"
-        fill="currentColor"
-        opacity="1"
-      />
-      <path
-        d="M6.93 29.11A42 42 0 0 1 12.36 23.37L29.80 43.33A15.5 15.5 0 0 0 27.80 45.45Z"
-        fill="currentColor"
-        opacity="0.82"
-      />
-      <path
-        d="M12.83 22.97A42 42 0 0 1 19.31 18.45L32.36 41.51A15.5 15.5 0 0 0 29.97 43.18Z"
-        fill="currentColor"
-        opacity="1"
-      />
-      <path
-        d="M19.85 18.15A42 42 0 0 1 27.11 15.03L35.24 40.25A15.5 15.5 0 0 0 32.56 41.40Z"
-        fill="currentColor"
-        opacity="0.82"
-      />
-      <path
-        d="M27.70 14.84A42 42 0 0 1 35.44 13.25L38.32 39.59A15.5 15.5 0 0 0 35.46 40.18Z"
-        fill="currentColor"
-        opacity="1"
-      />
-      <path
-        d="M36.05 13.19A42 42 0 0 1 43.95 13.19L41.46 39.57A15.5 15.5 0 0 0 38.54 39.57Z"
-        fill="currentColor"
-        opacity="0.82"
-      />
-      <path
-        d="M44.56 13.25A42 42 0 0 1 52.30 14.84L44.54 40.18A15.5 15.5 0 0 0 41.68 39.59Z"
-        fill="currentColor"
-        opacity="1"
-      />
-      <path
-        d="M52.89 15.03A42 42 0 0 1 60.15 18.15L47.44 41.40A15.5 15.5 0 0 0 44.76 40.25Z"
-        fill="currentColor"
-        opacity="0.82"
-      />
-      <path
-        d="M60.69 18.45A42 42 0 0 1 67.17 22.97L50.03 43.18A15.5 15.5 0 0 0 47.64 41.51Z"
-        fill="currentColor"
-        opacity="1"
-      />
-      <path
-        d="M67.64 23.37A42 42 0 0 1 73.07 29.11L52.20 45.45A15.5 15.5 0 0 0 50.20 43.33Z"
-        fill="currentColor"
-        opacity="0.82"
-      />
-      <path
-        d="M73.45 29.60A42 42 0 0 1 77.61 36.31L53.88 48.10A15.5 15.5 0 0 0 52.34 45.63Z"
-        fill="currentColor"
-        opacity="1"
-      />
-      <path
-        d="M1.71 36.33L39.05 54.58Q40 55.25 40.95 54.58L78.29 36.33"
+        d={art.guard}
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.45"
+        strokeWidth={compact ? 2.2 : 1.65}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="40" cy="55" r="1.5" fill="currentColor" />
+      <circle cx="56" cy="66" r="1.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function CanwooWordmark() {
+  return (
+    <svg className="brand-latin" viewBox="0 0 212 42" aria-hidden="true">
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="5.5"
+        strokeLinecap="butt"
+        strokeLinejoin="round"
+      >
+        {wordmarkPaths.map((d, i) => (
+          <path key={i} d={d} />
+        ))}
+      </g>
+    </svg>
+  );
+}
+
+// Matching monoline lettering for the two-character brand, with open counters
+// and gently joined strokes. The parent lockup supplies its accessible name.
+export function CanwooHanWordmark() {
+  return (
+    <svg className="brand-chinese" viewBox="0 0 64 32" aria-hidden="true">
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.35"
+        strokeLinecap="butt"
+        strokeLinejoin="round"
+      >
+        <path d="M15 2.5L7.5 8.5H23L18.5 4M3 12H28M14 8.5C12.5 14 8 18 2.5 20M16 12C19 16 23.5 19 28.5 20M18 17L10.5 21M21.5 21L11 25M25 25L12 29" />
+        <path d="M42 3C40.5 8 37.5 13 34 16M39 10V29M46 5H61M44.5 15H58V27M52 5L48.5 27M43 27H63" />
+      </g>
     </svg>
   );
 }
@@ -83,13 +81,11 @@ export function CanwooBrand({ tagline }: { tagline?: string }) {
       className={`canwoo-brand${tagline ? ' has-tagline' : ''}`}
       aria-label="Canwoo 参伍"
     >
-      <CanwooMark className="brand-mark" />
+      <CanwooMark className="brand-mark" compact />
       <span className="brand-copy">
         <span className="brand-wordmark" aria-hidden="true">
-          <span className="brand-latin">canwoo</span>
-          <span className="brand-chinese" lang="zh-CN">
-            参伍
-          </span>
+          <CanwooWordmark />
+          <CanwooHanWordmark />
         </span>
         {tagline && <small>{tagline}</small>}
       </span>

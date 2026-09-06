@@ -306,8 +306,8 @@ export default function ReadingAnnotations({
       acknowledgeRequest(request.requestId);
       setReply(
         L(
-          '助手正在阅读这一页，进度和回复会自动更新。',
-          'The assistant is reading this page. Progress and replies update here.',
+          '问题已提交。实际执行状态、回复或需处理的事项会显示在下方。',
+          'Question submitted. Execution status, replies or required actions appear below.',
         ),
       );
       refresh();

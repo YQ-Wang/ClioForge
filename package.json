@@ -1,9 +1,9 @@
 {
-  "name": "foliotrace",
-  "version": "0.1.0",
+  "name": "canwoo",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=22.19.0"
   },
   "scripts": {
     "dev": "vinext dev",
@@ -17,10 +17,13 @@
     "build:cloudflare": "FOLIOTRACE_DEPLOY_TARGET=cloudflare vinext build",
     "dev:cloudflare": "FOLIOTRACE_DEPLOY_TARGET=cloudflare vinext dev --hostname 127.0.0.1",
     "db:migrate:local": "wrangler d1 migrations apply DB --local --config wrangler.jsonc",
-    "db:migrate:remote": "wrangler d1 migrations apply DB --remote --config wrangler.jsonc",
-    "deploy:cloudflare": "wrangler deploy --config dist/server/wrangler.json",
-    "deploy:jobs": "wrangler deploy --config wrangler.jobs.jsonc",
-    "check:jobs": "wrangler deploy --dry-run --config wrangler.jobs.jsonc"
+    "db:migrate:remote": "node scripts/cloudflare.mjs migrate",
+    "deploy:cloudflare": "node scripts/cloudflare.mjs deploy-app",
+    "deploy:jobs": "node scripts/cloudflare.mjs deploy-jobs",
+    "check:jobs": "node scripts/cloudflare.mjs check-jobs",
+    "format:check": "oxfmt --check",
+    "check:comments": "node scripts/check-comments.mjs",
+    "check": "npm run check:comments && npm run typecheck && npm run lint"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
@@ -99,5 +102,15 @@
       "nanoid": "5.1.16"
     },
     "lodash-es": "4.18.1"
+  },
+  "description": "A source-grounded AI workspace for history and humanities research",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YQ-Wang/canwoo.git"
+  },
+  "homepage": "https://canwoo.com",
+  "bugs": {
+    "url": "https://github.com/YQ-Wang/canwoo/issues"
   }
 }

@@ -13,6 +13,7 @@ type ReadingPageData = {
 type ReadingPageState = ReadingPageData & {
   key: string;
   loading: boolean;
+  loaded: boolean;
   error: string | null;
   accessDenied: boolean;
 };
@@ -24,6 +25,7 @@ function emptyPage(key: string): ReadingPageState {
     role: null,
     truncated: false,
     loading: false,
+    loaded: false,
     error: null,
     accessDenied: false,
   };
@@ -57,7 +59,11 @@ export function useReadingPage(
 
   useEffect(() => {
     setState((previous) =>
-      previous.key === key ? { ...previous, loading: false } : emptyPage(key),
+      previous.key === key
+        ? enabled
+          ? previous
+          : { ...previous, loading: false }
+        : { ...emptyPage(key), loading: enabled },
     );
     if (!enabled || !projectId || !versionId) return;
 
@@ -92,10 +98,15 @@ export function useReadingPage(
       if (manual) denied = false;
       const requestController = new AbortController();
       controller = requestController;
-      setState((previous) => ({
-        ...(previous.key === key ? previous : emptyPage(key)),
-        loading: true,
-      }));
+      setState((previous) => {
+        // A successful empty result is loaded too. Silent polling must not
+        // replace its help text with a loading message every five seconds.
+        if (previous.key === key && previous.loaded && !manual) return previous;
+        return {
+          ...(previous.key === key ? previous : emptyPage(key)),
+          loading: true,
+        };
+      });
       inFlight = (async () => {
         try {
           const response = await fetch(path, {
@@ -122,6 +133,7 @@ export function useReadingPage(
             role: data.role,
             truncated: data.truncated,
             loading: false,
+            loaded: true,
             error: null,
             accessDenied: false,
           });

@@ -5,7 +5,7 @@ import { citationSchema } from '@/lib/platform/types';
 import { updateMission } from '@/lib/platform/incremental';
 import { methodSchema } from '@/lib/platform/research-recipes';
 import { TeamStore } from '@/lib/project-team';
-import { importLedSample } from '@/lib/platform/dataset';
+import { importLedSample, sampleBatchSchema } from '@/lib/platform/dataset';
 import { z } from 'zod';
 import { authenticate, failure, jsonBody, HttpError } from '@/lib/server';
 import { MissionStore } from '@/lib/platform/missions';
@@ -191,6 +191,9 @@ export async function POST(request: Request) {
           store,
           auth.settings.FILES,
           input.project_id,
+          input.value === undefined
+            ? undefined
+            : sampleBatchSchema.parse(input.value),
         );
         break;
       case 'update_mission': {

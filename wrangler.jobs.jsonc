@@ -1,7 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "canwoo-research",
-  "account_id": "bf045b2b8a84caff86b86f4952486119",
   "main": "workers/research.ts",
   "compatibility_date": "2026-09-04",
   "compatibility_flags": ["nodejs_compat"],
@@ -9,7 +8,8 @@
     {
       "binding": "DB",
       "database_name": "canwoo",
-      "database_id": "689a6ad8-2a97-4640-a780-b2378ff9d394",
+      // Use the same database ID as the app in your private deployment copy.
+      "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "drizzle",
     },
   ],

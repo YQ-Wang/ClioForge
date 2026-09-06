@@ -1,0 +1,13 @@
+# Login background — historic canal illustration
+
+Generated with the built-in imagegen tool on 2026-09-06. This is an original decorative illustration inspired by historical pictorial maps, not an authenticated artifact, historical reconstruction or research source. It is rendered as a CSS background and excluded from assistive content.
+
+Final project asset: `public/brand/history-canal.webp` (131,930 bytes). The original generated PNG is retained in the image-generation output folder; the project copy is encoded as WebP for delivery. Dark appearance is handled in CSS, with a low-contrast inverted illustration. On mobile the background is reduced to 22% opacity to protect headline readability.
+
+## Generation prompt
+
+Create a refined editorial background illustration for Canwoo, a humanities research SaaS login page. Portrait 4:5 composition. Inspired by the visual vocabulary of historic Chinese pictorial maps and Ming-period Jiangnan canal towns: a quiet winding waterway, one small stone arched bridge, distant low tiled roofs and courtyard walls, a few willow branches, subtle map-like contours. Original contemporary illustration, not a reproduction of a real artifact. Extremely restrained pale warm-gray ink linework and very light muted sage washes on warm ivory uncoated paper (#f2f2eb approximate). Delicate architectural drafting, clear understated contours, almost no texture. The TOP 55 percent and upper left must be nearly blank ivory with only the faintest atmospheric lines so dark headline text remains perfectly readable. Concentrate the gently detailed canal-and-bridge composition in the LOWER 40 percent, extending naturally to the lower right edge; no central focal object. Flat, quiet, intelligent, museum-publication quality. No text, no calligraphy, no labels, no stamps, no logos, no fan, no framing border, no UI elements, no photorealism, no dramatic light, no strong contrast, no heavy vintage distressing.
+
+Production deployment: `b84473db-9e1f-4237-aa4b-562572311359`. Verified the live background URL, SVG Han wordmark, 38px fan and 390px layout in an isolated browser. TypeScript, lint and production build passed; local browser checks also covered both languages, light/dark appearance and authentication-form mode changes without submitting credentials.
+
+The final composition places the fan and “Many sources. A clearer view.” together in the natural negative space above the headline, replacing the previous eyebrow text. The opaque footer and divider were removed after visual review: the canal illustration is continuous to the lower rounded edge again. The research sentence rests over the existing broad fade at the bottom. Mobile preserves the same heading hierarchy with a smaller fan.

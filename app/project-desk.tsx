@@ -1,5 +1,6 @@
 'use client';
 import { useI18n } from '@/lib/i18n/provider';
+import { importSampleBatches, type SampleBatch } from '@/lib/sample-import';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -18,6 +19,7 @@ import {
   Minimize2,
   Quote,
   Save,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -122,6 +124,28 @@ export default function ProjectDesk({
   const [models, setModels] = useState<Model[]>([]);
   const [preferredModel, setPreferredModel] = useState('');
   const [sourceId, setSourceId] = useState('');
+  const sourceItems = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const list = sourceItems.current;
+    if (tab !== 'sources' || !list) return;
+    const revealSelected = () => {
+      const selected = list.querySelector<HTMLElement>('[aria-current="true"]');
+      if (!selected) return;
+      const top = selected.offsetTop;
+      if (
+        top < list.scrollTop ||
+        top + selected.offsetHeight > list.scrollTop + list.clientHeight
+      )
+        list.scrollTop = Math.max(
+          0,
+          top - (list.clientHeight - selected.offsetHeight) / 2,
+        );
+    };
+    revealSelected();
+    const observer = new ResizeObserver(revealSelected);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [sourceId, tab, sources]);
   const [importOpen, setImportOpen] = useState(false);
   const setTab = onNavigate;
   const navigate = onNavigate;
@@ -156,6 +180,7 @@ export default function ProjectDesk({
   const [workbench, setWorkbench] = useState<WorkbenchData | null>(null);
   const [location, setLocation] = useState<ReaderLocation | null>(null);
   const [researchReturn, setResearchReturn] = useState('');
+  const [budgetReturn, setBudgetReturn] = useState('');
   const [bibliographySource, setBibliographySource] = useState('');
   const upload = useRef<HTMLInputElement>(null);
   const mounted = useRef(true);
@@ -310,10 +335,18 @@ export default function ProjectDesk({
     type?: string;
   };
   const [importItems, setImportItems] = useState<ImportItem[]>([]);
+  const [importExpanded, setImportExpanded] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [importStopping, setImportStopping] = useState(false);
+  const importActive = useRef(false);
   const stopImport = useRef(false);
   async function importFiles(items: ImportItem[]) {
-    if (busy || !canWrite) return;
+    if (busy || importActive.current || !canWrite) return;
+    importActive.current = true;
     stopImport.current = false;
+    setImporting(true);
+    setImportStopping(false);
+    setImportExpanded(true);
     setBusy(true);
     setImportOpen(false);
     setMessage('');
@@ -322,13 +355,15 @@ export default function ProjectDesk({
     let lastId = '';
     try {
       for (const item of queue) {
-        if (item.status === 'ready' || stopImport.current) continue;
+        if (stopImport.current || !mounted.current) break;
+        if (item.status === 'ready') continue;
         item.status = 'running';
         item.error = undefined;
         setImportItems([...queue]);
         try {
           item.type ||= documentType(item.file);
           item.pages ||= await extractPages(item.file, item.type);
+          if (!mounted.current) break;
           item.receipt ||= await uploadOriginal(
             project.id,
             item.file,
@@ -350,16 +385,22 @@ export default function ProjectDesk({
           item.error =
             error instanceof Error ? error.message : t('导入未完成，请重试。');
         }
-        setImportItems([...queue]);
+        if (mounted.current) setImportItems([...queue]);
       }
+      if (!mounted.current) return;
       await refresh();
-      if (lastId) {
+      if (lastId && mounted.current) {
         setSourceId(lastId);
         setLocation(null);
         navigate('sources');
       }
     } finally {
-      setBusy(false);
+      importActive.current = false;
+      if (mounted.current) {
+        setImporting(false);
+        setImportStopping(false);
+        setBusy(false);
+      }
     }
   }
   function openEvidence(item: Evidence) {
@@ -531,9 +572,10 @@ export default function ProjectDesk({
             return;
           }
           if (files.length)
-            void importFiles(
-              files.map((file) => ({ file, status: 'waiting' })),
-            );
+            void importFiles([
+              ...importItems.filter((item) => item.status !== 'ready'),
+              ...files.map((file) => ({ file, status: 'waiting' as const })),
+            ]);
         }}
       />
       {importItems.length > 0 && (
@@ -545,70 +587,112 @@ export default function ProjectDesk({
         >
           <div>
             <strong>
-              {locale === 'en' ? 'Importing sources' : '资料导入'} ·{' '}
+              {locale === 'en' ? 'Source import' : '资料导入'} ·{' '}
               {importItems.filter((item) => item.status === 'ready').length} /{' '}
               {importItems.length}
             </strong>
-            {busy ? (
+            {importing ? (
               <Button
                 variant="ghost"
                 size="sm"
+                disabled={importStopping}
                 onClick={() => {
                   stopImport.current = true;
+                  setImportStopping(true);
                 }}
               >
-                {locale === 'en'
-                  ? 'Stop after this file'
-                  : '完成当前文件后暂停'}
+                {importStopping
+                  ? locale === 'en'
+                    ? 'Finishing this file…'
+                    : '正在完成当前文件…'
+                  : locale === 'en'
+                    ? 'Stop after this file'
+                    : '完成当前文件后暂停'}
               </Button>
             ) : (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setImportItems([])}
+                aria-expanded={importExpanded}
+                aria-controls="source-import-details"
+                onClick={() => setImportExpanded((expanded) => !expanded)}
               >
-                {locale === 'en' ? 'Close' : '收起'}
+                {importExpanded
+                  ? locale === 'en'
+                    ? 'Hide details'
+                    : '收起详情'
+                  : locale === 'en'
+                    ? 'Show details'
+                    : '查看详情'}
               </Button>
             )}
           </div>
           <progress
+            aria-label={
+              locale === 'en' ? 'Files ready to read' : '可以阅读的文件'
+            }
             value={importItems.filter((item) => item.status === 'ready').length}
             max={importItems.length}
           />
-          {importItems.map((item, index) => (
-            <div className="import-file-row" key={index}>
-              <FileText size={15} />
-              <span>{item.file.name}</span>
-              <small>
-                {item.status === 'ready'
-                  ? locale === 'en'
-                    ? 'Ready to read'
-                    : '可以阅读'
-                  : item.status === 'running'
+          <div
+            id="source-import-details"
+            className="import-details"
+            hidden={!importExpanded}
+          >
+            {importItems.map((item, index) => (
+              <div className="import-file-row" key={index}>
+                <FileText size={15} />
+                <span>{item.file.name}</span>
+                <small>
+                  {item.status === 'ready'
                     ? locale === 'en'
-                      ? 'Saving original and text…'
-                      : '正在保存原件与文字…'
-                    : item.status === 'failed'
-                      ? item.error
-                      : locale === 'en'
-                        ? 'Waiting'
-                        : '等待导入'}
-              </small>
-            </div>
-          ))}
-          {!busy && importItems.some((item) => item.status !== 'ready') && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!canWrite}
-              onClick={() => void importFiles(importItems)}
-            >
-              {locale === 'en'
-                ? 'Continue unfinished files'
-                : '继续未完成的文件'}
-            </Button>
-          )}
-          <p>
+                      ? 'Ready to read'
+                      : '可以阅读'
+                    : item.status === 'running'
+                      ? locale === 'en'
+                        ? 'Saving original and text…'
+                        : '正在保存原件与文字…'
+                      : item.status === 'failed'
+                        ? item.error
+                        : locale === 'en'
+                          ? 'Waiting'
+                          : '等待导入'}
+                </small>
+                {!importing && item.status !== 'ready' && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={
+                      locale === 'en'
+                        ? `Remove ${item.file.name} from import`
+                        : `从导入中移除 ${item.file.name}`
+                    }
+                    onClick={() =>
+                      setImportItems((current) =>
+                        current.filter((_, position) => position !== index),
+                      )
+                    }
+                  >
+                    <X size={14} />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+          {!importing &&
+            importItems.some((item) => item.status !== 'ready') && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy || !canWrite}
+                onClick={() => void importFiles(importItems)}
+              >
+                {locale === 'en'
+                  ? 'Continue unfinished files'
+                  : '继续未完成的文件'}
+              </Button>
+            )}
+          <p hidden={!importExpanded}>
             {locale === 'en'
               ? 'Originals are preserved. Check extracted text against the source; image-only pages can be transcribed in the reader.'
               : '原件保留。自动提取文字请对照原件核查；没有文字的扫描页可在阅读器中转录。'}
@@ -691,10 +775,20 @@ export default function ProjectDesk({
             }}
             onSample={() =>
               void action(async () => {
-                await api('/api/platform', {
-                  action: 'import_dataset',
-                  project_id: project.id,
-                });
+                await importSampleBatches(
+                  (value) =>
+                    api<{ result: SampleBatch }>('/api/platform', {
+                      action: 'import_dataset',
+                      project_id: project.id,
+                      value,
+                    }).then((response) => response.result),
+                  (completed, total) =>
+                    setMessage(
+                      locale === 'en'
+                        ? `Preparing public sources: ${completed} / ${total}. Keep this page open; completed sources are preserved if interrupted.`
+                        : `正在准备公开史料：${completed} / ${total}。请保持页面打开；中断后已保存的材料会保留。`,
+                    ),
+                );
                 await refresh();
                 setMessage('公开史料已保存，可以开始阅读。');
               })
@@ -820,43 +914,47 @@ export default function ProjectDesk({
                     : '含未转录页面'}
                 </NativeSelectOption>
               </NativeSelect>
-              {visibleSources.map((source) => (
-                <button
-                  key={source.id}
-                  className={`source-item ${sourceId === source.id ? 'selected' : ''}`}
-                  aria-current={sourceId === source.id ? 'true' : undefined}
-                  onClick={() => {
-                    setSourceId(source.id);
-                    setLocation(null);
-                    const version = latest(source.id);
-                    if (version)
-                      navigateWorkspace(sourcePath(project.id, version.id, 1));
-                  }}
-                >
-                  <FileText size={16} />
-                  <span>
-                    {source.title}
-                    <small>
-                      v{latest(source.id)?.revision || 1} ·{' '}
-                      {t('{0} 页', {
-                        0: latest(source.id)?.pages.length || 0,
-                      })}
-                    </small>
-                  </span>
-                </button>
-              ))}
-              {sources.length > 0 && !visibleSources.length && (
-                <p className="p-2 text-xs text-muted-foreground leading-6">
-                  {t('没有匹配的资料，试试其他标题关键词。')}
-                </p>
-              )}
-              {!sources.length && (
-                <p className="text-sm text-muted-foreground leading-7">
-                  {t(
-                    '导入 PDF、照片或文本，开始阅读第一份材料。单份最大 20 MiB，内测每账户 500 MiB 原件额度。',
-                  )}
-                </p>
-              )}
+              <div className="source-items" ref={sourceItems}>
+                {visibleSources.map((source) => (
+                  <button
+                    key={source.id}
+                    className={`source-item ${sourceId === source.id ? 'selected' : ''}`}
+                    aria-current={sourceId === source.id ? 'true' : undefined}
+                    onClick={() => {
+                      setSourceId(source.id);
+                      setLocation(null);
+                      const version = latest(source.id);
+                      if (version)
+                        navigateWorkspace(
+                          sourcePath(project.id, version.id, 1),
+                        );
+                    }}
+                  >
+                    <FileText size={16} />
+                    <span>
+                      {source.title}
+                      <small>
+                        v{latest(source.id)?.revision || 1} ·{' '}
+                        {t('{0} 页', {
+                          0: latest(source.id)?.pages.length || 0,
+                        })}
+                      </small>
+                    </span>
+                  </button>
+                ))}
+                {sources.length > 0 && !visibleSources.length && (
+                  <p className="p-2 text-xs text-muted-foreground leading-6">
+                    {t('没有匹配的资料，试试其他标题关键词。')}
+                  </p>
+                )}
+                {!sources.length && (
+                  <p className="text-sm text-muted-foreground leading-7">
+                    {t(
+                      '导入 PDF、照片或文本，开始阅读第一份材料。单份最大 20 MiB，内测每账户 500 MiB 原件额度。',
+                    )}
+                  </p>
+                )}
+              </div>
             </aside>
             {readerRoute.kind === 'unavailable' ? (
               <Notice
@@ -876,7 +974,12 @@ export default function ProjectDesk({
                 runs={runs}
                 active={tab === 'sources' && readerReady}
                 onLocationChange={publishReaderLocation}
-                onBudget={() => setTab('runs')}
+                onBudget={() => {
+                  setBudgetReturn(
+                    window.location.pathname + window.location.search,
+                  );
+                  setTab('runs');
+                }}
                 onModelSettings={onAssistantSettings}
                 projectId={project.id}
                 readOnly={!canWrite}
@@ -1086,6 +1189,21 @@ export default function ProjectDesk({
               {t('打开助手设置')}
             </Button>
           </div>
+        )}
+        {budgetReturn && (
+          <Button
+            variant="outline"
+            className="mb-4"
+            onClick={() => {
+              navigateWorkspace(budgetReturn);
+              setBudgetReturn('');
+            }}
+          >
+            <ArrowLeft size={16} />
+            {locale === 'en'
+              ? 'Return to your reading and question'
+              : '返回刚才的原文与提问'}
+          </Button>
         )}
         {workbench && (
           <TasksPanel

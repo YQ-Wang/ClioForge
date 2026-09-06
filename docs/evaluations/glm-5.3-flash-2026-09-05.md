@@ -9,10 +9,10 @@ Model: `z-ai/glm-5.3-flash` through OpenRouter. The catalog advertises text/imag
 One Z.AI provider, no provider fallbacks, 4096-token output ceiling, JSON mode, hidden reasoning excluded from responses. Three tasks per effort: exact record extraction with missing dates; rejecting unsupported population/date claims; identifying missing provenance despite an instruction embedded in source text. These checks use the public LED/Heidelberg record HD010014 and a separately labelled synthetic editorial variant. The prompt, assertions and results are reproducible with `scripts/evaluate-openrouter.mjs` and the adjacent JSON report. The key is never included in the report.
 
 | Effort | Checks passed | Mean response time | Total reported reasoning tokens | Cost for 3 requests |
-| --- | --- | --- | --- | --- |
-| low | 3 / 3 | 2.67 s | 0 | $0.000134655 |
-| high | 3 / 3 | 5.07 s | 437 | $0.000251475 |
-| max | 3 / 3 | 7.98 s | 1,271 | $0.000457955 |
+| ------ | ------------- | ------------------ | ------------------------------- | ------------------- |
+| low    | 3 / 3         | 2.67 s             | 0                               | $0.000134655        |
+| high   | 3 / 3         | 5.07 s             | 437                             | $0.000251475        |
+| max    | 3 / 3         | 7.98 s             | 1,271                           | $0.000457955        |
 
 These are three individual short tasks per level, not repeated statistical measurements. Zero reported reasoning tokens is what the provider returned; it does not change the catalog's mandatory-reasoning declaration. Higher effort did not improve the checked outcomes in this sample.
 

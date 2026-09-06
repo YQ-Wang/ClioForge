@@ -1,7 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "canwoo",
-  "account_id": "bf045b2b8a84caff86b86f4952486119",
   "main": "vinext/server/fetch-handler",
   "compatibility_date": "2026-09-04",
   "compatibility_flags": ["nodejs_compat"],
@@ -9,7 +8,9 @@
     {
       "binding": "DB",
       "database_name": "canwoo",
-      "database_id": "689a6ad8-2a97-4640-a780-b2378ff9d394",
+      // Local placeholder. Copy this file to an ignored *.local.jsonc file
+      // and set your own database ID before deploying.
+      "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "drizzle",
     },
   ],
@@ -25,13 +26,13 @@
   },
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [{ "pattern": "canwoo.com", "custom_domain": true }],
+  "routes": [],
   "vars": {
-    "BETTER_AUTH_URL": "https://canwoo.com",
-    "EMAIL_FROM": "noreply@canwoo.com",
+    "BETTER_AUTH_URL": "http://127.0.0.1:3000",
+    "EMAIL_FROM": "noreply@example.com",
   },
   "send_email": [
-    { "name": "EMAIL", "allowed_sender_addresses": ["noreply@canwoo.com"] },
+    { "name": "EMAIL", "allowed_sender_addresses": ["noreply@example.com"] },
   ],
   "limits": {
     "cpu_ms": 30000,

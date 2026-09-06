@@ -39,3 +39,12 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# Private deployment targets and local tool state
+wrangler*.local.jsonc
+/.codex/
+/.agents/
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

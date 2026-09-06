@@ -6,6 +6,9 @@ import { XMLParser } from 'fast-xml-parser';
 import { parseRichDocument, type RichNode } from './rich-document';
 import {
   citedEvidence,
+  writingCitationKey,
+  writingCitationLink,
+  writingCitationMap,
   writingDocx,
   type WritingCitation,
 } from './writing-export';
@@ -32,6 +35,17 @@ const textRun = (text: string, props = '') =>
 const color = (v: unknown) => writingColor(v)?.slice(1) || null;
 const attributeText = (value: unknown) =>
   typeof value === 'string' ? value : '';
+const documentLink = (href: unknown, origin: string) => {
+  if (typeof href !== 'string' || !href) return null;
+  try {
+    const url = new URL(href, origin);
+    return ['http:', 'https:', 'mailto:'].includes(url.protocol)
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
+};
 const align = (n: RichNode) =>
   ['left', 'center', 'right', 'justify'].includes(String(n.attrs?.textAlign))
     ? String(n.attrs?.textAlign)
@@ -106,16 +120,14 @@ export function equationOMML(latex: string) {
   }
   return `<m:oMath>${walk(tree)}</m:oMath>`;
 }
-function citationFor(n: RichNode, byId: Map<string, WritingCitation>) {
+function citationFor(
+  n: RichNode,
+  byId: Map<string, WritingCitation>,
+  origin: string,
+) {
   const href = n.marks?.find((m) => m.type === 'link')?.attrs?.href;
   if (typeof href !== 'string') return null;
-  let url: URL;
-  try {
-    url = new URL(href, 'https://canwoo.com');
-  } catch {
-    return null;
-  }
-  const id = url.searchParams.get('evidence');
+  const id = writingCitationKey(href, origin);
   if (!id) return null;
   const c = byId.get(id);
   if (!c)
@@ -126,16 +138,17 @@ export function richWritingDocx(
   title: string,
   serialized: string,
   citations: WritingCitation[],
+  origin = citations[0]?.href || 'https://canwoo.com',
 ) {
   const doc = parseRichDocument(serialized),
-    byId = new Map(citations.map((c) => [c.id, c])),
+    byId = writingCitationMap(citations),
     used: WritingCitation[] = [],
     images: Uint8Array[] = [],
     links: string[] = [];
   function node(n: RichNode, prefix = ''): string {
     const children = () => (n.content || []).map((c) => node(c)).join('');
     if (n.type === 'text') {
-      const citation = citationFor(n, byId);
+      const citation = citationFor(n, byId, origin);
       if (citation) {
         used.push(citation);
         return `<w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="${used.length}"/></w:r>`;
@@ -167,9 +180,12 @@ export function richWritingDocx(
             props += `<w:rFonts w:ascii="${family === 'monospace' ? 'Consolas' : family}" w:hAnsi="${family === 'monospace' ? 'Consolas' : family}"/>`;
         }
       }
-      const href = n.marks?.find((m) => m.type === 'link')?.attrs?.href;
+      const href = documentLink(
+        n.marks?.find((m) => m.type === 'link')?.attrs?.href,
+        origin,
+      );
       const text = textRun(n.text || '', props);
-      if (typeof href === 'string' && /^(https?:\/\/|mailto:)/i.test(href)) {
+      if (href) {
         links.push(href);
         return `<w:hyperlink r:id="link${links.length}">${text}</w:hyperlink>`;
       }
@@ -275,9 +291,9 @@ export function richWritingDocx(
   }
   const body = node(doc);
   const footnoteBody = used
-    .map((c) => `[source](https://canwoo.com/?evidence=${c.id})`)
+    .map((c) => `[source](${writingCitationLink(c)})`)
     .join('\n');
-  const files = unzipSync(writingDocx(title, footnoteBody, citations));
+  const files = unzipSync(writingDocx(title, footnoteBody, citations, origin));
   const decode = (path: string) => new TextDecoder().decode(files[path]);
   files['word/document.xml'] = strToU8(
     decode('word/document.xml')
@@ -325,13 +341,14 @@ export function writingPrintHTML(
   body: string,
   serialized: string | null | undefined,
   citations: WritingCitation[],
+  origin = citations[0]?.href || 'https://canwoo.com',
 ) {
-  const byId = new Map(citations.map((c) => [c.id, c])),
+  const byId = writingCitationMap(citations),
     used: WritingCitation[] = [];
   function node(n: RichNode): string {
     const children = () => (n.content || []).map(node).join('');
     if (n.type === 'text') {
-      const c = citationFor(n, byId);
+      const c = citationFor(n, byId, origin);
       if (c) {
         used.push(c);
         return `<sup><a href="#note-${used.length}">[${used.length}]</a></sup>`;
@@ -366,12 +383,10 @@ export function writingPrintHTML(
             styles.push(`font-family:${attributeText(a.fontFamily)}`);
           text = `<span style="${styles.join(';')}">${text}</span>`;
         }
-        if (
-          m.type === 'link' &&
-          typeof m.attrs?.href === 'string' &&
-          /^(https?:\/\/|mailto:)/i.test(m.attrs.href)
-        )
-          text = `<a href="${escapeXML(m.attrs.href)}">${text}</a>`;
+        if (m.type === 'link') {
+          const href = documentLink(m.attrs?.href, origin);
+          if (href) text = `<a href="${escapeXML(href)}">${text}</a>`;
+        }
       }
       return text;
     }
@@ -412,7 +427,7 @@ export function writingPrintHTML(
   let content: string;
   if (serialized) content = node(parseRichDocument(serialized));
   else {
-    const legacy = citedEvidence(body, citations);
+    const legacy = citedEvidence(body, citations, origin);
     if (legacy.missing.length)
       throw new HttpError(400, '笔记包含找不到的证据引用，请重新选择出处。');
     used.push(...legacy.used);

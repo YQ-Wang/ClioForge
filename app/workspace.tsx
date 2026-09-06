@@ -4,6 +4,7 @@ import { useI18n } from '@/lib/i18n/provider';
 import { LOCALE_COOKIE } from '@/lib/i18n/core';
 import { useCallback, useEffect, useEffectEvent, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
+import { authReturnPath } from '@/lib/auth-return';
 import { api } from '@/lib/client-api';
 import { CanwooBrand, CanwooMark, GoogleMark } from '@/components/canwoo-brand';
 import ResearchGuide from './research-guide';
@@ -33,6 +34,8 @@ import {
   Search,
   Sparkles,
   Settings2,
+  Eye,
+  EyeOff,
   X,
 } from 'lucide-react';
 import {
@@ -65,6 +68,7 @@ import ProjectDesk from './project-desk';
 import { LanguageSwitcher } from './language-switcher';
 import { ThemeSwitcher } from './theme-switcher';
 import Link from 'next/link';
+import { SOURCE_CODE_URL } from '@/lib/platform-contact';
 function ResponsiveSidebar({ routeKey }: { routeKey: string }) {
   const { setOpen, setOpenMobile } = useSidebar();
   useEffect(() => setOpenMobile(false), [routeKey, setOpenMobile]);
@@ -221,6 +225,9 @@ export default function Workspace({
         <footer className="public-footer">
           {t('参伍 · 让材料彼此参照，让判断有所依据。')}
           <Link href="/privacy">{t('隐私与资料')}</Link>
+          <a href={SOURCE_CODE_URL}>
+            {locale === 'en' ? 'Source code' : '源代码'}
+          </a>
         </footer>
       </div>
     );
@@ -285,6 +292,9 @@ export default function Workspace({
             </span>
             <Settings2 size={18} />
           </button>
+          <a className="workspace-source-link" href={SOURCE_CODE_URL}>
+            {locale === 'en' ? 'Open source · AGPL v3' : '开源代码 · AGPL v3'}
+          </a>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="workspace-main">
@@ -446,16 +456,20 @@ function AuthForm({
 }) {
   const { t, locale } = useI18n();
   const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   async function googleSignIn() {
     setBusy(true);
     setMessage('');
     try {
+      const callbackURL = authReturnPath(
+        window.location.pathname + window.location.search,
+      );
       const result = await authClient.signIn.social({
         provider: 'google',
-        callbackURL: '/',
-        errorCallbackURL: '/?error=google',
+        callbackURL,
+        errorCallbackURL: `${callbackURL}${callbackURL.includes('?') ? '&' : '?'}error=google`,
       });
       if (result.error)
         throw new Error(t('Google 登录暂不可用，请重试或使用邮箱。'));
@@ -474,6 +488,9 @@ function AuthForm({
     try {
       const email = form.get('email') as string;
       const password = form.get('password') as string;
+      const callbackURL = authReturnPath(
+        window.location.pathname + window.location.search,
+      );
       const result = recovery
         ? await authClient.resetPassword({
             newPassword: password,
@@ -485,14 +502,14 @@ function AuthForm({
               email,
               password,
               name: email.split('@')[0],
-              callbackURL: '/',
+              callbackURL,
             })
           : mode === 'reset'
             ? await authClient.requestPasswordReset({
                 email,
                 redirectTo: window.location.origin,
               })
-            : await authClient.signIn.email({ email, password });
+            : await authClient.signIn.email({ email, password, callbackURL });
       if (result.error) {
         const errors: Record<string, string> = {
           INVALID_EMAIL_OR_PASSWORD: '邮箱或密码不正确。',
@@ -525,8 +542,14 @@ function AuthForm({
   return (
     <section className="auth-layout">
       <div className="auth-intro">
-        <CanwooMark className="intro-mark" />
-        <p className="eyebrow">{t('为下一次发现留一席之地')}</p>
+        <div className="auth-fan-study">
+          <CanwooMark className="auth-fan" compact />
+          <span className="auth-study-caption">
+            {locale === 'en'
+              ? 'Many sources. A clearer view.'
+              : '参照众说，求得新知。'}
+          </span>
+        </div>
         <h2>
           {t('让每一次发现，')}
           <br />
@@ -539,38 +562,15 @@ function AuthForm({
           {locale === 'en' && ' '}
           {t('把阅读、证据与思考，放回同一张书桌。')}
         </p>
-        <div className="research-path" aria-label={t('研究流程')}>
-          <div>
-            <span className="path-icon blue">
-              <FolderOpen size={19} />
-            </span>
-            <span>
-              <strong>{t('收集与阅读')}</strong>
-              <small>{t('原件与转录，逐页对照')}</small>
-            </span>
-          </div>
-          <div>
-            <span className="path-icon green">
-              <Quote size={19} />
-            </span>
-            <span>
-              <strong>{t('关联与追问')}</strong>
-              <small>{t('每条证据，固定出处')}</small>
-            </span>
-          </div>
-          <div>
-            <span className="path-icon purple">
-              <GitBranch size={19} />
-            </span>
-            <span>
-              <strong>{t('积累与回溯')}</strong>
-              <small>{t('让每一次校订留下版本')}</small>
-            </span>
-          </div>
-        </div>
+        <div className="auth-history-space" aria-hidden="true" />
+        <p className="auth-research-promise">
+          {locale === 'en'
+            ? 'Read with AI. Follow every citation. Keep the final judgment yours.'
+            : '与 AI 一起阅读与追问。每条引用可回溯，每个判断由你审读。'}
+        </p>
       </div>
       <div className="auth-panel">
-        <span className="status-tag">
+        <span className="auth-space-label">
           <ShieldCheck size={14} />
           {t('私人研究空间')}
         </span>
@@ -611,24 +611,47 @@ function AuthForm({
             </Field>
           )}
           {(recovery || mode !== 'reset') && (
-            <Field label={t('密码')}>
-              <Input
-                name="password"
-                type="password"
-                autoComplete={
-                  mode === 'login' && !recovery
-                    ? 'current-password'
-                    : 'new-password'
-                }
-                minLength={10}
-                placeholder={
-                  mode === 'signup' || recovery
-                    ? t('至少 10 个字符')
-                    : t('输入密码')
-                }
-                required
-              />
-            </Field>
+            <div className="form-field auth-password-field">
+              <Label htmlFor="auth-password" className="field-label">
+                {t('密码')}
+              </Label>
+              <div className="auth-password-input">
+                <Input
+                  id="auth-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={
+                    mode === 'login' && !recovery
+                      ? 'current-password'
+                      : 'new-password'
+                  }
+                  minLength={10}
+                  placeholder={
+                    mode === 'signup' || recovery
+                      ? t('至少 10 个字符')
+                      : t('输入密码')
+                  }
+                  required
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  aria-label={
+                    showPassword
+                      ? locale === 'en'
+                        ? 'Hide password'
+                        : '隐藏密码'
+                      : locale === 'en'
+                        ? 'Show password'
+                        : '显示密码'
+                  }
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
           )}
           <Button type="submit" disabled={busy} className="w-full">
             {busy && <LoaderCircle className="animate-spin" size={16} />}
@@ -645,11 +668,12 @@ function AuthForm({
         </form>
         {message && <Notice text={message} />}
         {!recovery && (
-          <div className="mt-4 flex justify-between">
+          <div className="auth-mode-actions">
             <Button
               variant="link"
               onClick={() => {
                 setMode(mode === 'signup' ? 'login' : 'signup');
+                setShowPassword(false);
                 setMessage('');
               }}
             >
@@ -659,6 +683,7 @@ function AuthForm({
               variant="link"
               onClick={() => {
                 setMode(mode === 'reset' ? 'login' : 'reset');
+                setShowPassword(false);
                 setMessage('');
               }}
             >

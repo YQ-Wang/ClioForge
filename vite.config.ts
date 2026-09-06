@@ -16,8 +16,12 @@ export default defineConfig(async () => {
       vinext(),
       cloudflare({
         viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },
-        configPath: 'wrangler.jsonc',
-        auxiliaryWorkers: [{ configPath: 'wrangler.jobs.jsonc' }],
+        configPath: process.env.CANWOO_CONFIG || 'wrangler.jsonc',
+        auxiliaryWorkers: [
+          {
+            configPath: process.env.CANWOO_JOBS_CONFIG || 'wrangler.jobs.jsonc',
+          },
+        ],
       }),
     ],
   };

@@ -1,4 +1,5 @@
 import { zipSync, strToU8 } from 'fflate';
+import { parseRichDocument, type RichNode } from './rich-document';
 export type WritingCitation = {
   id: string;
   label: string;
@@ -6,21 +7,83 @@ export type WritingCitation = {
   href: string;
   stale: boolean;
 };
-export function citedEvidence(body: string, citations: WritingCitation[]) {
-  const byId = new Map(citations.map((c) => [c.id, c]));
+export function writingCitationKey(href: string, base = 'https://canwoo.com') {
+  let url: URL;
+  try {
+    url = new URL(href, base);
+    if (url.origin !== new URL(base).origin || url.pathname !== '/')
+      return null;
+  } catch {
+    return null;
+  }
+  const evidence = url.searchParams.get('evidence');
+  if (evidence) return `evidence:${url.origin}${url.pathname}:${evidence}`;
+  const project = url.searchParams.get('project'),
+    version = url.searchParams.get('version'),
+    page = url.searchParams.get('page');
+  const uuid =
+    /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+  if (
+    url.searchParams.get('tab') !== 'sources' ||
+    !project ||
+    !version ||
+    !uuid.test(project) ||
+    !uuid.test(version) ||
+    !page ||
+    !/^[1-9]\d*$/.test(page)
+  )
+    return null;
+  return `page:${url.origin}:${project}:${version}:${page}`;
+}
+export function writingCitationLink(citation: WritingCitation) {
+  if (citation.id.startsWith('page:')) return citation.href;
+  const url = new URL(citation.href);
+  url.searchParams.set('evidence', citation.id);
+  return url.href;
+}
+export function writingCitationMap(citations: WritingCitation[]) {
+  return new Map(
+    citations.map((citation) => [
+      writingCitationKey(writingCitationLink(citation), citation.href)!,
+      citation,
+    ]),
+  );
+}
+export function writingPageReferences(
+  body: string,
+  document: string | null | undefined,
+  origin: string,
+) {
+  const keys = new Set<string>();
+  const add = (href: unknown) => {
+    if (typeof href !== 'string') return;
+    const key = writingCitationKey(href, origin);
+    if (key?.startsWith('page:')) keys.add(key);
+  };
+  for (const match of body.matchAll(/\[[^\]]+\]\(([^\s)]+)\)/g)) add(match[1]);
+  if (document) {
+    const visit = (node: RichNode) => {
+      for (const mark of node.marks || [])
+        if (mark.type === 'link') add(mark.attrs?.href);
+      for (const child of node.content || []) visit(child);
+    };
+    visit(parseRichDocument(document));
+  }
+  return keys;
+}
+export function citedEvidence(
+  body: string,
+  citations: WritingCitation[],
+  origin = citations[0]?.href || 'https://canwoo.com',
+) {
+  const byId = writingCitationMap(citations);
   const used: WritingCitation[] = [],
     missing: string[] = [];
   const text = body
     .replaceAll('\uE000', '')
     .replaceAll('\uE001', '')
-    .replace(/\[([^\]]+)\]\(([^\s)]+)\)/g, (whole, label, href) => {
-      let url: URL;
-      try {
-        url = new URL(href, 'https://canwoo.com');
-      } catch {
-        return whole;
-      }
-      const id = url.searchParams.get('evidence');
+    .replace(/\[([^\]]+)\]\(([^\s)]+)\)/g, (_whole, label, href) => {
+      const id = writingCitationKey(href, origin);
       if (!id) return `${label} (${href})`;
       const citation = byId.get(id);
       if (!citation) {
@@ -56,8 +119,9 @@ export function writingDocx(
   title: string,
   body: string,
   citations: WritingCitation[],
+  origin = citations[0]?.href || 'https://canwoo.com',
 ) {
-  const { text, used, missing } = citedEvidence(body, citations);
+  const { text, used, missing } = citedEvidence(body, citations, origin);
   if (missing.length)
     throw new Error('笔记包含找不到的证据引用，请重新选择出处。');
   const paragraphs = text

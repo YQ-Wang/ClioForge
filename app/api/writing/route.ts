@@ -2,48 +2,8 @@ import { richWritingDocx, writingPrintHTML } from '@/lib/rich-writing-export';
 import { richDocumentString } from '@/lib/rich-document';
 import { z } from 'zod';
 import { authenticate, failure, jsonBody } from '@/lib/server';
-import { WorkbenchStore } from '@/lib/workbench-store';
-import { footnote } from '@/lib/bibliography';
-import { sourcePath } from '@/lib/navigation';
-import { writingDocx, type WritingCitation } from '@/lib/writing-export';
-import type { Evidence, Source, SourceVersion } from '@/lib/types';
-import type { ResearchStore } from '@/lib/store';
-export async function writingSources(
-  store: ResearchStore,
-  projectId: string,
-  origin: string,
-) {
-  const snapshot = await store.readProject(projectId),
-    work = await new WorkbenchStore(store.db, store.owner).workbench(projectId);
-  const citations: WritingCitation[] = (snapshot.evidence as Evidence[]).map(
-    (e) => {
-      const source = (snapshot.sources as Source[]).find(
-          (s) => s.id === e.source_id,
-        ),
-        version = (snapshot.source_versions as SourceVersion[]).find(
-          (v) => v.id === e.version_id,
-        ),
-        entry = work.bibliography.find((b) => b.source_id === e.source_id);
-      return {
-        id: e.id,
-        label: `${source?.title || 'Source'} · ${e.page}`,
-        text: `${entry ? footnote(entry, String(e.page)) : source?.title || 'Source'}, p. ${e.page}. “${e.quote}” (Canwoo version ${version?.revision || '?'}; ${e.version_id})`,
-        href: origin + sourcePath(projectId, e.version_id, e.page),
-        stale: (snapshot.source_versions as SourceVersion[]).some(
-          (v) =>
-            v.source_id === e.source_id &&
-            v.revision > (version?.revision || 0),
-        ),
-      };
-    },
-  );
-  return {
-    citations,
-    evidence: snapshot.evidence,
-    claims: work.claims,
-    links: work.claim_evidence,
-  };
-}
+import { writingDocx, writingPageReferences } from '@/lib/writing-export';
+import { writingSources } from '@/lib/writing-sources';
 export async function GET(request: Request) {
   try {
     const { store } = await authenticate(request),
@@ -72,14 +32,22 @@ export async function POST(request: Request) {
           format: z.enum(['docx', 'print']).default('docx'),
         })
         .parse(await jsonBody(request, 1600000));
+    const origin = new URL(request.url).origin;
     const { citations } = await writingSources(
       store,
       input.project_id,
-      new URL(request.url).origin,
+      origin,
+      writingPageReferences(input.body, input.document, origin),
     );
     if (input.format === 'print')
       return new Response(
-        writingPrintHTML(input.title, input.body, input.document, citations),
+        writingPrintHTML(
+          input.title,
+          input.body,
+          input.document,
+          citations,
+          origin,
+        ),
         {
           headers: {
             'Content-Type': 'text/html; charset=utf-8',
@@ -92,8 +60,8 @@ export async function POST(request: Request) {
     return new Response(
       new Uint8Array(
         input.document
-          ? richWritingDocx(input.title, input.document, citations)
-          : writingDocx(input.title, input.body, citations),
+          ? richWritingDocx(input.title, input.document, citations, origin)
+          : writingDocx(input.title, input.body, citations, origin),
       ),
       {
         headers: {

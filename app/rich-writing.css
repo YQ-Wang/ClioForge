@@ -313,6 +313,23 @@
   margin: 0;
 }
 
+.writing-export-actions {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-inline-size: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.writing-tools > output {
+  display: block;
+  margin-block: 8px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 .writing-print-dialog iframe {
   width: 100%;
   height: min(60dvh, 760px);

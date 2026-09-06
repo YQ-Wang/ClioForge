@@ -2,16 +2,26 @@ import { saveOriginalUpload } from '../original-upload';
 import dataset from '../../fixtures/led-sample.json';
 import { MissionStore } from './missions';
 import { sha256 } from './search';
+import { z } from 'zod';
 export { dataset };
+export const sampleBatchSchema = z.object({
+  offset: z.number().int().min(0).max(dataset.records.length),
+  limit: z.number().int().min(1).max(4),
+});
 export async function importLedSample(
   store: MissionStore,
   files: R2Bucket,
   projectId: string,
+  batch?: z.infer<typeof sampleBatchSchema>,
 ) {
   await store.project(projectId, 'write');
+  const range = batch
+    ? sampleBatchSchema.parse(batch)
+    : { offset: 0, limit: dataset.records.length };
+  const end = Math.min(range.offset + range.limit, dataset.records.length);
   let imported = 0,
     skipped = 0;
-  for (const record of dataset.records) {
+  for (const record of dataset.records.slice(range.offset, end)) {
     const externalId = record.record_number;
     const digest = await sha256(record.text);
     const existing = await store.db
@@ -94,6 +104,8 @@ export async function importLedSample(
   return {
     imported,
     skipped,
+    next: end,
+    total: dataset.records.length,
     source: dataset.source,
     license: dataset.license,
     limitations: dataset.selection,

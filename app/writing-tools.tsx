@@ -51,17 +51,35 @@ export default function WritingTools({
   );
   const cite = (c: WritingCitation) =>
     `[${c.label.replaceAll(']', '）')}](${c.href}&evidence=${c.id})`;
+  const matchingCitations =
+    data?.citations.filter((c) =>
+      `${c.label} ${c.text}`
+        .toLocaleLowerCase()
+        .includes(query.trim().toLocaleLowerCase()),
+    ) || [];
+  async function loadMaterials() {
+    setBusy(true);
+    setError('');
+    try {
+      setData(await api<Materials>(`/api/writing?project_id=${projectId}`));
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : L(
+              '无法加载出处，请重试。',
+              'Could not load citations. Please retry.',
+            ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <details
       className="writing-tools"
       onToggle={(e) => {
-        if (e.currentTarget.open && !data) {
-          setBusy(true);
-          void api<Materials>(`/api/writing?project_id=${projectId}`)
-            .then(setData)
-            .catch((e) => setError(e.message))
-            .finally(() => setBusy(false));
-        }
+        if (e.currentTarget.open && !data && !busy) void loadMaterials();
       }}
     >
       <summary>
@@ -76,75 +94,85 @@ export default function WritingTools({
           'Insert evidence you have saved. Export converts its links to Word footnotes. Footnotes are static text, not live Zotero citations.',
         )}
       </p>
-      <Button
-        type="button"
-        variant="outline"
-        disabled={busy}
-        onClick={async () => {
-          setBusy(true);
-          setError('');
-          try {
-            const r = await fetch('/api/writing', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                project_id: projectId,
-                title,
-                body,
-                document: richDocument,
-              }),
-            });
-            if (!r.ok)
-              throw new Error(((await r.json()) as { error: string }).error);
-            const url = URL.createObjectURL(await r.blob()),
-              a = document.createElement('a');
-            a.href = url;
-            a.download = (title || 'Canwoo') + '.docx';
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-          } catch (e) {
-            setError(e instanceof Error ? e.message : 'Export failed');
-          } finally {
-            setBusy(false);
-          }
-        }}
+      {busy && (
+        <output>
+          {L('正在准备引用与导出，请稍候…', 'Preparing citations and export…')}
+        </output>
+      )}
+      <fieldset
+        className="writing-export-actions"
+        aria-label={L('导出格式', 'Export format')}
       >
-        {L('导出 Word（含脚注）', 'Export Word with footnotes')}
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        disabled={busy}
-        onClick={async () => {
-          setBusy(true);
-          setError('');
-          try {
-            const response = await fetch('/api/writing', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                project_id: projectId,
-                title,
-                body,
-                document: richDocument,
-                format: 'print',
-              }),
-            });
-            if (!response.ok)
-              throw new Error(
-                ((await response.json()) as { error: string }).error,
-              );
-            setPrintReady(false);
-            setPreview(URL.createObjectURL(await response.blob()));
-          } catch (e) {
-            setError(e instanceof Error ? e.message : 'Print failed');
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        {L('预览 / 保存 PDF', 'Preview / save PDF')}
-      </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setError('');
+            try {
+              const r = await fetch('/api/writing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  project_id: projectId,
+                  title,
+                  body,
+                  document: richDocument,
+                }),
+              });
+              if (!r.ok)
+                throw new Error(((await r.json()) as { error: string }).error);
+              const url = URL.createObjectURL(await r.blob()),
+                a = document.createElement('a');
+              a.href = url;
+              a.download = (title || 'Canwoo') + '.docx';
+              a.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Export failed');
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {L('导出 Word（含脚注）', 'Export Word with footnotes')}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setError('');
+            try {
+              const response = await fetch('/api/writing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  project_id: projectId,
+                  title,
+                  body,
+                  document: richDocument,
+                  format: 'print',
+                }),
+              });
+              if (!response.ok)
+                throw new Error(
+                  ((await response.json()) as { error: string }).error,
+                );
+              setPrintReady(false);
+              setPreview(URL.createObjectURL(await response.blob()));
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Print failed');
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {L('预览 / 保存 PDF', 'Preview / save PDF')}
+        </Button>
+      </fieldset>
       <p>
         {L(
           'Word 保留文字格式、表格、图画和脚注，并将常用公式转换为可编辑公式。打印可保存 PDF；可再次编辑的画布请保留完整文稿或项目备份。',
@@ -201,6 +229,19 @@ export default function WritingTools({
         </DialogContent>
       </Dialog>
       {error && <p role="alert">{error}</p>}
+      {onInsert && (data || error) && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={() => void loadMaterials()}
+        >
+          {data
+            ? L('刷新可引用证据', 'Refresh available evidence')
+            : L('重新加载出处', 'Retry loading citations')}
+        </Button>
+      )}
       {data && onInsert && (
         <>
           <Input
@@ -213,35 +254,37 @@ export default function WritingTools({
             onChange={(e) => setQuery(e.target.value)}
           />
           <div className="writing-evidence-list">
-            {data.citations
-              .filter((c) =>
-                `${c.label} ${c.text}`
-                  .toLocaleLowerCase()
-                  .includes(query.toLocaleLowerCase()),
-              )
-              .map((c) => (
-                <article key={c.id}>
-                  <strong>{c.label}</strong>
-                  <p>{data.evidence.find((e) => e.id === c.id)?.quote}</p>
-                  {c.stale && (
-                    <small>
-                      {L(
-                        '材料有新版本，请重新核对',
-                        'Source updated; check this evidence',
-                      )}
-                    </small>
-                  )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => onInsert(cite(c))}
-                  >
-                    {L('插入出处', 'Insert citation')}
-                  </Button>
-                  <EvidenceDiscussion projectId={projectId} targetId={c.id} />
-                </article>
-              ))}
+            {matchingCitations.map((c) => (
+              <article key={c.id}>
+                <strong>{c.label}</strong>
+                <p>{data.evidence.find((e) => e.id === c.id)?.quote}</p>
+                {c.stale && (
+                  <small>
+                    {L(
+                      '材料有新版本，请重新核对',
+                      'Source updated; check this evidence',
+                    )}
+                  </small>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onInsert(cite(c))}
+                >
+                  {L('插入出处', 'Insert citation')}
+                </Button>
+                <EvidenceDiscussion projectId={projectId} targetId={c.id} />
+              </article>
+            ))}
           </div>
+          {!!data.citations.length && !matchingCitations.length && (
+            <output>
+              {L(
+                '没有匹配的证据，请换一个关键词或清空搜索。',
+                'No matching evidence. Try another keyword or clear the search.',
+              )}
+            </output>
+          )}
           {!data.citations.length && (
             <p>
               {L(

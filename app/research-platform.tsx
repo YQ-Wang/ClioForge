@@ -1,4 +1,5 @@
 'use client';
+import { importSampleBatches, type SampleBatch } from '@/lib/sample-import';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
@@ -457,10 +458,20 @@ export default function ResearchPlatform({
                       disabled={!canWrite || busy}
                       onClick={() =>
                         void action(async () => {
-                          const result = (await mutate('import_dataset')) as {
-                            imported: number;
-                            skipped: number;
-                          };
+                          const result = await importSampleBatches(
+                            async (value) =>
+                              (await mutate(
+                                'import_dataset',
+                                value,
+                              )) as SampleBatch,
+                            (completed, total) =>
+                              setMessage(
+                                L(
+                                  `正在准备公开史料：${completed} / ${total}。中断后可重新点击，已保存的条目会跳过。`,
+                                  `Preparing public sources: ${completed} / ${total}. If interrupted, start again; saved records are skipped.`,
+                                ),
+                              ),
+                          );
                           await onRefresh();
                           setMessage(
                             L(
@@ -2827,6 +2838,7 @@ function TaskDetail({
         models={models}
         sources={sources}
         versions={versions}
+        onOpenSource={onOpenSource}
       />
     </aside>
   );
