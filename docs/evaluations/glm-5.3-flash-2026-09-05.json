@@ -1,0 +1,279 @@
+{
+  "model": "z-ai/glm-5.3-flash",
+  "created_at": "2026-09-05T09:07:57.106Z",
+  "dataset": {
+    "source": "https://storage.googleapis.com/ithaca-resources/models/led.json",
+    "license": "CC-BY-SA-4.0",
+    "record": "HD010014"
+  },
+  "limits": {
+    "requests": 9,
+    "max_tokens": 4096,
+    "max_input_usd_per_million": 0.15,
+    "max_output_usd_per_million": 0.5
+  },
+  "note": "Small software suitability check, not a historical research capability benchmark. Reasoning content is excluded. No automatic retries.",
+  "results": [
+    {
+      "case": "extract",
+      "effort": "low",
+      "status": 200,
+      "model": "z-ai/glm-5.3-flash",
+      "provider": "Z.AI",
+      "finish_reason": "stop",
+      "latency_ms": 1513,
+      "input_tokens": 252,
+      "output_tokens": 31,
+      "reasoning_tokens": 0,
+      "cost_usd": 0.00002281,
+      "checks": {
+        "id": true,
+        "exact_quote": true,
+        "unknown_dates": true
+      },
+      "passed": true,
+      "answer": {
+        "record_id": "HD010014",
+        "quote": "Dis Manibus",
+        "date_min": null,
+        "date_max": null
+      }
+    },
+    {
+      "case": "evidence_limit",
+      "effort": "low",
+      "status": 200,
+      "model": "z-ai/glm-5.3-flash",
+      "provider": "Z.AI",
+      "finish_reason": "stop",
+      "latency_ms": 4448,
+      "input_tokens": 297,
+      "output_tokens": 243,
+      "reasoning_tokens": 0,
+      "cost_usd": 0.000079185,
+      "checks": {
+        "reject_population": true,
+        "reject_date": true,
+        "exact_quote": true,
+        "chinese": true,
+        "alternatives": true
+      },
+      "passed": true,
+      "answer": {
+        "population_claim_supported": false,
+        "exact_date_supported": false,
+        "quote": "Dis Manibus Q Pompeio Hercliano qui vix nn IIII mensib IIII diebus XI",
+        "explanation_zh": "该铭文仅记载一名儿童（Q. Pompeius Herclianus）活了四年零四个月零十一天后去世。单一案例无法证明所有罗马儿童都在五岁前死亡，这属于以偏概全。此外，铭文完全没有日期信息，来源中date_min和date_max均为空，因此无法确定其刻于公元150年。",
+        "alternative_explanations": [
+          "单个儿童墓志铭只是一例死亡记录，幸存至五岁以上的罗马儿童也会出现在其他铭文中，因此不能推广为全体儿童的普遍情况。",
+          "该铭文未附任何年代信息（如执政官姓名或纪年），其刻立年代可能早于或晚于公元150年，无法精确断代。",
+          "铭文中的缩写（如nn、mensib）若解读有误，年龄记载也可能不精确，但即便正确也只是一个孤例。"
+        ]
+      }
+    },
+    {
+      "case": "source_boundary",
+      "effort": "low",
+      "status": 200,
+      "model": "z-ai/glm-5.3-flash",
+      "provider": "Z.AI",
+      "finish_reason": "stop",
+      "latency_ms": 2047,
+      "input_tokens": 210,
+      "output_tokens": 83,
+      "reasoning_tokens": 0,
+      "cost_usd": 0.00003266,
+      "checks": {
+        "no_false_independence": true,
+        "exact_parallel": true,
+        "provenance_gaps": true
+      },
+      "passed": true,
+      "answer": {
+        "independence_established": false,
+        "parallel_quote": "Dis Manibus Q Pompeio Hercliano",
+        "missing_metadata": [
+          "provenance/origin of each transcription (where and when taken)",
+          "transcriber identity and editorial method",
+          "underlying physical source (inscription stone, date, findspot)"
+        ]
+      }
+    },
+    {
+      "case": "extract",
+      "effort": "high",
+      "status": 200,
+      "model": "z-ai/glm-5.3-flash",
+      "provider": "Z.AI",
+      "finish_reason": "stop",
+      "latency_ms": 1397,
+      "input_tokens": 252,
+      "output_tokens": 38,
+      "reasoning_tokens": 7,
+      "cost_usd": 0.0000284,
+      "checks": {
+        "id": true,
+        "exact_quote": true,
+        "unknown_dates": true
+      },
+      "passed": true,
+      "answer": {
+        "record_id": "HD010014",
+        "quote": "Dis Manibus",
+        "date_min": null,
+        "date_max": null
+      }
+    },
+    {
+      "case": "evidence_limit",
+      "effort": "high",
+      "status": 200,
+      "model": "z-ai/glm-5.3-flash",
+      "provider": "Z.AI",
+      "finish_reason": "stop",
+      "latency_ms": 6125,
+      "input_tokens": 297,
+      "output_tokens": 373,
+      "reasoning_tokens": 83,
+      "cost_usd": 0.000100165,
+      "checks": {
+        "reject_population": true,
+        "reject_date": true,
+        "exact_quote": true,
+        "chinese": true,
+        "alternatives": true
+      },
+      "passed": true,
+      "answer": {
+        "population_claim_supported": false,
+        "exact_date_supported": false,
+        "quote": "Dis Manibus Q Pompeio Hercliano qui vix nn IIII mensib IIII diebus XI",
+        "explanation_zh": "该铭文仅记载一名叫Q. Pompeius Herclianus的孩子活了四年四个月十一天（缩写未展开），只能说明这一个体在五岁前去世，不能推广为『所有罗马儿童都在五岁前死亡』。同时，源数据中date_min和date_max均为null，没有任何年代信息，因此『精确断代为公元150年』也没有依据。",
+        "alternative_explanations": [
+          "以个案推断总体：单条墓志只反映一名儿童的死亡年龄，属于幸存样本，无法证明全体罗马儿童的死亡率；可能有大量活过五岁的儿童未留下铭文或未被记录。",
+          "年代推断无据：源记录未提供任何日期字段或可断代的内部证据（如执政官年名、皇帝名号），公元150年之说可能来自外部假设或与类似铭文的类比，均非本源所载。",
+          "年龄读数也可能有误：铭文缩写（nn、mensib等）若释读或转写有误，连该儿童的具体存活时长也无法确证。"
+        ]
+      }
+    },
+    {
+      "case": "source_boundary",
+      "effort": "high",
+      "status": 200,
+      "model": "z-ai/glm-5.3-flash",
+      "provider": "Z.AI",
+      "finish_reason": "stop",
+      "latency_ms": 7685,
+      "input_tokens": 210,
+      "output_tokens": 444,
+      "reasoning_tokens": 347,
+      "cost_usd": 0.00012291,
+      "checks": {
+        "no_false_independence": true,
+        "exact_parallel": true,
+        "provenance_gaps": true
+      },
+      "passed": true,
+      "answer": {
+        "independence_established": false,
+        "parallel_quote": "Dis Manibus Q Pompeio Hercliano",
+        "missing_metadata": [
+          "findspot or archaeological context",
+          "support/object type and material",
+          "repository, inventory number, or physical location",
+          "date, agent, and method of transcription",
+          "link to photograph, squeeze, autopsied original, or prior edition"
+        ]
+      }
+    },
+    {
+      "case": "extract",
+      "effort": "max",
+      "status": 200,
+      "model": "z-ai/glm-5.3-flash",
+      "provider": "Z.AI",
+      "finish_reason": "stop",
+      "latency_ms": 2407,
+      "input_tokens": 252,
+      "output_tokens": 147,
+      "reasoning_tokens": 116,
+      "cost_usd": 0.00005181,
+      "checks": {
+        "id": true,
+        "exact_quote": true,
+        "unknown_dates": true
+      },
+      "passed": true,
+      "answer": {
+        "record_id": "HD010014",
+        "quote": "Dis Manibus",
+        "date_min": null,
+        "date_max": null
+      }
+    },
+    {
+      "case": "evidence_limit",
+      "effort": "max",
+      "status": 200,
+      "model": "z-ai/glm-5.3-flash",
+      "provider": "Z.AI",
+      "finish_reason": "stop",
+      "latency_ms": 10969,
+      "input_tokens": 297,
+      "output_tokens": 797,
+      "reasoning_tokens": 501,
+      "cost_usd": 0.000206165,
+      "checks": {
+        "reject_population": true,
+        "reject_date": true,
+        "exact_quote": true,
+        "chinese": true,
+        "alternatives": true
+      },
+      "passed": true,
+      "answer": {
+        "population_claim_supported": false,
+        "exact_date_supported": false,
+        "quote": "Dis Manibus Q Pompeio Hercliano qui vix nn IIII mensib IIII diebus XI",
+        "explanation_zh": "该铭文仅记载了一名儿童（Q. Pompeius Herclianus）的死亡及所活年月日，属于个案记录。一则墓志无法证明“所有罗马儿童都在五岁前死亡”这一总体性断言。此外，资料中 date_min 与 date_max 均为空（null），没有任何年代信息，因此铭文“恰好定年为公元150年”的说法也没有依据。",
+        "alternative_explanations": [
+          "单条墓志是有偏样本：立碑者多为有能力置办纪念碑的家庭，被纪念的儿童不能代表全体罗马儿童，个别早夭记录推不出全称结论。",
+          "年龄记载中的缩写与数字（如 nn IIII）可能被误读、转录有误，或属于惯用/约略写法，未必是精确年龄。",
+          "AD 150 的定年只能来自外部依据（如字体风格、人名形式、Dis Manibus 公式等），且这类依据通常只能给出大致年代范围；本记录未含任何年代字段，无法支持'恰好公元150年'的精确定年。"
+        ]
+      }
+    },
+    {
+      "case": "source_boundary",
+      "effort": "max",
+      "status": 200,
+      "model": "z-ai/glm-5.3-flash",
+      "provider": "Z.AI",
+      "finish_reason": "stop",
+      "latency_ms": 10570,
+      "input_tokens": 210,
+      "output_tokens": 783,
+      "reasoning_tokens": 654,
+      "cost_usd": 0.00019998,
+      "checks": {
+        "no_false_independence": true,
+        "exact_parallel": true,
+        "provenance_gaps": true
+      },
+      "passed": true,
+      "answer": {
+        "independence_established": false,
+        "parallel_quote": "Dis Manibus Q Pompeio Hercliano",
+        "missing_metadata": [
+          "findspot or archaeological context of the inscribed support",
+          "date and method of each transcription (autopsy vs. derived copy)",
+          "editorial chain of custody or shared source linking the two transcriptions",
+          "citation of prior edition or corpus number (e.g., CIL) for either text",
+          "physical support description and current location",
+          "photographic, squeeze, or facsimile documentation"
+        ]
+      }
+    }
+  ],
+  "recorded_or_conservative_cost_usd": 0.000844085
+}

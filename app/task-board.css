@@ -1,0 +1,99 @@
+.board-help,
+.board-feedback {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted-foreground);
+  margin: 10px 0 14px;
+}
+.board-feedback {
+  display: block;
+  background: var(--secondary);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--foreground);
+}
+.board-feedback.is-error {
+  color: var(--destructive);
+}
+.board-card-wrap {
+  position: relative;
+  min-width: 0;
+}
+.board-card-wrap.is-dragging {
+  opacity: 0.35;
+}
+.board-card-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  right: 7px;
+  pointer-events: none;
+}
+.board-card-controls > * {
+  pointer-events: auto;
+}
+.board-drag-handle {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--muted-foreground);
+  cursor: grab !important;
+  touch-action: none;
+}
+.board-drag-handle:hover {
+  background: var(--accent);
+  color: var(--primary);
+}
+.board-drag-handle:active {
+  cursor: grabbing !important;
+}
+.board-card-wrap:has(.board-card-controls) .research-task-card {
+  padding-top: 40px;
+}
+.board-card-wrap .research-task-card {
+  width: 100%;
+}
+.task-board .research-kanban-column > div {
+  min-height: 130px;
+}
+.task-board .research-kanban-column {
+  align-self: stretch;
+}
+.task-board .research-kanban-column.is-drop-target {
+  background: var(--accent);
+  outline: 2px dashed var(--ring);
+  outline-offset: -2px;
+}
+.board-drag-preview {
+  max-width: 270px;
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--ring);
+  box-shadow: var(--elevation-2);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.board-drag-handle:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .board-drag-handle {
+    width: 36px;
+    height: 36px;
+  }
+  .board-card-wrap:has(.board-card-controls) .research-task-card {
+    padding-top: 48px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-card-wrap {
+    transition: none !important;
+  }
+}

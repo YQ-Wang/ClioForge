@@ -1,0 +1,1 @@
+CREATE TABLE mission_boards(mission_id TEXT PRIMARY KEY REFERENCES missions(id), revision INTEGER NOT NULL DEFAULT 0, body TEXT NOT NULL DEFAULT '{"order":[],"stages":{}}' CHECK(json_valid(body)), mutation_token TEXT NOT NULL DEFAULT '');

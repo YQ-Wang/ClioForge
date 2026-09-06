@@ -1,0 +1,163 @@
+.research-attention {
+  margin-bottom: 24px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  container: attention / inline-size;
+}
+.attention-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.attention-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.attention-heading h2 svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.attention-heading p,
+.attention-more {
+  margin-top: 6px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.attention-heading > a {
+  gap: 8px;
+}
+.attention-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.attention-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--foreground);
+  text-decoration: none;
+  transition:
+    background 140ms,
+    border-color 140ms;
+}
+.attention-item:hover,
+.attention-item:focus-visible {
+  background: var(--accent);
+  border-color: var(--ring);
+}
+.attention-item:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.attention-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--secondary);
+  color: var(--primary);
+}
+.attention-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.attention-copy strong {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.attention-project,
+.attention-context {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.attention-project {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attention-context {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.attention-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--primary);
+  font-weight: 500;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.attention-action svg {
+  flex-shrink: 0;
+}
+.attention-item:hover .attention-action {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.attention-more {
+  margin: 12px 0 0;
+}
+.attention-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+@container attention (max-width: 520px) {
+  .attention-item {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+  .attention-icon {
+    width: 32px;
+    height: 32px;
+    align-self: start;
+  }
+  .attention-action {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+  .attention-heading > a {
+    min-height: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .attention-item {
+    transition: none;
+  }
+}

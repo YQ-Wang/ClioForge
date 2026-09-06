@@ -1,0 +1,47 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "canwoo",
+  "account_id": "bf045b2b8a84caff86b86f4952486119",
+  "main": "vinext/server/fetch-handler",
+  "compatibility_date": "2026-09-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "canwoo",
+      "database_id": "689a6ad8-2a97-4640-a780-b2378ff9d394",
+      "migrations_dir": "drizzle",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "canwoo-originals",
+    },
+  ],
+  "observability": {
+    "enabled": true,
+    "redact_query_string": true,
+  },
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "canwoo.com", "custom_domain": true }],
+  "vars": {
+    "BETTER_AUTH_URL": "https://canwoo.com",
+    "EMAIL_FROM": "noreply@canwoo.com",
+  },
+  "send_email": [
+    { "name": "EMAIL", "allowed_sender_addresses": ["noreply@canwoo.com"] },
+  ],
+  "limits": {
+    "cpu_ms": 30000,
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "JOB_QUEUE",
+        "queue": "canwoo-research",
+      },
+    ],
+  },
+}

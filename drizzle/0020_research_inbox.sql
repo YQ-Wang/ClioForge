@@ -1,0 +1,2 @@
+CREATE TABLE attention_receipts(owner_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,item_key TEXT NOT NULL,fingerprint TEXT NOT NULL,seen_at TEXT NOT NULL,PRIMARY KEY(owner_id,item_key));
+CREATE UNIQUE INDEX task_conversation_active ON mission_tasks(json_extract(input,'$.parameters.conversation_root_id')) WHERE executor='model' AND json_extract(input,'$.parameters.conversation_root_id') IS NOT NULL AND status IN ('blocked','ready','queued','running');

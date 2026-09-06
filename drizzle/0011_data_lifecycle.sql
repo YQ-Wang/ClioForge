@@ -1,0 +1,17 @@
+CREATE TABLE project_lifecycle(project_id TEXT PRIMARY KEY REFERENCES projects(id), state TEXT NOT NULL CHECK(state IN ('restoring','deleting')), created_at TEXT NOT NULL);
+CREATE TABLE project_restores(id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES user(id), project_id TEXT NOT NULL UNIQUE REFERENCES projects(id), digest TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('uploading','records','complete','cancelled')), cursor INTEGER NOT NULL DEFAULT 0, total INTEGER NOT NULL, plan_path TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE UNIQUE INDEX one_active_restore ON project_restores(owner_id) WHERE status IN ('uploading','records');
+CREATE TABLE restore_files(restore_id TEXT NOT NULL REFERENCES project_restores(id), source_id TEXT NOT NULL, path TEXT NOT NULL, bytes INTEGER NOT NULL, sha256 TEXT NOT NULL, media_type TEXT NOT NULL, uploaded INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(restore_id,source_id));
+CREATE TABLE restore_people(project_id TEXT NOT NULL REFERENCES projects(id), user_id TEXT NOT NULL REFERENCES user(id), original_id TEXT NOT NULL, PRIMARY KEY(project_id,user_id));
+CREATE TABLE account_deletions(owner_id TEXT PRIMARY KEY REFERENCES user(id), status TEXT NOT NULL CHECK(status IN ('pending','complete')), created_at TEXT NOT NULL, finished_at TEXT, error TEXT);
+DROP TRIGGER immutable_version_delete;
+CREATE TRIGGER immutable_version_delete BEFORE DELETE ON source_versions WHEN NOT EXISTS(SELECT 1 FROM project_lifecycle WHERE project_id=old.project_id AND state='deleting') BEGIN SELECT RAISE(ABORT,'Versions are immutable'); END;
+DROP TRIGGER immutable_note_delete;
+CREATE TRIGGER immutable_note_delete BEFORE DELETE ON notes WHEN NOT EXISTS(SELECT 1 FROM project_lifecycle WHERE project_id=old.project_id AND state='deleting') BEGIN SELECT RAISE(ABORT,'Notes are immutable'); END;
+DROP TRIGGER immutable_artifact_delete;
+CREATE TRIGGER immutable_artifact_delete BEFORE DELETE ON artifacts WHEN NOT EXISTS(SELECT 1 FROM project_lifecycle WHERE project_id=old.project_id AND state='deleting') BEGIN SELECT RAISE(ABORT,'Artifacts are immutable'); END;
+CREATE TRIGGER deleted_account_project BEFORE INSERT ON projects WHEN EXISTS(SELECT 1 FROM account_deletions WHERE owner_id=new.owner_id) BEGIN SELECT RAISE(ABORT,'Account is closed'); END;
+CREATE TABLE artifact_lineage(artifact_id TEXT NOT NULL REFERENCES artifacts(id), original_artifact_id TEXT NOT NULL, relation TEXT NOT NULL, original_sha256 TEXT NOT NULL, PRIMARY KEY(artifact_id,original_artifact_id,relation));
+CREATE TABLE artifact_cleanup_permits(artifact_id TEXT PRIMARY KEY);
+DROP TRIGGER immutable_artifact_update;
+CREATE TRIGGER immutable_artifact_update BEFORE UPDATE ON artifacts WHEN NOT EXISTS(SELECT 1 FROM artifact_cleanup_permits WHERE artifact_id=old.id) BEGIN SELECT RAISE(ABORT,'Artifacts are immutable'); END;

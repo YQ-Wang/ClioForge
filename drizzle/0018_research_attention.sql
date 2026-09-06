@@ -1,0 +1,2 @@
+CREATE TABLE discussion_mentions(comment_id TEXT NOT NULL REFERENCES project_comments(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,PRIMARY KEY(comment_id,user_id));
+CREATE TABLE attention_preferences(owner_id TEXT PRIMARY KEY REFERENCES user(id) ON DELETE CASCADE,tasks INTEGER NOT NULL DEFAULT 1,mentions INTEGER NOT NULL DEFAULT 1);

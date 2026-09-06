@@ -1,0 +1,171 @@
+/* Native color-scheme resolves system mode before hydration, avoiding a flash
+   of a light research surface. Original scans and PDFs retain their colors. */
+:root {
+  --radius: 0.75rem;
+  color-scheme: light;
+  --primary: light-dark(#2563eb, #a6c6ff);
+  --ring: light-dark(#7da5f4, #a6c6ff);
+  --sidebar: light-dark(#f8f9fb, #101214);
+  --sidebar-accent: light-dark(#eaf0fc, #24324c);
+  --muted-foreground: light-dark(#626b78, #aeb6c3);
+  --border: light-dark(#e4e7ec, #30353e);
+  --md-sys-color-primary: light-dark(#2563eb, #a6c6ff);
+  --md-sys-color-on-primary: light-dark(#fff, #132b50);
+  --md-sys-color-primary-container: light-dark(#edf2fc, #24324c);
+  --md-sys-color-on-primary-container: light-dark(#234f9d, #d4e3ff);
+  --md-sys-color-surface: light-dark(#fff, #191c20);
+  --md-sys-color-surface-container-low: light-dark(#f8f9fb, #101214);
+  --md-sys-color-surface-container: light-dark(#f4f5f7, #22262c);
+  --md-sys-color-surface-container-high: light-dark(#eceef2, #292e36);
+  --md-sys-color-on-surface: light-dark(#20242b, #edf0f5);
+  --md-sys-color-on-surface-variant: light-dark(#626b78, #aeb6c3);
+  --md-sys-color-outline: light-dark(#747b86, #8897aa);
+  --md-sys-color-outline-variant: light-dark(#e4e7ec, #30353e);
+  --popover: var(--card);
+  --accent: light-dark(#edf2fc, #24324c);
+  --accent-foreground: light-dark(#0842a0, #c5dbff);
+  --destructive: light-dark(#b3261e, #ffb4ab);
+  --input: light-dark(#9aa2af, #64758c);
+  --sidebar-foreground: light-dark(#444746, #c1cbd9);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent-foreground: light-dark(#001d35, #d3e3fd);
+  --chart-1: light-dark(#2563eb, #a6c6ff);
+  --chart-2: light-dark(#146c2e, #8bd5a5);
+  --chart-3: light-dark(#7627bb, #d2b2ff);
+  --chart-4: light-dark(#b06000, #f6cb8a);
+  --chart-5: light-dark(#b3261e, #ffb4ab);
+  --elevation-1:
+    0 1px 3px light-dark(#3c404314, #0005),
+    0 1px 2px light-dark(#3c40431a, #0005);
+  --elevation-2:
+    0 3px 10px light-dark(#3c40431a, #0006),
+    0 1px 3px light-dark(#3c40431a, #0006);
+}
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-theme='system'] {
+    color-scheme: dark;
+  }
+}
+.theme-toggle {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  background: var(--card);
+}
+.theme-toggle:hover {
+  background: var(--accent);
+}
+.appearance-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .public-header {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .appearance-actions {
+    margin-left: auto;
+  }
+  .workspace-bar-actions {
+    gap: 6px;
+  }
+}
+@media print {
+  :root,
+  html[data-theme] {
+    color-scheme: light;
+  }
+  .theme-toggle {
+    display: none;
+  }
+}
+.method-report-panel {
+  margin: 20px 0;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+}
+.method-report-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.method-report-panel h3 {
+  font-size: 18px;
+  font-weight: 550;
+}
+.method-report-panel p {
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 12px 0;
+  color: var(--muted-foreground);
+}
+.method-report-panel details {
+  font-size: 13px;
+  margin: 16px 0;
+}
+.report-page {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  padding: 10px 0;
+  color: var(--primary);
+}
+.followup-review-form {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.followup-review-form label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+.followup-review-form p,
+.followup-review-form small {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.8;
+}
+.followup-review-form :is(select, input[type='number']) {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  min-width: 0;
+}
+.followup-pages {
+  max-height: 240px;
+  overflow: auto;
+  margin-top: 12px;
+}
+.followup-pages label {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.followup-pages small {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.followup-pages input {
+  margin-top: 4px;
+}

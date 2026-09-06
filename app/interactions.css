@@ -1,0 +1,173 @@
+/* Native disclosures retain keyboard behavior and expose a consistent visual affordance. */
+details > summary {
+  position: relative;
+  display: block;
+  list-style: none;
+  min-height: 40px;
+  padding: 9px 36px 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details > summary::marker {
+  content: '';
+}
+details > summary::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 17px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 140ms;
+  pointer-events: none;
+}
+details[open] > summary::after {
+  transform: rotate(45deg);
+  top: 15px;
+}
+details > summary:hover {
+  background: var(--muted);
+}
+details > summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+/* Reader padding used to crowd the trailing indicator for long labels. */
+.reading-original-text > summary {
+  padding-right: 38px;
+}
+.research-platform .mission-brief > summary,
+.research-platform .research-review-context > summary {
+  color: var(--foreground);
+}
+.overview-section header button {
+  min-height: 36px;
+  padding-inline: 8px;
+  border-radius: 6px;
+}
+.overview-section header button:hover {
+  background: var(--accent);
+}
+.overview-source,
+.research-prompts > button {
+  border-radius: 8px;
+  padding-inline: 10px;
+}
+.research-prompts > button:hover {
+  background: var(--accent);
+}
+.overview-source > svg,
+.research-prompts > button > svg,
+.overview-counts button > svg:last-child {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.project-open-label,
+.note-open-action,
+.review-open-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.project-open-label {
+  margin-left: auto;
+}
+.project-list .project-card-top {
+  grid-column: 1;
+  grid-row: 1;
+}
+.project-list .project-open-label {
+  display: none;
+}
+.project-list .research-project-card::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 1.6px solid var(--primary);
+  border-top: 1.6px solid var(--primary);
+  transform: rotate(45deg);
+  grid-column: 4;
+}
+.project-list .research-project-card {
+  grid-template-columns: 46px minmax(0, 1fr) auto 12px;
+}
+.note-open-action {
+  margin-top: 12px;
+}
+.note-open:hover .note-open-action,
+.research-project-card:hover .project-open-label {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.note-open,
+.review-page-list > button {
+  border-radius: 8px;
+}
+.review-page-list > button > span:first-child {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.review-open-action {
+  flex-shrink: 0;
+}
+.review-page-list > button:hover .review-open-action {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.review-page-list > button > .review-row-status {
+  color: var(--muted-foreground);
+}
+.review-reason-hint {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.note-open:focus-visible,
+.overview-source:focus-visible,
+.research-prompts > button:focus-visible,
+.overview-counts button:focus-visible,
+.research-project-card:focus-visible,
+.review-page-list > button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .project-list .research-project-card {
+    grid-template-columns: 38px minmax(0, 1fr) 12px;
+    gap: 12px;
+  }
+  .project-list .research-project-card::after {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .project-list .project-card-meta {
+    grid-column: 2;
+    align-items: flex-start;
+  }
+  .review-page-list > button {
+    flex-wrap: wrap;
+  }
+  .review-page-list > button > span:first-child {
+    flex-basis: 100%;
+  }
+  .review-open-action {
+    margin-left: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  details > summary::after {
+    transition: none;
+  }
+}

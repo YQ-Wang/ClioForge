@@ -1,0 +1,2 @@
+CREATE TABLE direct_run_costs(run_id TEXT PRIMARY KEY REFERENCES research_runs(id), project_id TEXT NOT NULL REFERENCES projects(id), owner_id TEXT NOT NULL REFERENCES user(id), phase TEXT NOT NULL CHECK(phase IN ('reserved','calling','settled','uncertain')), reserved_units INTEGER NOT NULL CHECK(reserved_units>=0), input_rate REAL NOT NULL CHECK(input_rate>0), output_rate REAL NOT NULL CHECK(output_rate>0), max_output INTEGER NOT NULL, created_at TEXT NOT NULL);
+CREATE INDEX direct_run_costs_owner ON direct_run_costs(owner_id,created_at);

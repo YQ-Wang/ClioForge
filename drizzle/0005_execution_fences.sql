@@ -1,0 +1,2 @@
+DROP TRIGGER IF EXISTS invalidate_task_source;
+CREATE TRIGGER invalidate_task_source AFTER INSERT ON source_versions BEGIN UPDATE mission_tasks SET status='stale',lease_hash=NULL,lease_until=NULL,revision=revision+1,updated_at=NEW.created_at WHERE id IN (SELECT ti.task_id FROM task_inputs ti JOIN source_versions v ON v.id=ti.version_id WHERE v.source_id=NEW.source_id AND v.id<>NEW.id) AND status IN ('accepted','succeeded','review','ready','blocked','queued','running'); END;

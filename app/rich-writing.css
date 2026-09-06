@@ -1,0 +1,324 @@
+.rich-writing {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--card);
+}
+.writing-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+}
+.writing-toolbar select,
+.writing-insert-panel select {
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px;
+  font-size: 12px;
+  max-width: 145px;
+}
+.rich-writing .tiptap {
+  padding: 24px 32px;
+  min-height: 320px;
+  outline: none;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+.rich-writing .tiptap:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+.rich-writing .tiptap p {
+  margin: 0 0 0.8em;
+}
+.rich-writing .tiptap h1 {
+  font-size: 1.9em;
+  font-weight: 650;
+}
+.rich-writing .tiptap h2 {
+  font-size: 1.5em;
+  font-weight: 650;
+}
+.rich-writing .tiptap h3 {
+  font-size: 1.2em;
+  font-weight: 650;
+}
+.rich-writing .tiptap ul {
+  list-style: disc;
+  padding-left: 1.6em;
+}
+.rich-writing .tiptap ol {
+  list-style: decimal;
+  padding-left: 1.6em;
+}
+.rich-writing blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 18px;
+  color: var(--muted-foreground);
+}
+.rich-writing pre {
+  white-space: pre-wrap;
+  background: var(--background);
+  padding: 16px;
+  border-radius: 8px;
+}
+.rich-writing a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+.rich-writing .tableWrapper {
+  overflow: auto;
+  margin: 16px 0;
+}
+.rich-writing table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+.rich-writing td,
+.rich-writing th {
+  border: 1px solid var(--border);
+  min-width: 80px;
+  padding: 8px;
+  position: relative;
+  vertical-align: top;
+}
+.rich-writing th {
+  background: var(--background);
+  font-weight: 600;
+}
+.rich-writing .selectedCell:after {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  content: '';
+  inset: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.rich-writing .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary);
+}
+.rich-writing .resize-cursor {
+  cursor: col-resize;
+}
+.writing-insert-panel {
+  padding: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  flex-wrap: wrap;
+  background: var(--background);
+}
+.writing-insert-panel label {
+  flex: 1;
+  min-width: 220px;
+  font-size: 12px;
+}
+.writing-drawing {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 20px 0;
+  text-align: center;
+}
+.writing-drawing img {
+  max-height: 480px;
+  max-width: 100%;
+  margin: auto;
+}
+.writing-drawing.selected {
+  outline: 2px solid var(--primary);
+}
+.writing-drawing p {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.writing-status {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.writing-canvas-dialog {
+  max-width: min(1200px, 96vw) !important;
+  width: 96vw !important;
+}
+.writing-canvas {
+  height: min(60vh, 620px);
+  min-height: 300px;
+  color: #1b1b1f;
+  color-scheme: light;
+}
+.writing-canvas .excalidraw {
+  --color-primary: #0b57d0;
+}
+.rich-writing .tiptap-mathematics-render {
+  cursor: pointer;
+}
+.rich-writing .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 6px;
+}
+@media (max-width: 600px) {
+  .rich-writing .tiptap {
+    padding: 18px 16px;
+  }
+  .writing-status {
+    align-items: start;
+    flex-direction: column;
+  }
+  .writing-toolbar select {
+    max-width: 110px;
+  }
+}
+.writing-import {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  border-top: 1px solid var(--border);
+}
+.writing-import input {
+  max-width: 230px;
+  font-size: 11px;
+}
+
+.writing-toolbar button {
+  position: relative;
+}
+.writing-color-indicator {
+  position: absolute;
+  width: 14px;
+  height: 3px;
+  bottom: 3px;
+  border-radius: 2px;
+}
+.writing-palette {
+  width: 228px;
+  padding: 14px;
+  border-radius: 14px;
+}
+.writing-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+  padding: 8px 0;
+}
+.writing-swatches button {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  cursor: pointer;
+}
+.writing-swatches button[aria-pressed='true'] {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.writing-swatches button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.rich-writing .tiptap span[style*='background-color'] {
+  color: #17202e;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.draft-save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.draft-save-status svg {
+  flex-shrink: 0;
+}
+.draft-save-status[data-error='true'] {
+  color: var(--destructive);
+}
+
+.note-editor-footer > .draft-save-status {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+  max-width: 380px;
+}
+.writing-import summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 8px 0;
+  color: var(--muted-foreground);
+}
+.writing-import label {
+  display: block;
+  padding: 8px 0;
+  font-size: 12px;
+}
+.entity-form fieldset {
+  border: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.note-research-history {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.note-research-history a {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0;
+}
+.note-research-history small {
+  color: var(--muted-foreground);
+}
+
+.writing-swatches,
+.writing-tools > fieldset.flow-actions {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.writing-print-dialog iframe {
+  width: 100%;
+  height: min(60dvh, 760px);
+  min-height: 240px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  color-scheme: light;
+}

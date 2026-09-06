@@ -1,0 +1,2 @@
+CREATE TABLE project_invitations(id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id), email TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('viewer','editor','reviewer')), invited_by TEXT NOT NULL REFERENCES user(id), status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','declined','revoked')), created_at TEXT NOT NULL, expires_at TEXT NOT NULL, responded_at TEXT, UNIQUE(project_id,email));
+CREATE INDEX invitation_inbox ON project_invitations(email,status,expires_at);
