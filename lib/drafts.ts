@@ -92,3 +92,22 @@ export function confirmReadingRequest(
     readingRequest: undefined,
   };
 }
+
+export function discardDraft(
+  storage: Storage,
+  prefix: string,
+  expected: DraftRecord,
+): boolean {
+  if (!expected.key.startsWith(prefix)) return false;
+  const raw = storage.getItem(expected.key);
+  if (!raw) return true;
+  const current = draftRecord.safeParse(JSON.parse(raw));
+  if (
+    !current.success ||
+    current.data.updatedAt !== expected.updatedAt ||
+    JSON.stringify(current.data.value) !== JSON.stringify(expected.value)
+  )
+    return false;
+  storage.removeItem(expected.key);
+  return true;
+}

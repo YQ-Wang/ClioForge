@@ -197,3 +197,35 @@ void test('legacy question drafts recover and malformed or foreign pending reque
   assert.equal(foreign.pending, null);
   assert.equal(foreign.question, 'Keep me');
 });
+
+void test('a selected-page follow-up survives a lost submission response without widening its scope', () => {
+  const scoped = {
+    ...request,
+    extra_pages: [],
+    source_pages: [
+      { version_id: 'selected-version', page: 2 },
+      { version_id: 'selected-version', page: 4 },
+    ],
+  };
+  const pending = prepareConversationRequest(scoped, null, () => requestId);
+  const restored = readConversationDraft(
+    JSON.stringify({ question: 'Earlier draft', pending }),
+    emptyConversationDraft(),
+    request.task_id,
+  );
+  assert.equal(restored.scope, 'selected');
+  assert.deepEqual(restored.selected, [
+    { version_id: 'selected-version', pages: '2, 4' },
+  ]);
+  assert.deepEqual(conversationRequestBody(restored.pending!), {
+    ...scoped,
+    request_id: requestId,
+  });
+  const reconciled = reconcileConversationDraft(
+    restored,
+    [requestId],
+    requestId,
+  );
+  assert.equal(reconciled.scope, 'selected');
+  assert.deepEqual(reconciled.selected, restored.selected);
+});

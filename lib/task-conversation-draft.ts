@@ -11,6 +11,16 @@ const requestSchema = z.object({
       page: z.number().int().positive(),
     }),
   ),
+  source_pages: z
+    .array(
+      z.object({
+        version_id: z.string().min(1),
+        page: z.number().int().positive(),
+      }),
+    )
+    .min(1)
+    .max(24)
+    .optional(),
   locale: z.enum(['zh-CN', 'en']),
   effort: z.enum(['low', 'high', 'max']),
 });
@@ -22,6 +32,11 @@ const draftSchema = z.object({
   after: z.string(),
   extra: z.string(),
   pages: z.string(),
+  scope: z.enum(['inherited', 'selected']).default('inherited'),
+  selected: z
+    .array(z.object({ version_id: z.string().min(1), pages: z.string() }))
+    .max(10)
+    .default([]),
   touched: z.boolean(),
   pending: pendingSchema.nullable(),
 });
@@ -65,6 +80,8 @@ export function emptyConversationDraft(
     after,
     extra: '',
     pages: '1',
+    scope: 'inherited',
+    selected: [],
     touched: false,
     pending: null,
   };
@@ -102,6 +119,16 @@ export function readConversationDraft(
       pages: payload.extra_pages.length
         ? payload.extra_pages.map((page) => page.page).join(', ')
         : draft.pages,
+      scope: payload.source_pages ? 'selected' : 'inherited',
+      selected: [
+        ...new Set(payload.source_pages?.map((p) => p.version_id) || []),
+      ].map((id) => ({
+        version_id: id,
+        pages: payload
+          .source_pages!.filter((p) => p.version_id === id)
+          .map((p) => p.page)
+          .join(', '),
+      })),
       touched: true,
     };
   } catch {

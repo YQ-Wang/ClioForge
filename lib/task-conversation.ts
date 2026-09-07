@@ -19,6 +19,7 @@ export const taskMessageInput = z.object({
   model_id: z.uuid(),
   after_id: z.uuid().nullable(),
   extra_pages: z.array(ref).max(24).default([]),
+  source_pages: z.array(ref).min(1).max(24).optional(),
   locale: z.enum(['zh-CN', 'en']),
   effort: z.enum(['low', 'high', 'max']).default('high'),
 });
@@ -117,16 +118,23 @@ export async function startTaskMessage(
   if (parent && !['succeeded', 'accepted', 'review'].includes(parent.status))
     throw new HttpError(409, '上一条回答尚未完成，请先处理它。');
   const context = [root, ...(parent ? [parent] : [])];
+  if (value.source_pages && value.extra_pages.length)
+    throw new HttpError(
+      400,
+      '请选择完整的本次阅读范围，不要同时沿用补充材料。',
+    );
   const ids = [
     ...new Set(
-      context
-        .flatMap((t) => [
-          ...t.input.version_ids,
-          ...(['succeeded', 'accepted', 'review'].includes(t.status)
-            ? t.result?.citations.map((c) => c.version_id) || []
-            : []),
-        ])
-        .concat(value.extra_pages.map((p) => p.version_id)),
+      value.source_pages
+        ? value.source_pages.map((p) => p.version_id)
+        : context
+            .flatMap((t) => [
+              ...t.input.version_ids,
+              ...(['succeeded', 'accepted', 'review'].includes(t.status)
+                ? t.result?.citations.map((c) => c.version_id) || []
+                : []),
+            ])
+            .concat(value.extra_pages.map((p) => p.version_id)),
     ),
   ];
   if (!ids.length || ids.length > 10)
@@ -149,7 +157,9 @@ export async function startTaskMessage(
             .filter((c) => c.version_id === id)
             .map((c) => ({ version_id: id, page: c.page })) || [],
       );
-    const chosen = [...scoped, ...extras, ...cited];
+    const chosen = value.source_pages
+      ? value.source_pages.filter((p) => p.version_id === id)
+      : [...scoped, ...extras, ...cited];
     for (const p of chosen.length
       ? chosen
       : version.pages.map((p) => ({ version_id: id, page: p.page }))) {
@@ -174,9 +184,13 @@ export async function startTaskMessage(
     id: t.id,
     title: t.title,
     question: t.input.query || t.input.prompt.slice(0, 1500),
-    summary: t.result?.summary.slice(0, 3500) || null,
-    summary_shortened: (t.result?.summary.length || 0) > 3500,
-    citations: t.result?.citations.slice(0, 20) || [],
+    summary: value.source_pages
+      ? null
+      : t.result?.summary.slice(0, 3500) || null,
+    summary_shortened:
+      !value.source_pages && (t.result?.summary.length || 0) > 3500,
+    citations: value.source_pages ? [] : t.result?.citations.slice(0, 20) || [],
+    prior_answer_omitted_for_selected_scope: !!value.source_pages,
   }));
   const serialized = JSON.stringify(snapshot);
   if (serialized.length > 9000)
@@ -190,11 +204,15 @@ export async function startTaskMessage(
     publish = crypto.randomUUID();
   const common = { version_ids: ids, page_refs: pages, locale: value.locale };
   const draft: MissionDraft = {
-    title: L('继续研究：', 'Follow up: ') + value.question.slice(0, 140),
+    title: L('继续研究：', 'Follow up: ') + value.question.slice(0, 60),
     question: value.question,
     scope: L(
-      '原任务、所选上一条回答与本次固定材料。',
-      'Original task, the selected preceding answer and fixed source pages.',
+      value.source_pages
+        ? '仅本次选择的材料页；此前问题保留为背景，旧回答与引文不带入。'
+        : '原任务、所选上一条回答与本次固定材料。',
+      value.source_pages
+        ? 'Only the selected source pages; earlier questions provide background, without previous answers or quotations.'
+        : 'Original task, the selected preceding answer and fixed source pages.',
     ),
     acceptance: L(
       '核对引文，研究者审读后才确认为成果。',
@@ -203,7 +221,7 @@ export async function startTaskMessage(
     tasks: [
       {
         id: value.request_id,
-        title: value.question.slice(0, 180),
+        title: value.question.slice(0, 80),
         executor: 'model',
         kind: 'counter',
         assignee: L('研究助手', 'Research assistant'),
@@ -221,6 +239,7 @@ export async function startTaskMessage(
             output_schema: 'comparison_answer_v1',
             conversation_root_id: root.id,
             conversation_parent_id: parent?.id || null,
+            conversation_scope: value.source_pages ? 'selected' : 'inherited',
             conversation_signature: signature,
             conversation_context: snapshots,
           },

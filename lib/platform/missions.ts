@@ -37,12 +37,13 @@ export class MissionStore extends ResearchStore {
       .prepare(
         `SELECT a.id,a.project_id,a.title,a.kind,a.sha256,a.license,a.created_by,a.created_at,a.source_versions,
         (SELECT m.title FROM missions m WHERE m.id=a.mission_id AND m.project_id=?) AS research_title,
+        CASE WHEN a.project_id=? THEN a.mission_id ELSE NULL END AS mission_id,
         substr(json_extract(a.body,'$.summary'),1,240) AS summary_excerpt,
         CASE WHEN EXISTS(SELECT 1 FROM mission_tasks mt WHERE mt.id=a.task_id AND (mt.status IN ('stale','rejected') OR mt.result<>a.body)) THEN 1 ELSE 0 END AS outdated
        FROM artifacts a WHERE a.project_id=? OR EXISTS(SELECT 1 FROM artifact_grants g WHERE g.artifact_id=a.id AND g.project_id=?)
        ORDER BY a.created_at DESC LIMIT 100`,
       )
-      .bind(projectId, projectId, projectId)
+      .bind(projectId, projectId, projectId, projectId)
       .all();
   }
   async mission(

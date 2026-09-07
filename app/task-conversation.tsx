@@ -205,7 +205,31 @@ export default function TaskConversation({
   const missingAnswer =
     !!draft.after && !answers.some((turn) => turn.id === draft.after);
   const missingSource =
-    !!draft.extra && !versions.some((version) => version.id === draft.extra);
+    draft.scope === 'selected'
+      ? draft.selected.some(
+          (item) => !versions.some((version) => version.id === item.version_id),
+        )
+      : !!draft.extra &&
+        !versions.some((version) => version.id === draft.extra);
+  const inheritedVersions = [
+    ...new Set(
+      [
+        data?.root,
+        ...answers.filter((answer) => answer.id === draft.after),
+      ].flatMap((task) =>
+        task
+          ? [
+              ...task.input.version_ids,
+              ...(['succeeded', 'accepted', 'review'].includes(task.status)
+                ? task.result?.citations.map(
+                    (citation) => citation.version_id,
+                  ) || []
+                : []),
+            ]
+          : [],
+      ),
+    ),
+  ];
   const headVersions = sources
     .map(
       (source) =>
@@ -214,6 +238,12 @@ export default function TaskConversation({
           .sort((a, b) => b.revision - a.revision)[0],
     )
     .filter(Boolean);
+  const scopeVersions = versions.filter(
+    (version) =>
+      headVersions.some((head) => head.id === version.id) ||
+      inheritedVersions.includes(version.id) ||
+      draft.selected.some((item) => item.version_id === version.id),
+  );
   const selectedVersion = versions.find(
     (version) => version.id === draft.extra,
   );
@@ -235,19 +265,46 @@ export default function TaskConversation({
       if (!pending) {
         const current = draftRef.current;
         const version = versions.find((item) => item.id === current.extra);
-        if (current.extra && !version)
+        if (current.scope === 'inherited' && current.extra && !version)
           throw new Error(
             L(
               '补充材料已不可用，请重新选择。',
               'Choose an available additional source.',
             ),
           );
-        const extraPages = version
-          ? selectedPages(
-              current.pages,
-              version.pages.map((page) => page.page),
-            ).map((page) => ({ version_id: version.id, page }))
-          : [];
+        const extraPages =
+          current.scope === 'inherited' && version
+            ? selectedPages(
+                current.pages,
+                version.pages.map((page) => page.page),
+              ).map((page) => ({ version_id: version.id, page }))
+            : [];
+        const sourcePages =
+          current.scope === 'selected'
+            ? current.selected.flatMap((item) => {
+                const selected = versions.find(
+                  (version) => version.id === item.version_id,
+                );
+                if (!selected)
+                  throw new Error(
+                    L(
+                      '所选材料已不可用，请重新选择。',
+                      'Choose an available source.',
+                    ),
+                  );
+                return selectedPages(
+                  item.pages,
+                  selected.pages.map((page) => page.page),
+                ).map((page) => ({ version_id: selected.id, page }));
+              })
+            : undefined;
+        if (sourcePages && (!sourcePages.length || sourcePages.length > 24))
+          throw new Error(
+            L(
+              '请为本次追问选择 1–24 页材料。',
+              'Choose 1–24 pages for this follow-up.',
+            ),
+          );
         pending = prepareConversationRequest(
           {
             task_id: data.root.id,
@@ -255,6 +312,7 @@ export default function TaskConversation({
             model_id: current.model,
             after_id: current.after || null,
             extra_pages: extraPages,
+            ...(sourcePages ? { source_pages: sourcePages } : {}),
             locale: data.root.input.locale,
             effort: current.effort,
           },
@@ -558,6 +616,126 @@ export default function TaskConversation({
                 ))}
               </NativeSelect>
             </label>
+            <section
+              className="task-conversation-scope"
+              aria-label={L('本次阅读范围', 'Sources for this follow-up')}
+            >
+              <label>
+                {L('本次阅读范围', 'Sources for this follow-up')}
+                <NativeSelect
+                  value={draft.scope}
+                  onChange={(event) =>
+                    changeDraft({
+                      scope: event.target.value as ConversationDraft['scope'],
+                    })
+                  }
+                >
+                  <option value="inherited">
+                    {L(
+                      `沿用已有 ${inheritedVersions.length} 份材料`,
+                      `Keep ${inheritedVersions.length} existing sources`,
+                    )}
+                  </option>
+                  <option value="selected">
+                    {L('只读我选择的材料页', 'Read only the pages I choose')}
+                  </option>
+                </NativeSelect>
+              </label>
+              {draft.scope === 'selected' ? (
+                <>
+                  <p className="task-conversation-field-hint">
+                    {L(
+                      '只发送勾选的页和本次问题。此前问题作为背景，旧回答和旧引文不带入，避免混入未选材料。最多 10 份、24 页。',
+                      'Send only the selected pages and this question. Earlier questions provide background; previous answers and quotations are omitted. Up to 10 sources and 24 pages.',
+                    )}
+                  </p>
+                  <div className="task-conversation-scope-list">
+                    {scopeVersions.map((version) => {
+                      const item = draft.selected.find(
+                        (item) => item.version_id === version.id,
+                      );
+                      const title =
+                        sources.find(
+                          (source) => source.id === version.source_id,
+                        )?.title || L('材料', 'Source');
+                      return (
+                        <div
+                          key={version.id}
+                          className="task-conversation-scope-row"
+                        >
+                          <label className="task-conversation-scope-check">
+                            <input
+                              type="checkbox"
+                              checked={!!item}
+                              onChange={(event) =>
+                                changeDraft({
+                                  selected: event.target.checked
+                                    ? [
+                                        ...draft.selected,
+                                        {
+                                          version_id: version.id,
+                                          pages: String(
+                                            version.pages[0]?.page || 1,
+                                          ),
+                                        },
+                                      ]
+                                    : draft.selected.filter(
+                                        (item) =>
+                                          item.version_id !== version.id,
+                                      ),
+                                })
+                              }
+                            />
+                            <span>
+                              {title} · v{version.revision}
+                            </span>
+                          </label>
+                          {item && (
+                            <label>
+                              {L('页码', 'Pages')}
+                              <Input
+                                aria-label={L(
+                                  `${title} 的阅读页码`,
+                                  `Pages to read in ${title}`,
+                                )}
+                                value={item.pages}
+                                placeholder="1-3, 5"
+                                required
+                                onChange={(event) =>
+                                  changeDraft({
+                                    selected: draft.selected.map((selected) =>
+                                      selected.version_id === version.id
+                                        ? {
+                                            ...selected,
+                                            pages: event.target.value,
+                                          }
+                                        : selected,
+                                    ),
+                                  })
+                                }
+                              />
+                            </label>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="task-conversation-field-hint">
+                    {L(
+                      `已选择 ${draft.selected.length} 份材料`,
+                      `${draft.selected.length} sources selected`,
+                    )}
+                  </p>
+                </>
+              ) : (
+                <p className="task-conversation-field-hint">
+                  {L(
+                    '会发送原任务与所选回答使用的材料。需要缩小范围时，请选择“只读我选择的材料页”。',
+                    'Includes the sources used by the original task and selected answer. Choose specific pages above to narrow the scope.',
+                  )}
+                </p>
+              )}
+            </section>
             <label className="task-conversation-question-label">
               {L('你的追问', 'Your question')}
               <Textarea
@@ -637,39 +815,41 @@ export default function TaskConversation({
                     </option>
                   </NativeSelect>
                 </label>
-                <label className="task-conversation-source">
-                  {L('补充一份材料', 'Add a source')}
-                  <NativeSelect
-                    value={draft.extra}
-                    onChange={(event) => {
-                      const version = versions.find(
-                        (item) => item.id === event.target.value,
-                      );
-                      changeDraft({
-                        extra: event.target.value,
-                        pages: String(version?.pages[0]?.page || 1),
-                      });
-                    }}
-                  >
-                    <option value="">
-                      {L('沿用现有材料', 'Keep current sources')}
-                    </option>
-                    {missingSource && (
-                      <option value={draft.extra}>
-                        {L('所选材料已不可用', 'Selected source unavailable')}
+                {draft.scope === 'inherited' && (
+                  <label className="task-conversation-source">
+                    {L('补充一份材料', 'Add a source')}
+                    <NativeSelect
+                      value={draft.extra}
+                      onChange={(event) => {
+                        const version = versions.find(
+                          (item) => item.id === event.target.value,
+                        );
+                        changeDraft({
+                          extra: event.target.value,
+                          pages: String(version?.pages[0]?.page || 1),
+                        });
+                      }}
+                    >
+                      <option value="">
+                        {L('沿用现有材料', 'Keep current sources')}
                       </option>
-                    )}
-                    {selectableVersions.map((version) => (
-                      <option key={version.id} value={version.id}>
-                        {sources.find(
-                          (source) => source.id === version.source_id,
-                        )?.title || L('材料', 'Source')}{' '}
-                        · v{version.revision}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </label>
-                {draft.extra && (
+                      {missingSource && (
+                        <option value={draft.extra}>
+                          {L('所选材料已不可用', 'Selected source unavailable')}
+                        </option>
+                      )}
+                      {selectableVersions.map((version) => (
+                        <option key={version.id} value={version.id}>
+                          {sources.find(
+                            (source) => source.id === version.source_id,
+                          )?.title || L('材料', 'Source')}{' '}
+                          · v{version.revision}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </label>
+                )}
+                {draft.scope === 'inherited' && draft.extra && (
                   <label className="task-conversation-source">
                     {L('补充材料页码', 'Additional source pages')}
                     <Input
@@ -776,7 +956,9 @@ export default function TaskConversation({
                     awaitingUpdate ||
                     missingModel ||
                     missingAnswer ||
-                    missingSource))
+                    missingSource ||
+                    (draft.scope === 'selected' &&
+                      (!draft.selected.length || draft.selected.length > 10))))
               }
             >
               {busy === 'submit' ? (

@@ -78,11 +78,12 @@ export default function SourceComparison({
       )}\n\n## ${L('我的观察与待核查问题', 'My observations and questions to verify')}\n\n${observation}\n`;
   }
   function preserve(a: Passage | null, b: Passage | null, observation: string) {
-    if (observation || (a?.quote && b?.quote))
+    if (observation || a?.quote || b?.quote)
       localDraft.update({
         ...localDraft.value,
         text: draftText(a, b, observation),
       });
+    else localDraft.clear();
   }
   function compose() {
     if (!left || !right || left.source.id === right.source.id) return;

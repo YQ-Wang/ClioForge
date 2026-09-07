@@ -1,5 +1,6 @@
 'use client';
 import ResearchRepair from './research-repair';
+import ResearchLibrary from './research-library';
 import { canRepairProse } from '@/lib/review-citations';
 import { importSampleBatches, type SampleBatch } from '@/lib/sample-import';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -117,6 +118,7 @@ type Overview = {
     id: string;
     title: string;
     research_title?: string | null;
+    mission_id?: string | null;
     summary_excerpt?: string | null;
     kind: string;
     sha256: string;
@@ -1086,72 +1088,19 @@ export default function ResearchPlatform({
             </>
           )}
           {section === 'library' && (
-            <>
-              <div className="platform-heading">
-                <div>
-                  <h2>
-                    {L('可复用的研究成果', 'Reusable research artifacts')}
-                  </h2>
-                  <p>
-                    {L(
-                      '阅读你已核查和采纳的成果，随时回到引文出处，也可以下载为研究报告。',
-                      'Read findings you have reviewed and accepted, return to their sources, or download a research report.',
-                    )}
-                  </p>
-                </div>
-              </div>
-              <div className="mission-grid">
-                {overview.artifacts.map((artifact) => (
-                  <section className="artifact-card" key={artifact.id}>
-                    <FileCheck2 />
-                    <h3>{artifact.research_title || artifact.title}</h3>
-                    {artifact.research_title && <small>{artifact.title}</small>}
-                    {artifact.summary_excerpt && (
-                      <p className="line-clamp-3">{artifact.summary_excerpt}</p>
-                    )}
-                    <p>
-                      {artifact.outdated
-                        ? L(
-                            '有后续修改，请重新审读',
-                            'Later changes; review again',
-                          )
-                        : L('已采纳', 'Accepted')}{' '}
-                      ·{' '}
-                      {new Date(artifact.created_at).toLocaleDateString(locale)}
-                    </p>
-                    <small>
-                      {L(
-                        '项目内保存 · 原始材料的权利仍受保护',
-                        'Saved in this project · original source rights retained',
-                      )}
-                    </small>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        void action(async () => {
-                          const data = await api<{ artifact: Artifact }>(
-                            `/api/artifacts?project_id=${project.id}&id=${artifact.id}`,
-                          );
-                          setReport(data.artifact);
-                        })
-                      }
-                    >
-                      <FileCheck2 size={15} />
-                      {L('阅读研究成果', 'Read finding')}
-                    </Button>
-                  </section>
-                ))}
-              </div>
-              {!overview.artifacts.length && (
-                <div className="platform-empty">
-                  <FileCheck2 />
-                  {L(
-                    '复核并采纳任务后，成果会出现在这里。',
-                    'Review and accept a task to preserve its artifact here.',
-                  )}
-                </div>
-              )}
-            </>
+            <ResearchLibrary
+              artifacts={overview.artifacts}
+              busy={busy}
+              onPlan={(id) => void openMission(id)}
+              onRead={(id) =>
+                void action(async () => {
+                  const data = await api<{ artifact: Artifact }>(
+                    `/api/artifacts?project_id=${project.id}&id=${id}`,
+                  );
+                  setReport(data.artifact);
+                })
+              }
+            />
           )}
           {section === 'team' && (
             <>

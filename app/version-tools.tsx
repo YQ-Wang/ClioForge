@@ -15,6 +15,7 @@ import {
   Laptop,
   AlertCircle,
   CloudCheck,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +30,7 @@ import {
   NativeSelectOption,
 } from '@/components/ui/native-select';
 import { Input } from '@/components/ui/input';
-import { draftPrefix, type DraftRecord } from '@/lib/drafts';
+import { discardDraft, draftPrefix, type DraftRecord } from '@/lib/drafts';
 import { useLocalDraft } from '@/hooks/use-local-draft';
 import type { Note } from '@/lib/types';
 import { rpc } from '@/lib/client-api';
@@ -73,6 +74,9 @@ export function DraftShelf({
   const { t, locale } = useI18n();
   const drafts = useProjectDrafts(userId, projectId);
   const [open, setOpen] = useState(false);
+  const [discarding, setDiscarding] = useState<DraftRecord | null>(null);
+  const [discardError, setDiscardError] = useState('');
+  const L = (zh: string, en: string) => (locale === 'en' ? en : zh);
   return (
     <>
       <Button variant="ghost" onClick={() => setOpen(true)}>
@@ -92,35 +96,110 @@ export function DraftShelf({
             <p>{t('没有未保存的草稿。')}</p>
           ) : (
             drafts.map((draft) => (
-              <button
-                className="draft-row"
-                key={draft.key}
-                onClick={() => {
-                  onResume(draft);
-                  setOpen(false);
-                }}
-              >
-                <strong>
-                  {draft.value.title ||
-                    (draft.value.kind === 'reading'
-                      ? locale === 'en'
-                        ? 'Reading annotation'
-                        : '阅读批注'
-                      : t('未命名笔记'))}
-                </strong>
-                <span>
-                  {draft.value.kind === 'source'
-                    ? t('校订 · 第 {0} 页', { 0: draft.value.page })
-                    : draft.value.kind === 'reading'
-                      ? locale === 'en'
-                        ? `Reading annotation · Page ${draft.value.page}`
-                        : `阅读批注 · 第 ${draft.value.page} 页`
-                      : t('笔记')}{' '}
-                  · {new Date(draft.updatedAt).toLocaleString(locale)}
-                </span>
-              </button>
+              <div className="flex items-center gap-2" key={draft.key}>
+                <button
+                  className="draft-row min-w-0 flex-1"
+                  onClick={() => {
+                    onResume(draft);
+                    setOpen(false);
+                  }}
+                >
+                  <strong>
+                    {draft.value.title ||
+                      (draft.value.kind === 'reading'
+                        ? locale === 'en'
+                          ? 'Reading annotation'
+                          : '阅读批注'
+                        : t('未命名笔记'))}
+                  </strong>
+                  <span>
+                    {draft.value.kind === 'source'
+                      ? t('校订 · 第 {0} 页', { 0: draft.value.page })
+                      : draft.value.kind === 'reading'
+                        ? locale === 'en'
+                          ? `Reading annotation · Page ${draft.value.page}`
+                          : `阅读批注 · 第 ${draft.value.page} 页`
+                        : t('笔记')}{' '}
+                    · {new Date(draft.updatedAt).toLocaleString(locale)}
+                  </span>
+                </button>
+                <Button
+                  variant="ghost"
+                  aria-label={
+                    L('丢弃草稿：', 'Discard draft: ') +
+                    (draft.value.title || t('未命名笔记'))
+                  }
+                  onClick={() => {
+                    setDiscarding(draft);
+                    setDiscardError('');
+                  }}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </div>
             ))
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!discarding}
+        onOpenChange={(value) => {
+          if (!value) setDiscarding(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {L('丢弃这份本机草稿？', 'Discard this local draft?')}
+            </DialogTitle>
+            <DialogDescription>
+              {L(
+                '仅删除此浏览器中尚未保存的内容。项目中已保存的笔记、原文和版本不受影响。此操作无法撤销。',
+                'Only unsaved content in this browser will be removed. Saved project notes, sources and versions remain available. This cannot be undone.',
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <p>{discarding?.value.title}</p>
+          {discardError && <p role="alert">{discardError}</p>}
+          <div className="form-actions">
+            <Button variant="ghost" onClick={() => setDiscarding(null)}>
+              {L('保留草稿', 'Keep draft')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!discarding) return;
+                try {
+                  if (
+                    !discardDraft(
+                      localStorage,
+                      draftPrefix(userId, projectId),
+                      discarding,
+                    )
+                  ) {
+                    setDiscardError(
+                      L(
+                        '草稿已在别处更新。请关闭确认窗口，核对最新内容后再决定。',
+                        'This draft changed elsewhere. Close this confirmation and review its latest contents first.',
+                      ),
+                    );
+                    return;
+                  }
+                  window.dispatchEvent(new Event('foliotrace-drafts'));
+                  setDiscarding(null);
+                } catch {
+                  setDiscardError(
+                    L(
+                      '无法删除本机草稿，请重试。',
+                      'Could not discard the local draft. Try again.',
+                    ),
+                  );
+                }
+              }}
+            >
+              {L('丢弃本机草稿', 'Discard local draft')}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

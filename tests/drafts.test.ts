@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   draftPrefix,
+  discardDraft,
   draftRecord,
   readDrafts,
   prepareReadingRequest,
@@ -15,6 +16,9 @@ function browserStorage(entries: Map<string, string>) {
     },
     key: (index: number) => [...entries.keys()][index] ?? null,
     getItem: (key: string) => entries.get(key) ?? null,
+    removeItem: (key: string) => {
+      entries.delete(key);
+    },
   } as Storage;
 }
 const reading = {
@@ -207,4 +211,36 @@ void test('editing a question creates a new request while an older confirmation 
     }).success,
     false,
   );
+});
+
+void test('discarding a draft rejects other accounts and changed content, preserving all other entries', () => {
+  const prefix = draftPrefix('reader', 'project');
+  const key = prefix + 'reading:excerpt';
+  const foreign = draftPrefix('other-reader', 'project') + 'reading:excerpt';
+  const original = { updatedAt: '2026-09-07', value: reading };
+  const entries = new Map([
+    [key, JSON.stringify(original)],
+    [foreign, JSON.stringify(original)],
+  ]);
+  const storage = browserStorage(entries);
+  const expected = readDrafts(storage, prefix)[0];
+  assert.equal(
+    discardDraft(storage, prefix, { ...expected, key: foreign }),
+    false,
+  );
+  entries.set(
+    key,
+    JSON.stringify({
+      ...original,
+      value: { ...reading, text: 'A newer edit at the same timestamp.' },
+    }),
+  );
+  assert.equal(discardDraft(storage, prefix, expected), false);
+  assert.match(storage.getItem(key)!, /newer edit/);
+  assert.equal(
+    discardDraft(storage, prefix, readDrafts(storage, prefix)[0]),
+    true,
+  );
+  assert.equal(storage.getItem(key), null);
+  assert.ok(storage.getItem(foreign));
 });

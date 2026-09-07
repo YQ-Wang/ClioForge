@@ -1248,6 +1248,7 @@ void test('artifact summaries identify their research plan without exposing a sh
     (row) => row.id === id,
   );
   assert.equal(own?.research_title, draft.title);
+  assert.equal(own?.mission_id, mission);
   assert.equal(own?.summary_excerpt, 'A specific, reviewed conclusion.');
   assert.equal((await other.artifactSummaries(b.project.id)).results.length, 0);
   await assert.rejects(other.artifactSummaries(a.project.id), /不存在/);
@@ -1261,6 +1262,7 @@ void test('artifact summaries identify their research plan without exposing a sh
     (row) => row.id === id,
   );
   assert.equal(shared?.research_title, null);
+  assert.equal(shared?.mission_id, null);
   assert.equal(shared?.summary_excerpt, 'A specific, reviewed conclusion.');
 });
 void test('tenant boundaries cover sources, versions, projects, upload receipts and model keys', async () => {
@@ -5555,4 +5557,103 @@ void test('valid quote-heavy source versions can be paged without an oversized i
     'source_versions',
   );
   assert.deepEqual(result.rows.find((row) => row.id === id)?.pages, pages);
+});
+
+void test('explicit follow-up pages replace inherited sources and exclude previous answer content', async () => {
+  const f = await conversationFixture();
+  const id = crypto.randomUUID();
+  const path = `${f.owner.owner}/${f.a.project.id}/${id}/selected.txt`;
+  await f.owner.recordUpload(id, f.a.project.id, path, 'text/plain');
+  const versionId = await f.owner.importSource({
+    p_id: id,
+    p_project: f.a.project.id,
+    p_title: 'Selected letter',
+    p_path: path,
+    p_type: 'text/plain',
+    p_pages: [
+      { page: 1, text: 'A proposed petition, not a submitted petition.' },
+      { page: 2, text: 'UNSELECTED_PAGE_SENTINEL' },
+    ],
+  });
+  const root = await f.store.task(f.root);
+  await db
+    .prepare('UPDATE mission_tasks SET input=? WHERE id=?')
+    .bind(
+      JSON.stringify({
+        ...root.input,
+        version_ids: [f.a.versionId, versionId],
+        page_refs: [
+          { version_id: f.a.versionId, page: 1 },
+          { version_id: versionId, page: 1 },
+          { version_id: versionId, page: 2 },
+        ],
+      }),
+      f.root,
+    )
+    .run();
+  const foreign = await source(await user());
+  for (const pages of [
+    [],
+    [{ version_id: versionId, page: 99 }],
+    [{ version_id: foreign.versionId, page: 1 }],
+  ]) {
+    await assert.rejects(
+      startTaskMessage(
+        f.store,
+        { ...f.input, source_pages: pages },
+        async () => {
+          throw new Error('Invalid scope must not dispatch');
+        },
+      ),
+    );
+  }
+  const request = {
+    ...f.input,
+    source_pages: [{ version_id: versionId, page: 1 }],
+  };
+  const next = await startTaskMessage(f.store, request, async () => {});
+  assert.deepEqual(
+    await startTaskMessage(f.store, request, async () => {
+      throw new Error('Duplicate dispatch');
+    }),
+    next,
+  );
+  const task = await f.store.task(next.task_id);
+  assert.deepEqual(task.input.version_ids, [versionId]);
+  assert.deepEqual(task.input.page_refs, request.source_pages);
+  assert.doesNotMatch(
+    task.input.prompt,
+    /implementation remains to be checked/,
+  );
+  await executeMissionTask(
+    { DB: db, FOLIOTRACE_ENCRYPTION_KEY: f.secret },
+    next.task_id,
+    async (input) => {
+      assert.match(
+        input.prompt,
+        /A proposed petition, not a submitted petition/,
+      );
+      assert.doesNotMatch(
+        input.prompt,
+        /UNSELECTED_PAGE_SENTINEL|港口于一八六一年开放/,
+      );
+      assert.deepEqual(input.sourceVersionIds, [versionId]);
+      return {
+        text: JSON.stringify({
+          summary: 'It records a proposal [1].',
+          citations: [
+            {
+              version_id: versionId,
+              page: 1,
+              quote: 'A proposed petition, not a submitted petition.',
+            },
+          ],
+          data: { limitations: ['Submission remains unverified.'] },
+        }),
+        inputTokens: 120,
+        outputTokens: 60,
+      };
+    },
+  );
+  assert.equal((await f.store.task(next.task_id)).status, 'succeeded');
 });

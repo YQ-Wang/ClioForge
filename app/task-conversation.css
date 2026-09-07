@@ -238,3 +238,32 @@
     padding: 14px;
   }
 }
+
+.task-conversation-scope {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--background);
+}
+.task-conversation-scope-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.task-conversation-scope-row {
+  display: grid;
+  gap: 8px;
+}
+.task-conversation .task-conversation-scope-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.task-conversation-scope-check input {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-top: 2px;
+  accent-color: var(--primary);
+}
