@@ -8,7 +8,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { usePreparedDownload } from '@/lib/use-prepared-download';
 import { Input } from '@/components/ui/input';
 import { useI18n } from '@/lib/i18n/provider';
 import { api } from '@/lib/client-api';
@@ -36,6 +37,7 @@ export default function WritingTools({
 }) {
   const { locale } = useI18n(),
     L = (zh: string, en: string) => (locale === 'en' ? en : zh);
+  const { download, prepare } = usePreparedDownload();
   const [data, setData] = useState<Materials | null>(null),
     [query, setQuery] = useState(''),
     [busy, setBusy] = useState(false),
@@ -123,12 +125,7 @@ export default function WritingTools({
               });
               if (!r.ok)
                 throw new Error(((await r.json()) as { error: string }).error);
-              const url = URL.createObjectURL(await r.blob()),
-                a = document.createElement('a');
-              a.href = url;
-              a.download = (title || 'Canwoo') + '.docx';
-              a.click();
-              setTimeout(() => URL.revokeObjectURL(url), 1000);
+              prepare(await r.blob(), (title || 'Canwoo') + '.docx');
             } catch (e) {
               setError(e instanceof Error ? e.message : 'Export failed');
             } finally {
@@ -138,6 +135,15 @@ export default function WritingTools({
         >
           {L('导出 Word（含脚注）', 'Export Word with footnotes')}
         </Button>
+        {download && !busy && (
+          <a
+            href={download.url}
+            download={download.name}
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            {L('保存已准备的 Word 文稿', 'Save prepared Word document')}
+          </a>
+        )}
         <Button
           type="button"
           variant="outline"

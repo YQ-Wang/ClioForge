@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { Download, FolderPen, CheckCircle2, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { usePreparedDownload } from '@/lib/use-prepared-download';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Field } from './workspace';
@@ -27,11 +28,10 @@ export default function ProjectSettings({
     [error, setError] = useState(''),
     [saved, setSaved] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [exported, setExported] = useState(false);
+  const { download, prepare } = usePreparedDownload();
   const canManage = project.role === 'owner';
   async function downloadArchive() {
     setExporting(true);
-    setExported(false);
     setError('');
     try {
       const response = await fetch(
@@ -45,13 +45,10 @@ export default function ProjectSettings({
           ),
         );
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${project.title.replace(/[\\/:*?"<>|]/g, '-').slice(0, 100)}.zip`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      setExported(true);
+      prepare(
+        blob,
+        `${project.title.replace(/[\\/:*?"<>|]/g, '-').slice(0, 100)}.zip`,
+      );
     } catch {
       setError(
         L(
@@ -168,12 +165,20 @@ export default function ProjectSettings({
             ? L('正在打包资料…', 'Preparing your package…')
             : L('下载资料包（含原件）', 'Download package with originals')}
         </Button>
-        {exported && (
+        {download && !exporting && (
           <output className="settings-hint">
             {L(
-              '资料包已准备好，浏览器已开始下载。',
-              'Your package is ready and the browser has started downloading it.',
+              '资料包已准备好。如未自动下载，可直接保存：',
+              'Your package is ready. If it did not download automatically, save it here:',
             )}
+            <a
+              href={download.url}
+              download={download.name}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              <Download size={16} />
+              {L('保存已准备的资料包', 'Save prepared package')}
+            </a>
           </output>
         )}
         <Button
