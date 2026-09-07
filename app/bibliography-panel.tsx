@@ -42,6 +42,10 @@ const types = {
   'article-journal': '期刊论文',
   'article-newspaper': '报刊文章',
   letter: '书信',
+  personal_communication: '书信',
+  map: '地图',
+  interview: '访谈',
+  dataset: '数据集',
   webpage: '网页',
   report: '报告',
   document: '文献',
@@ -346,13 +350,24 @@ export default function BibliographyPanel({
                 <NativeSelect
                   className="w-full"
                   name="type"
-                  defaultValue={editing?.csl.type || 'manuscript'}
+                  defaultValue={
+                    editing?.csl.type === 'letter'
+                      ? 'personal_communication'
+                      : editing?.csl.type || 'manuscript'
+                  }
                 >
-                  {Object.entries(types).map(([value, label]) => (
-                    <NativeSelectOption key={value} value={value}>
-                      {t(label)}
+                  {Object.entries(types)
+                    .filter(([value]) => value !== 'letter')
+                    .map(([value, label]) => (
+                      <NativeSelectOption key={value} value={value}>
+                        {t(label)}
+                      </NativeSelectOption>
+                    ))}
+                  {editing?.csl.type && !(editing.csl.type in types) && (
+                    <NativeSelectOption value={editing.csl.type}>
+                      {editing.csl.type}
                     </NativeSelectOption>
-                  ))}
+                  )}
                 </NativeSelect>
               </Field>
             </div>
@@ -385,39 +400,59 @@ export default function BibliographyPanel({
                 />
               </Field>
             </div>
-            <div className="form-grid">
-              {[
-                ['archive', t('馆藏机构')],
-                ['archive_location', t('档号 / 索书号')],
-                ['archive-place', t('馆藏地点')],
-                ['publisher', t('出版社')],
-                ['publisher-place', t('出版地')],
-                ['container-title', t('期刊 / 所属文集')],
-                ['edition', t('版本 / 版次')],
-                ['volume', t('卷')],
-                ['issue', t('期')],
-                ['page', t('原书页码范围')],
-                ['URL', t('来源链接')],
-                ['DOI', 'DOI'],
-                ['language', t('语言')],
-                ['rights', t('使用权限 / 版权')],
-              ].map(([field, label]) => (
-                <Field label={t(label)} key={field}>
-                  <Input
-                    name={field}
-                    maxLength={2000}
-                    defaultValue={textValue(editing?.csl[field as keyof CSL])}
-                  />
-                </Field>
-              ))}
-            </div>
-            <Field label={t('摘要 / 内容说明')}>
-              <Textarea
-                name="abstract"
-                maxLength={10000}
-                defaultValue={editing?.csl.abstract}
+            <Field label={t('来源链接')}>
+              <Input
+                name="URL"
+                maxLength={2000}
+                defaultValue={editing?.csl.URL}
               />
             </Field>
+            <details className="rounded-lg border p-4" open={!!editing}>
+              <summary className="cursor-pointer font-medium">
+                {L(
+                  '馆藏、出版与其他信息（选填）',
+                  'Archive, publication and other details (optional)',
+                )}
+              </summary>
+              <p className="text-sm text-muted-foreground my-3">
+                {L(
+                  '先保存标题、作者、日期与出处；其余信息可以稍后补充。',
+                  'Start with a title, author, date and source link. You can add the remaining details later.',
+                )}
+              </p>
+              <div className="form-grid">
+                {[
+                  ['archive', t('馆藏机构')],
+                  ['archive_location', t('档号 / 索书号')],
+                  ['archive-place', t('馆藏地点')],
+                  ['publisher', t('出版社')],
+                  ['publisher-place', t('出版地')],
+                  ['container-title', t('期刊 / 所属文集')],
+                  ['edition', t('版本 / 版次')],
+                  ['volume', t('卷')],
+                  ['issue', t('期')],
+                  ['page', t('原书页码范围')],
+                  ['DOI', 'DOI'],
+                  ['language', t('语言')],
+                  ['rights', t('使用权限 / 版权')],
+                ].map(([field, label]) => (
+                  <Field label={t(label)} key={field}>
+                    <Input
+                      name={field}
+                      maxLength={2000}
+                      defaultValue={textValue(editing?.csl[field as keyof CSL])}
+                    />
+                  </Field>
+                ))}
+              </div>
+              <Field label={t('摘要 / 内容说明')}>
+                <Textarea
+                  name="abstract"
+                  maxLength={10000}
+                  defaultValue={editing?.csl.abstract}
+                />
+              </Field>
+            </details>
             <div className="form-actions">
               <Button type="submit" disabled={busy}>
                 {t('保存书目')}

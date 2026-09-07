@@ -1164,6 +1164,64 @@ async function source(store: ResearchStore) {
   });
   return { project, id, versionId, path };
 }
+void test('artifact summaries identify their research plan without exposing a shared artifact owner plan', async () => {
+  const alice = await user(),
+    bob = await user();
+  const a = await source(alice),
+    b = await source(bob);
+  const store = new MissionStore(db, alice.owner),
+    other = new MissionStore(db, bob.owner);
+  const draft = researchTemplate({
+    title: 'Private research question',
+    question: 'Question',
+    scope: 'Selected text',
+    acceptance: 'Review sources',
+    query: '港口',
+    version_ids: [a.versionId],
+    locale: 'en',
+  });
+  const mission = await store.create(a.project.id, draft);
+  const id = crypto.randomUUID();
+  await db
+    .prepare(
+      'INSERT INTO artifacts(id,project_id,mission_id,title,kind,body,source_versions,sha256,license,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+    )
+    .bind(
+      id,
+      a.project.id,
+      mission,
+      'Review findings',
+      'review',
+      JSON.stringify({
+        summary: 'A specific, reviewed conclusion.',
+        citations: [],
+      }),
+      JSON.stringify([a.versionId]),
+      'test-hash',
+      'private',
+      alice.owner,
+      new Date().toISOString(),
+    )
+    .run();
+  const own = (await store.artifactSummaries(a.project.id)).results.find(
+    (row) => row.id === id,
+  );
+  assert.equal(own?.research_title, draft.title);
+  assert.equal(own?.summary_excerpt, 'A specific, reviewed conclusion.');
+  assert.equal((await other.artifactSummaries(b.project.id)).results.length, 0);
+  await assert.rejects(other.artifactSummaries(a.project.id), /不存在/);
+  await db
+    .prepare(
+      'INSERT INTO artifact_grants(artifact_id,project_id,granted_by,created_at) VALUES(?,?,?,?)',
+    )
+    .bind(id, b.project.id, alice.owner, new Date().toISOString())
+    .run();
+  const shared = (await other.artifactSummaries(b.project.id)).results.find(
+    (row) => row.id === id,
+  );
+  assert.equal(shared?.research_title, null);
+  assert.equal(shared?.summary_excerpt, 'A specific, reviewed conclusion.');
+});
 void test('tenant boundaries cover sources, versions, projects, upload receipts and model keys', async () => {
   const alice = await user(),
     bob = await user();

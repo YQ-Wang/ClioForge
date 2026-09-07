@@ -131,12 +131,7 @@ export async function GET(request: Request) {
         )
         .bind(projectId)
         .all(),
-      store.db
-        .prepare(
-          "SELECT a.id,a.project_id,a.title,a.kind,a.sha256,a.license,a.created_by,a.created_at,a.source_versions,CASE WHEN EXISTS(SELECT 1 FROM mission_tasks mt WHERE mt.id=a.task_id AND (mt.status IN ('stale','rejected') OR mt.result<>a.body)) THEN 1 ELSE 0 END AS outdated FROM artifacts a WHERE a.project_id=? OR EXISTS(SELECT 1 FROM artifact_grants g WHERE g.artifact_id=a.id AND g.project_id=?) ORDER BY a.created_at DESC LIMIT 100",
-        )
-        .bind(projectId, projectId)
-        .all(),
+      store.artifactSummaries(projectId),
       store.db
         .prepare(
           'SELECT id,label,scopes,expires_at,revoked_at,last_used_at FROM agent_credentials WHERE project_id=? AND owner_id=? ORDER BY created_at DESC',

@@ -27,13 +27,32 @@ export function parseBibliography(
         }).data;
   if (!Array.isArray(raw) || !raw.length || raw.length > 100)
     throw new Error('每次请选择 1–100 条书目。');
-  return raw.map((item) => cslInput.parse(item));
+  return raw.map((item, index) => {
+    const parsed = cslInput.safeParse(item);
+    if (!parsed.success) {
+      const field = parsed.error.issues[0]?.path[0];
+      const label =
+        field === 'type' ? '文献类型' : field === 'title' ? '标题' : '信息';
+      throw new Error(
+        `第 ${index + 1} 条书目的${label}无效，请检查这条记录后重新导入。`,
+      );
+    }
+    return parsed.data;
+  });
+}
+function citationData(entry: BibliographyEntry) {
+  return {
+    ...entry.csl,
+    id: entry.id,
+    type:
+      entry.csl.type === 'letter' ? 'personal_communication' : entry.csl.type,
+  };
 }
 export function exportBibliography(
   entries: BibliographyEntry[],
   format: 'csl' | 'bibtex' | 'ris' | 'chicago' | 'apa',
 ) {
-  const data = entries.map((entry) => ({ ...entry.csl, id: entry.id }));
+  const data = entries.map(citationData);
   if (format === 'csl') return JSON.stringify(data, null, 2);
   if (!data.length) return '';
   const cite = new Cite(data);
@@ -46,7 +65,7 @@ export function exportBibliography(
     : cite.format(format);
 }
 export function footnote(entry: BibliographyEntry, locator: string) {
-  return new Cite([{ ...entry.csl, id: entry.id }]).format('citation', {
+  return new Cite([citationData(entry)]).format('citation', {
     format: 'text',
     style: 'foliotrace-chicago',
     lang: 'en-US',

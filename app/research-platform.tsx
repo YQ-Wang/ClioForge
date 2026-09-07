@@ -116,6 +116,8 @@ type Overview = {
   artifacts: {
     id: string;
     title: string;
+    research_title?: string | null;
+    summary_excerpt?: string | null;
     kind: string;
     sha256: string;
     outdated?: number;
@@ -135,7 +137,7 @@ type Overview = {
 };
 const stateText: Record<string, [string, string]> = {
   draft: ['草案', 'Draft'],
-  active: ['执行中', 'Active'],
+  active: ['已启动', 'Started'],
   paused: ['已暂停', 'Paused'],
   completed: ['已完成', 'Completed'],
   ...taskStatusLabels,
@@ -1102,7 +1104,11 @@ export default function ResearchPlatform({
                 {overview.artifacts.map((artifact) => (
                   <section className="artifact-card" key={artifact.id}>
                     <FileCheck2 />
-                    <h3>{artifact.title}</h3>
+                    <h3>{artifact.research_title || artifact.title}</h3>
+                    {artifact.research_title && <small>{artifact.title}</small>}
+                    {artifact.summary_excerpt && (
+                      <p className="line-clamp-3">{artifact.summary_excerpt}</p>
+                    )}
                     <p>
                       {artifact.outdated
                         ? L(
