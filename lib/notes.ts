@@ -7,6 +7,10 @@ export function noteExcerpt(body: string, document?: string | null) {
       const text = (node: RichNode): string => {
         if (node.type === 'text') return node.text || '';
         if (node.type === 'hardBreak') return ' ';
+        if (node.type === 'drawing')
+          return typeof node.attrs?.caption === 'string'
+            ? node.attrs.caption || '[Drawing]'
+            : '[Drawing]';
         if (['inlineMath', 'blockMath'].includes(node.type))
           return typeof node.attrs?.latex === 'string' ? node.attrs.latex : '';
         return (node.content || [])

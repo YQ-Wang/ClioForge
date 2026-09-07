@@ -69,3 +69,23 @@ void test('note cards display rich text without markdown and preserve literal sy
   assert.equal(noteExcerpt('Retained text', '{broken'), 'Retained text');
   assert.equal(noteExcerpt('x'.repeat(300)).length, 220);
 });
+
+void test('drawing-only notes show their caption instead of appearing empty', () => {
+  const document = JSON.stringify({
+    type: 'doc',
+    content: [
+      {
+        type: 'drawing',
+        attrs: {
+          caption: 'Relationships between the five letters',
+          preview: 'data:image/png;base64,AA==',
+          scene: JSON.stringify({ elements: [] }),
+        },
+      },
+    ],
+  });
+  assert.equal(
+    noteExcerpt('', document),
+    'Relationships between the five letters',
+  );
+});

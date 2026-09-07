@@ -148,6 +148,7 @@
   margin-top: 5px;
 }
 .reading-discussion {
+  scroll-margin-top: 96px;
   margin: 0 20px 24px;
   border: 1px solid var(--border);
   border-radius: 14px;

@@ -39,7 +39,14 @@ export default function WritingCanvas({
   return (
     <Dialog
       open
-      onOpenChange={(open) => {
+      disablePointerDismissal
+      onOpenChange={(open, details) => {
+        // Escape belongs to Excalidraw's text editing and selection tools.
+        // Closing the surrounding dialog would discard the unsaved scene.
+        if (details.reason === 'escape-key') {
+          details.cancel();
+          return;
+        }
         if (!open && !busy) onClose();
       }}
     >
@@ -47,8 +54,8 @@ export default function WritingCanvas({
         <DialogTitle>{L('研究画布', 'Research canvas')}</DialogTitle>
         <DialogDescription>
           {L(
-            '绘制关系、时间线或论证结构；完成后插入笔记，仍可再次编辑。',
-            'Draw relationships, timelines or arguments. Insert into your note and edit it again later.',
+            '绘制关系、时间线或论证结构；完成后插入笔记，仍可再次编辑。Esc 用于退出绘图操作；关闭画布请用取消或关闭按钮。',
+            'Draw relationships, timelines or arguments. Insert into your note and edit it again later. Escape exits drawing operations; use Cancel or Close to leave the canvas.',
           )}
         </DialogDescription>
         <div className="writing-canvas">

@@ -155,10 +155,17 @@
 .writing-canvas-dialog {
   max-width: min(1200px, 96vw) !important;
   width: 96vw !important;
+  height: min(860px, calc(100dvh - 3rem));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.writing-canvas-dialog > * {
+  flex-shrink: 0;
 }
 .writing-canvas {
-  height: min(60vh, 620px);
-  min-height: 300px;
+  flex: 1 1 auto;
+  min-height: 220px;
   color: #1b1b1f;
   color-scheme: light;
 }

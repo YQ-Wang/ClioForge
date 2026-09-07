@@ -111,6 +111,16 @@ export default function ReadingAnnotations({
   const question = draft.value.question || '';
   const refresh = useCallback(() => setRevision((v) => v + 1), []);
   const mounted = useRef(false);
+  const discussion = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!active) return;
+    // Follow an explicit passage selection once, never each polling refresh.
+    const frame = requestAnimationFrame(() => {
+      discussion.current?.focus({ preventScroll: true });
+      discussion.current?.scrollIntoView({ block: 'start' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [active, evidence.id]);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -336,6 +346,8 @@ export default function ReadingAnnotations({
     })[value] || value;
   return (
     <aside
+      ref={discussion}
+      tabIndex={-1}
       className="reading-discussion"
       aria-label={L(
         '此处的批注与助手',

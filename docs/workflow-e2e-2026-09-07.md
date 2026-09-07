@@ -68,3 +68,22 @@ The generated prose still repeated itself and overstated the boundary between ma
 - OCR accuracy, new embedding generation, live scheduled web discovery, email delivery and multi-agent scholarly reasoning were not re-evaluated with this text-only case. Existing regression coverage is not a replacement for those live exercises.
 
 No new Cloudflare resource, subscription or database migration is required for these changes.
+
+## Browser follow-up after the Mac was unlocked
+
+Chrome acceptance used the existing production Adams project and the isolated local copy. The following are actual UI interactions, supplementing the API checks above:
+
+- Confirmed the ordered sidebar on desktop and mobile, including the final writing stage. Checked English, dark appearance and the mobile drawer at 390 × 844; restored Chinese and system appearance afterward.
+- Searched for `adam`, opened an approximate `Adams` result at its fixed version and page, selected source text, saved a labelled test annotation and added a discussion comment.
+- Created a labelled production note with bold text, preset highlighting, a table and a rendered equation, then saved it into the note library.
+- Dragged a human review task from ready-for-review to active, confirmed the persisted board state, and restored it through the move menu. Dependent publication remained blocked; no scholarly approval was recorded.
+- Opened the connected Google Drive Picker, searched and cancelled. No private file was imported. Completed Drive import remains outside this pass.
+
+The browser exercise exposed four application issues, corrected in this follow-up:
+
+1. Opening an annotation could leave its discussion below the visible page. It now receives focus and scrolls into view once per selection. A local deep link opened the discussion; returning to the source remained stable across subsequent synchronization.
+2. Escape inside Excalidraw could dismiss its surrounding dialog and discard the unsaved scene. Escape now belongs to the drawing tool, and clicking the background does not dismiss the canvas. The actual regression drew a rectangle, edited its text, pressed Escape, inserted and saved the drawing, then reopened its editable scene with the text intact.
+3. The drawing insertion button could fall below the visible area on a short desktop window. The canvas now shares the available dialog height with its caption and action buttons; verified at 1512 × 727.
+4. Drawing-only notes appeared to have no body in the library. Cards now include drawing captions, with a focused regression for this case.
+
+Eight focused note and rich-export tests passed. This follow-up made no model request. It does not extend the evidence for OCR accuracy, scheduled discovery, completed Drive import or autonomous scholarly reasoning.
