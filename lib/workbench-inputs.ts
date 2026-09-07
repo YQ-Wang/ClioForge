@@ -205,6 +205,7 @@ export const jobInput = z.object({
       'reading_answer_v1',
       'research_discussion_v1',
       'claim_review_v1',
+      'manuscript_section_v1',
     ])
     .optional(),
   effort: thinkingEffort.optional(),

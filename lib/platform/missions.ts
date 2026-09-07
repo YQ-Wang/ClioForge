@@ -1,3 +1,7 @@
+import {
+  assertManuscriptCurrent,
+  validateManuscriptSection,
+} from '../manuscript';
 import { requireClaimAssessments } from '../claim-assessments';
 import { checkClaimReview } from '../claim-review';
 import { loadBoard } from './task-board';
@@ -383,6 +387,9 @@ export class MissionStore extends ResearchStore {
   }
   async checkResult(task: MissionTask, result: TaskResult) {
     const checks = [];
+    const manuscript = task.input.parameters.manuscript_root
+      ? await assertManuscriptCurrent(this, task)
+      : null;
     if (
       task.executor === 'model' &&
       task.input.parameters.output_schema === 'claim_review_v1'
@@ -411,6 +418,9 @@ export class MissionStore extends ResearchStore {
         result,
         task.input.parameters.output_schema === 'comparison_answer_v1',
       );
+    if (task.input.parameters.manuscript_stage === 'section') {
+      validateManuscriptSection(result, manuscript!.bundle);
+    }
     const allowed = new Set(task.input.version_ids);
     const dependencies = (
       await this.db
@@ -532,9 +542,63 @@ export class MissionStore extends ResearchStore {
         ? 'review'
         : 'succeeded';
     const date = now(),
-      hash = await sha256(lease),
-      serialized = JSON.stringify(result);
+      hash = await sha256(lease);
+    const noteStatements: D1PreparedStatement[] = [];
+    if (
+      task.executor === 'builtin' &&
+      task.input.parameters.manuscript_stage === 'assemble'
+    ) {
+      const { noteId, config } = await assertManuscriptCurrent(this, task);
+      const note = z
+        .object({
+          manuscript_note: z.object({
+            title: z.string().min(1).max(200),
+            body: z.string().max(100000),
+          }),
+        })
+        .parse(result.data).manuscript_note;
+      if (note.title !== config.title)
+        throw new HttpError(400, '论文标题与确认的提纲不一致。');
+      const existing = await this.db
+        .prepare('SELECT project_id,title,body FROM notes WHERE id=?')
+        .bind(noteId)
+        .first<{ project_id: string; title: string; body: string }>();
+      if (
+        existing &&
+        (existing.project_id !== task.project_id ||
+          existing.title !== note.title ||
+          existing.body !== note.body)
+      )
+        throw new HttpError(409, '初稿保存标识已被使用，原稿没有被覆盖。');
+      // Commit the new note and the task result in the same lease-guarded batch.
+      noteStatements.push(
+        this.db
+          .prepare(
+            "INSERT INTO notes(id,project_id,parent_id,revision,title,body,created_at,document) SELECT ?,project_id,NULL,1,?,?,?,NULL FROM mission_tasks WHERE id=? AND attempt=? AND status='running' AND claimed_by=? AND lease_hash=? AND lease_until>? ON CONFLICT(id) DO NOTHING",
+          )
+          .bind(
+            noteId,
+            note.title,
+            note.body,
+            date,
+            id,
+            task.attempt,
+            actor,
+            hash,
+            date,
+          ),
+      );
+    }
+    if (noteStatements.length) {
+      const { manuscript_note: _draft, ...metadata } = result.data as Record<
+        string,
+        unknown
+      >;
+      result.data = metadata;
+    }
+    const serialized = JSON.stringify(result);
     const accepted = await this.db.batch([
+      ...noteStatements,
       this.db
         .prepare(
           "UPDATE task_attempts SET result=?,status=?,finished_at=? WHERE task_id=? AND attempt=? AND EXISTS(SELECT 1 FROM mission_tasks t WHERE t.id=task_id AND t.attempt=task_attempts.attempt AND t.status='running' AND t.claimed_by=? AND t.lease_hash=? AND t.lease_until>?)",
@@ -546,7 +610,7 @@ export class MissionStore extends ResearchStore {
         )
         .bind(serialized, status, date, id, task.attempt, actor, hash, date),
     ]);
-    if (!accepted[1].meta.changes)
+    if (!accepted.at(-1)!.meta.changes)
       throw new HttpError(409, '任务租约已失效，结果未覆盖当前尝试。');
     await this.event(
       task.mission_id,

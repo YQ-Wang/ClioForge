@@ -5,6 +5,7 @@
 - [Project overview and local setup](../README.md)
 - [中文说明](../README.zh-CN.md)
 - [Development and architecture](development.md)
+- [From reviewed research to a manuscript draft](manuscript-workflow.md)
 - [Deploying your own Cloudflare installation](deployment.md)
 - [Google sign-in and Drive setup](cloud-drive-setup.md)
 - [Contributing](../CONTRIBUTING.md)

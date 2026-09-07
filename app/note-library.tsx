@@ -1,4 +1,5 @@
 'use client';
+import ManuscriptBuilder from './manuscript-builder';
 import { useMemo, useState } from 'react';
 import {
   Archive,
@@ -154,6 +155,13 @@ export default function NoteLibrary({
       className="note-library"
       aria-label={L('项目笔记', 'Project notes')}
     >
+      <ManuscriptBuilder
+        projectId={projectId}
+        canWrite={canWrite}
+        onOpen={onOpen}
+        notes={notes}
+        onSaved={onSaved}
+      />
       <header className="notes-heading">
         <div>
           <p>

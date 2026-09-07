@@ -1,4 +1,8 @@
 import { boundedBytes } from './files';
+import {
+  MANUSCRIPT_OUTPUT_SCHEMA,
+  manuscriptOutputJsonSchema,
+} from './manuscript-output';
 import { CLAIM_REVIEW_SCHEMA, claimReviewJsonSchema } from './claim-review';
 import {
   DEFAULT_RESEARCH_MODEL,
@@ -51,6 +55,7 @@ export type ModelRequest = {
     | typeof COMPARISON_OUTPUT_SCHEMA
     | typeof READING_OUTPUT_SCHEMA
     | typeof DISCUSSION_OUTPUT_SCHEMA
+    | typeof MANUSCRIPT_OUTPUT_SCHEMA
     | typeof CLAIM_REVIEW_SCHEMA;
   effort?: ThinkingEffort;
   taskKind?: string;
@@ -60,22 +65,26 @@ function constrainedSchema(input: ModelRequest) {
   const schema =
     input.outputSchema === CLAIM_REVIEW_SCHEMA
       ? claimReviewJsonSchema
-      : input.outputSchema === COMPARISON_OUTPUT_SCHEMA
-        ? comparisonOutputJsonSchema
-        : input.outputSchema === DISCUSSION_OUTPUT_SCHEMA
-          ? discussionOutputJsonSchema
-          : readingOutputJsonSchema;
+      : input.outputSchema === MANUSCRIPT_OUTPUT_SCHEMA
+        ? manuscriptOutputJsonSchema
+        : input.outputSchema === COMPARISON_OUTPUT_SCHEMA
+          ? comparisonOutputJsonSchema
+          : input.outputSchema === DISCUSSION_OUTPUT_SCHEMA
+            ? discussionOutputJsonSchema
+            : readingOutputJsonSchema;
   if (
     input.outputSchema === CLAIM_REVIEW_SCHEMA ||
     !input.sourceVersionIds?.length
   )
     return schema;
   const reading =
-    input.outputSchema === COMPARISON_OUTPUT_SCHEMA
-      ? comparisonOutputJsonSchema
-      : input.outputSchema === DISCUSSION_OUTPUT_SCHEMA
-        ? discussionOutputJsonSchema
-        : readingOutputJsonSchema;
+    input.outputSchema === MANUSCRIPT_OUTPUT_SCHEMA
+      ? manuscriptOutputJsonSchema
+      : input.outputSchema === COMPARISON_OUTPUT_SCHEMA
+        ? comparisonOutputJsonSchema
+        : input.outputSchema === DISCUSSION_OUTPUT_SCHEMA
+          ? discussionOutputJsonSchema
+          : readingOutputJsonSchema;
   return {
     ...reading,
     properties: {
@@ -125,6 +134,7 @@ export function providerRequest(input: ModelRequest): {
                 input.outputSchema === COMPARISON_OUTPUT_SCHEMA ||
                 input.outputSchema === READING_OUTPUT_SCHEMA ||
                 input.outputSchema === DISCUSSION_OUTPUT_SCHEMA ||
+                input.outputSchema === MANUSCRIPT_OUTPUT_SCHEMA ||
                 input.outputSchema === CLAIM_REVIEW_SCHEMA
                   ? {
                       type: 'json_schema',

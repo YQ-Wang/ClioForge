@@ -1,4 +1,7 @@
 'use client';
+import Link from 'next/link';
+import { z } from 'zod';
+import { projectPath } from '@/lib/navigation';
 import { useI18n } from '@/lib/i18n/provider';
 import { researchTables } from '@/lib/research-report';
 import type { TaskResult } from '@/lib/platform/types';
@@ -16,11 +19,26 @@ export default function ResearchResult({
 }) {
   const { locale } = useI18n();
   const L = (zh: string, en: string) => (locale === 'en' ? en : zh);
+  const manuscript = z
+    .object({
+      format: z.literal('canwoo-manuscript-draft-v1'),
+      project_id: z.uuid(),
+      note_id: z.uuid(),
+    })
+    .safeParse(result.data);
   const parsed = researchTables.safeParse(result.data);
   const data = parsed.success ? parsed.data : {};
   return (
     <div className="research-report">
       <ResearchText text={result.summary} />
+      {manuscript.success && (
+        <Link
+          className="manuscript-result-link"
+          href={projectPath(manuscript.data.project_id, 'notes')}
+        >
+          {L('到笔记与写作打开初稿 →', 'Open the draft in Notes & writing →')}
+        </Link>
+      )}
       <ResearchInsights result={result} onSource={onSource} />
       {data.rows && (
         <>

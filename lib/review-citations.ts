@@ -49,6 +49,7 @@ export function canRepairProse(task: MissionTask) {
     ['human', 'model'].includes(task.executor) &&
     ['review', 'succeeded', 'uncertain', 'failed'].includes(task.status) &&
     task.input.parameters.extraction !== true &&
+    task.input.parameters.manuscript_stage !== 'section' &&
     !['audit', 'update'].includes(String(task.input.parameters.recipe)) &&
     (task.executor === 'human' ||
       task.kind === 'compare' ||

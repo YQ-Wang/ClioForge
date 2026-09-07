@@ -103,11 +103,24 @@ export async function createJob(
       inputBound * input.input_rate + input.max_output * input.output_rate,
     ),
   );
+  const manuscript = missionTask
+    ? await store.db
+        .prepare(
+          "SELECT t.mission_id,json_extract(r.input,'$.parameters.manuscript_config.budget_usd') budget FROM mission_tasks t JOIN mission_tasks r ON r.id=json_extract(t.input,'$.parameters.manuscript_root') AND r.mission_id=t.mission_id AND r.project_id=t.project_id WHERE t.id=? AND t.project_id=? AND json_extract(t.input,'$.parameters.manuscript_stage')='section'",
+        )
+        .bind(missionTask.id, input.project_id)
+        .first<{ mission_id: string; budget: number }>()
+    : null;
+  const manuscriptLimit = manuscript
+    ? Math.floor(
+        z.number().min(0.01).max(100).parse(manuscript.budget) * 1000000,
+      )
+    : null;
   const date = new Date().toISOString();
   await store.db.batch([
     store.db
       .prepare(
-        "INSERT INTO research_jobs(id,owner_id,project_id,model_id,model_snapshot,version_ids,prompt,status,stage,reserved_units,input_rate,output_rate,max_output,locale,created_at) SELECT ?,?,?,?,?,?,?,'queued','reserved',?,?,?,?,?,? WHERE (SELECT limit_units-committed_units FROM project_budgets WHERE project_id=?)>=? AND (SELECT COUNT(*) FROM research_jobs WHERE owner_id=? AND status IN ('queued','running','paused'))<20 ON CONFLICT(id) DO NOTHING",
+        "INSERT INTO research_jobs(id,owner_id,project_id,model_id,model_snapshot,version_ids,prompt,status,stage,reserved_units,input_rate,output_rate,max_output,locale,created_at) SELECT ?,?,?,?,?,?,?,'queued','reserved',?,?,?,?,?,? WHERE (SELECT limit_units-committed_units FROM project_budgets WHERE project_id=?)>=? AND (SELECT COUNT(*) FROM research_jobs WHERE owner_id=? AND status IN ('queued','running','paused'))<20 AND (? IS NULL OR (SELECT COALESCE(SUM(j.reserved_units),0) FROM research_jobs j JOIN mission_tasks mt ON mt.id=json_extract(j.model_snapshot,'$.mission_task.id') WHERE mt.mission_id=? AND j.project_id=?) + ? <= ?) ON CONFLICT(id) DO NOTHING",
       )
       .bind(
         input.id,
@@ -141,6 +154,11 @@ export async function createJob(
         input.project_id,
         reserved,
         store.owner,
+        manuscriptLimit,
+        manuscript?.mission_id || null,
+        input.project_id,
+        reserved,
+        manuscriptLimit,
       ),
     store.db
       .prepare(
@@ -157,7 +175,9 @@ export async function createJob(
   if (!job)
     throw new HttpError(
       409,
-      '后台分析预算不足，或已有 20 个未完成任务。请调整预算或处理队列。',
+      manuscript
+        ? '论文或项目预算不足，或已有 20 个未完成任务。尚未调用模型；请检查预算与执行记录。'
+        : '后台分析预算不足，或已有 20 个未完成任务。请调整预算或处理队列。',
     );
   return job;
 }

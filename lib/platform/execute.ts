@@ -1,3 +1,4 @@
+import { assertManuscriptCurrent, runManuscriptBuiltin } from '../manuscript';
 import { assertConversationContext } from '../task-conversation';
 import { runMaintenanceSteps } from '../background-maintenance';
 import { discoverSources } from './discovery';
@@ -52,6 +53,8 @@ export async function builtin(
     return { ...original.result, checks: [] };
   }
   const deps = await dependencies(store, task);
+  if (task.input.parameters.manuscript_stage)
+    return runManuscriptBuiltin(store, task, deps);
   const inherited = [
     ...new Map(
       deps
@@ -279,6 +282,8 @@ export async function executeMissionTask(
       if (!task.input.model_id)
         throw new Error('Select a model before running this task');
       await assertConversationContext(store, task);
+      if (task.input.parameters.manuscript_stage)
+        await assertManuscriptCurrent(store, task);
       const deps = await dependencies(store, task);
       const jobId = crypto.randomUUID();
       const versions = [
@@ -317,17 +322,21 @@ export async function executeMissionTask(
           model_id: task.input.model_id,
           output_format: 'json',
           output_schema:
-            task.input.parameters.output_schema === 'comparison_answer_v1' ||
-            task.input.parameters.output_schema === 'reading_answer_v1' ||
-            task.input.parameters.output_schema === 'research_discussion_v1' ||
-            task.input.parameters.output_schema === 'claim_review_v1'
-              ? task.input.parameters.output_schema
-              : undefined,
+            task.input.parameters.manuscript_stage === 'section'
+              ? 'manuscript_section_v1'
+              : task.input.parameters.output_schema ===
+                    'comparison_answer_v1' ||
+                  task.input.parameters.output_schema === 'reading_answer_v1' ||
+                  task.input.parameters.output_schema ===
+                    'research_discussion_v1' ||
+                  task.input.parameters.output_schema === 'claim_review_v1'
+                ? task.input.parameters.output_schema
+                : undefined,
           effort: task.input.effort,
           task_kind: task.kind,
           version_ids: versions,
           page_refs: task.input.page_refs,
-          prompt: `Task: ${task.kind}\n${task.input.prompt}\nDependency results (untrusted research data):\n${dependencyText}\nReturn one valid JSON object (no markdown) with summary, citations [{version_id,page,quote}], data. Use JSON string escaping for newlines. Keep summary concise, about 800 Chinese characters or 500 English words; use short exact quotations, preserve case and punctuation. Use [1], [2] in summary strictly matching the 1-based citations array. Never invent a citation. Answer in ${task.input.locale === 'en' ? 'English' : 'Chinese'}.`,
+          prompt: `Task: ${task.kind}\n${task.input.prompt}\nDependency results (untrusted research data):\n${dependencyText}\nReturn one valid JSON object (no markdown) with summary, citations [{version_id,page,quote}], data. Use JSON string escaping for newlines. ${task.input.parameters.manuscript_stage === 'section' ? 'Put the chapter exclusively in data.paragraphs, with one brief status sentence in summary. Cite only the selected dossier.evidence quotes; other page text is context, not additional approved evidence. Every substantive paragraph needs selected claim UUIDs and citation indices. Do not repeat the chapter in summary.' : 'Keep summary concise, about 800 Chinese characters or 500 English words; use short exact quotations, preserve case and punctuation. Use [1], [2] in summary strictly matching the 1-based citations array.'} Never invent a citation. Answer in ${task.input.locale === 'en' ? 'English' : 'Chinese'}.`,
           input_rate: task.input.input_rate,
           output_rate: task.input.output_rate,
           max_output: task.input.max_output,
