@@ -6,7 +6,7 @@ import { WorkbenchStore } from '../lib/workbench-store';
 import type { ResearchStore } from '../lib/store';
 import type { WorkbenchData } from '../lib/workbench-types';
 
-void test('saved excerpts and page citations include the locator once, with or without a bibliography entry', async (t) => {
+void test('saved excerpts and page citations identify file pages without inventing original pagination', async (t) => {
   const project = '11111111-1111-4111-8111-111111111111';
   const version = '22222222-2222-4222-8222-222222222222';
   const otherVersion = '33333333-3333-4333-8333-333333333333';
@@ -92,7 +92,9 @@ void test('saved excerpts and page citations include the locator once, with or w
       1,
       citation.text,
     );
-    if (page === 8) assert.match(citation.text, /Uncatalogued letter, p\. 8\./);
+    assert.match(citation.text, new RegExp(`file page ${page};`));
+    assert.doesNotMatch(citation.text, new RegExp(`, (?:p\\. )?${page}[,.]`));
+    if (page === 8) assert.match(citation.text, /Uncatalogued letter\./);
     assert.match(citation.text, /Canwoo version 1/);
     assert.ok(citation.href.startsWith(origin));
     if (citation.id.startsWith('page:'))
