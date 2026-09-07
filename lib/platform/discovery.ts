@@ -68,7 +68,7 @@ export async function discoverSources(
         title: h.title || 'Project source',
         url: `/?project=${task.project_id}&tab=sources&version=${h.version_id}&page=${h.page}`,
         access: 'project_text',
-        detail: h.text.slice(0, 300),
+        detail: h.snippet,
       });
       if (
         h.text &&
@@ -79,8 +79,8 @@ export async function discoverSources(
         citations.push({
           version_id: h.version_id,
           page: h.page,
-          quote: h.text.slice(0, 300),
-          start: 0,
+          quote: h.snippet,
+          start: h.text.indexOf(h.snippet),
         });
     }
     searches.push({

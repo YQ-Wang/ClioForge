@@ -1164,6 +1164,47 @@ async function source(store: ResearchStore) {
   });
   return { project, id, versionId, path };
 }
+void test('automated search and discovery cite the matching passage after source preparation notes', async () => {
+  const owner = await user();
+  const sample = await source(owner);
+  const text =
+    'Preparation notes and archive description. '.repeat(35) +
+    '\nWomen will demand a Vote. This is a disputed consequence, not an endorsement.';
+  const version = await owner.reviseSource({
+    p_source: sample.id,
+    p_expected: 1,
+    p_method: 'manual',
+    p_pages: [{ page: 1, text }],
+  });
+  const store = new MissionStore(db, owner.owner);
+  const draft = researchTemplate({
+    title: 'Locate voting language',
+    question: 'Where is voting mentioned?',
+    scope: 'One supplied excerpt',
+    acceptance: 'Retain the actual matching words and fixed version',
+    query: 'Women will demand a Vote',
+    version_ids: [version],
+    locale: 'en',
+  });
+  await store.create(sample.project.id, draft);
+  const task = await store.task(draft.tasks[0].id);
+  const search = await builtin(store, task);
+  task.input.parameters = { discovery: true, external: false };
+  const discovery = await discoverSources(store, task, [], async () => {
+    throw new Error('No external catalog was requested');
+  });
+  for (const result of [search, discovery]) {
+    assert.equal(result.citations.length, 1);
+    const citation = result.citations[0];
+    assert.ok(citation.quote.includes('Women will demand a Vote.'));
+    assert.ok(citation.start! > 500);
+    assert.equal(
+      text.slice(citation.start, citation.start! + citation.quote.length),
+      citation.quote,
+    );
+    assert.equal(citation.version_id, version);
+  }
+});
 void test('artifact summaries identify their research plan without exposing a shared artifact owner plan', async () => {
   const alice = await user(),
     bob = await user();
@@ -2993,6 +3034,12 @@ void test('AI reading plans require real citations and do not trust model-author
     verification.lease,
     'checks',
     await builtin(store, verification.task),
+  );
+  const verified = (await store.task(verification.task.id)).result!;
+  assert.equal(
+    verified.checks.filter((check) => check.name.startsWith('citation:'))
+      .length,
+    verified.citations.length,
   );
   const reviewer = await store.claim(draft.tasks[2].id, 'historian', 'human');
   await store.submit(reviewer.task.id, reviewer.lease, 'historian', {

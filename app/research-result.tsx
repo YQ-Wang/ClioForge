@@ -161,7 +161,7 @@ export default function ResearchResult({
               {check.passed ? '✓' : '!'}{' '}
               {check.name.startsWith('citation') ||
               check.name.startsWith('quote')
-                ? L(`引文 ${i + 1}`, `Citation ${i + 1}`)
+                ? L('引文文字与出处', 'Quotation text and source')
                 : check.name === 'scope'
                   ? L('材料范围', 'Source scope')
                   : check.name}{' '}

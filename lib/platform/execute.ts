@@ -85,8 +85,8 @@ export async function builtin(
         .map((hit) => ({
           version_id: hit.version_id,
           page: hit.page,
-          quote: hit.text.slice(0, 500),
-          start: 0,
+          quote: hit.snippet,
+          start: hit.text.indexOf(hit.snippet),
         })),
       checks: [
         {
@@ -195,7 +195,8 @@ export async function builtin(
         `Checked ${inherited.length} citations against fixed source versions. Historical interpretation remains subject to researcher review.`,
       ),
     };
-    result.checks = await store.checkResult(task, result);
+    // Submission verifies every quotation before accepting this result. Running
+    // the same checks here would store each check twice in the review record.
     return result;
   }
   if (task.kind === 'publish') {
