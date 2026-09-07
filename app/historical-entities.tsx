@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  NativeSelect,
+  NativeSelectOption,
+} from '@/components/ui/native-select';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -14,16 +18,29 @@ import { api, projectRows } from '@/lib/client-api';
 import { useI18n } from '@/lib/i18n/provider';
 import { sourcePath } from '@/lib/navigation';
 import type { HistoricalEntity } from '@/lib/historical-entities';
-import type { Evidence } from '@/lib/types';
+import type { Evidence, Source, SourceVersion } from '@/lib/types';
 export default function HistoricalEntities({
   projectId,
+  sources,
+  versions,
 }: {
   projectId: string;
+  sources: Source[];
+  versions: SourceVersion[];
 }) {
   const { locale } = useI18n(),
     L = (zh: string, en: string) => (locale === 'en' ? en : zh);
   const [data, setData] = useState<{
       entities: HistoricalEntity[];
+      history: {
+        id: string;
+        from_id: string;
+        to_id: string;
+        kind: string;
+        basis: string;
+        actor: string | null;
+        created_at: string;
+      }[];
       writable: boolean;
       reviewable: boolean;
     } | null>(null),
@@ -50,6 +67,24 @@ export default function HistoricalEntities({
   useEffect(() => {
     void refresh().catch((e) => setError(e.message));
   }, [refresh]);
+  const visible =
+    data?.entities.filter((entry) =>
+      `${entry.name} ${entry.aliases.join(' ')}`
+        .normalize('NFKD')
+        .replace(/\p{M}/gu, '')
+        .toLowerCase()
+        .includes(
+          query.trim().normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase(),
+        ),
+    ) || [];
+  const reason = (basis: string) => {
+    try {
+      const parsed = JSON.parse(basis);
+      return typeof parsed.reason === 'string' ? parsed.reason : '';
+    } catch {
+      return basis;
+    }
+  };
   return (
     <section className="entity-library">
       <div className="section-toolbar">
@@ -83,74 +118,114 @@ export default function HistoricalEntities({
       />
       {error && <p role="alert">{error}</p>}
       <div className="entity-cards">
-        {data?.entities
-          .filter((e) =>
-            `${e.name} ${e.aliases.join(' ')}`
-              .toLowerCase()
-              .includes(query.toLowerCase()),
-          )
-          .map((e) => (
-            <article key={e.id} className="research-insight">
-              <div className="flow-actions">
-                <strong>{e.name}</strong>
+        {visible.map((e) => (
+          <article key={e.id} className="research-insight">
+            <div className="flow-actions">
+              <strong>{e.name}</strong>
+              <span>
+                {labels[e.kind]} ·{' '}
+                {e.status === 'confirmed'
+                  ? L('已审读', 'Reviewed')
+                  : e.status === 'rejected'
+                    ? L('已排除', 'Rejected')
+                    : L('待核查', 'Candidate')}
+              </span>
+            </div>
+            {!!e.aliases.length && (
+              <p>
+                {L('别名：', 'Also known as: ')}
+                {e.aliases.join(' · ')}
+              </p>
+            )}
+            {(e.date_start !== null || e.date_end !== null) && (
+              <p>
+                {L('材料支持的年代范围：', 'Source-supported date range: ')}
+                {e.date_start ?? '?'} — {e.date_end ?? '?'}
+              </p>
+            )}
+            {e.canonical_id && (
+              <p>
+                {L('合并到：', 'Grouped under: ')}
+                {data?.entities.find((v) => v.id === e.canonical_id)?.name ||
+                  L('既有条目', 'Existing entry')}
+              </p>
+            )}
+            {e.evidence.map((c, i) => (
+              <a
+                key={i}
+                className="record-citation"
+                href={sourcePath(projectId, c.version_id, c.page)}
+              >
                 <span>
-                  {labels[e.kind]} ·{' '}
-                  {e.status === 'confirmed'
-                    ? L('已审读', 'Reviewed')
-                    : e.status === 'rejected'
-                      ? L('已排除', 'Rejected')
-                      : L('待核查', 'Candidate')}
+                  {sources.find(
+                    (source) =>
+                      source.id ===
+                      versions.find((version) => version.id === c.version_id)
+                        ?.source_id,
+                  )?.title || L('原文出处', 'Source')}{' '}
+                  · {L('打开原文', 'Open source')}
                 </span>
-              </div>
-              {!!e.aliases.length && (
-                <p>
-                  {L('别名：', 'Also known as: ')}
-                  {e.aliases.join(' · ')}
-                </p>
-              )}
-              {(e.date_start !== null || e.date_end !== null) && (
-                <p>
-                  {L(
-                    '年代范围（公元年；负数为公元前）：',
-                    'Date range (CE years; negative values are BCE): ',
-                  )}
-                  {e.date_start ?? '?'} — {e.date_end ?? '?'}
-                </p>
-              )}
-              {e.canonical_id && (
-                <p>
-                  {L('合并到：', 'Grouped under: ')}
-                  {data.entities.find((v) => v.id === e.canonical_id)?.name ||
-                    L('既有条目', 'Existing entry')}
-                </p>
-              )}
-              {e.evidence.map((c, i) => (
-                <a
-                  key={i}
-                  className="record-citation"
-                  href={sourcePath(projectId, c.version_id, c.page)}
-                >
-                  {c.quote} · {L('第', 'p. ')}
-                  {c.page}
-                  {L('页', '')}
-                </a>
-              ))}
-              {data.writable && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  onClick={() => {
-                    setEdit(e);
-                    setOpen(true);
-                  }}
-                >
-                  {L('查看与编辑', 'Review / edit')}
-                </Button>
-              )}
-            </article>
-          ))}
+                <br />
+                {c.quote} · {L('第', 'p. ')}
+                {c.page}
+                {L('页', '')}
+              </a>
+            ))}
+            {!!data?.history.some(
+              (item) => item.from_id === e.id || item.to_id === e.id,
+            ) && (
+              <details className="entity-history">
+                <summary>
+                  {L('判断依据与修改记录', 'Reasons and revision history')}
+                </summary>
+                {data.history
+                  .filter(
+                    (item) => item.from_id === e.id || item.to_id === e.id,
+                  )
+                  .map((item) => (
+                    <div key={item.id} className="my-3 text-sm">
+                      <strong>
+                        {item.kind === 'create'
+                          ? L('建立条目', 'Entry created')
+                          : item.kind === 'merge'
+                            ? L('归并条目', 'Identity grouped')
+                            : item.kind === 'unmerge'
+                              ? L('取消归并', 'Grouping undone')
+                              : L('修订条目', 'Entry revised')}
+                      </strong>
+                      <p>{reason(item.basis)}</p>
+                      <small>
+                        {item.actor || L('研究成员', 'Research member')} ·{' '}
+                        {new Date(item.created_at).toLocaleString(locale)}
+                      </small>
+                    </div>
+                  ))}
+              </details>
+            )}
+            {data?.writable && (
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={() => {
+                  setEdit(e);
+                  setOpen(true);
+                }}
+              >
+                {L('查看与编辑', 'Review / edit')}
+              </Button>
+            )}
+          </article>
+        ))}
       </div>
+      {data && data.entities.length > 0 && !visible.length && (
+        <output className="settings-feedback">
+          {L(
+            '没有匹配的条目。试试姓名的一部分或别名。',
+            'No matching entries. Try part of a name or an alias.',
+          )}
+        </output>
+      )}
       {data && !data.entities.length && (
         <p className="settings-feedback">
           {L(
@@ -167,8 +242,8 @@ export default function HistoricalEntities({
             </DialogTitle>
             <DialogDescription>
               {L(
-                '日期仅填写材料支持的范围；未知留空，不自动换算原始纪年。',
-                'Use only the date range supported by evidence. Leave unknowns empty; historical calendars are not converted automatically.',
+                '年代仅填写材料支持的范围，并在依据中说明是活动年份还是生卒年；未知留空。确认身份前请核对引文及整页语境。',
+                'Use source-supported years and explain whether they describe activity or lifespan; leave unknowns empty. Check the quotation and its page context before confirming an identity.',
               )}
             </DialogDescription>
           </DialogHeader>
@@ -245,13 +320,13 @@ export default function HistoricalEntities({
               </label>
               <label>
                 {L('类别', 'Kind')}
-                <select name="kind" defaultValue={edit?.kind || 'person'}>
+                <NativeSelect name="kind" defaultValue={edit?.kind || 'person'}>
                   {Object.entries(labels).map(([key, label]) => (
-                    <option key={key} value={key}>
+                    <NativeSelectOption key={key} value={key}>
                       {label}
-                    </option>
+                    </NativeSelectOption>
                   ))}
-                </select>
+                </NativeSelect>
               </label>
               <label>
                 {L('别名（逗号分隔）', 'Aliases (comma separated)')}
@@ -281,29 +356,38 @@ export default function HistoricalEntities({
               </div>
               <label>
                 {L('补充出处', 'Add supporting evidence')}
-                <select name="evidence">
-                  <option value="">
-                    {L('保留既有出处', 'Keep existing evidence')}
-                  </option>
+                <NativeSelect name="evidence">
+                  <NativeSelectOption value="">
+                    {edit
+                      ? L('保留既有出处', 'Keep existing evidence')
+                      : L('选择一条证据摘录', 'Choose an evidence excerpt')}
+                  </NativeSelectOption>
                   {evidence.map((e) => (
-                    <option value={e.id} key={e.id}>
+                    <NativeSelectOption value={e.id} key={e.id}>
                       {e.quote.slice(0, 80)}
-                    </option>
+                    </NativeSelectOption>
                   ))}
-                </select>
+                </NativeSelect>
               </label>
               <label>
                 {L('审读状态', 'Review status')}
-                <select
+                <NativeSelect
                   name="status"
                   defaultValue={edit?.status || 'candidate'}
                 >
-                  <option value="candidate">{L('待核查', 'Candidate')}</option>
-                  <option value="confirmed" disabled={!data?.reviewable}>
+                  <NativeSelectOption value="candidate">
+                    {L('待核查', 'Candidate')}
+                  </NativeSelectOption>
+                  <NativeSelectOption
+                    value="confirmed"
+                    disabled={!data?.reviewable}
+                  >
                     {L('已审读确认', 'Reviewed')}
-                  </option>
-                  <option value="rejected">{L('已排除', 'Rejected')}</option>
-                </select>
+                  </NativeSelectOption>
+                  <NativeSelectOption value="rejected">
+                    {L('已排除', 'Rejected')}
+                  </NativeSelectOption>
+                </NativeSelect>
               </label>
             </fieldset>
             {edit?.canonical_id && (
@@ -314,38 +398,42 @@ export default function HistoricalEntities({
                 )}
               </p>
             )}
-            {edit && data?.reviewable && (
-              <label>
-                {L('同一对象的归并', 'Identity grouping')}
-                <select
-                  name="target"
-                  defaultValue={edit.canonical_id ? 'unmerge' : ''}
-                >
-                  {!edit.canonical_id && (
-                    <option value="">{L('不合并', 'Keep separate')}</option>
-                  )}
-                  {edit.canonical_id ? (
-                    <option value="unmerge">
-                      {L('取消此前合并', 'Undo grouping')}
-                    </option>
-                  ) : (
-                    data.entities
-                      .filter(
-                        (e) =>
-                          e.id !== edit.id &&
-                          e.kind === edit.kind &&
-                          e.status === 'confirmed' &&
-                          !e.canonical_id,
-                      )
-                      .map((e) => (
-                        <option value={e.id} key={e.id}>
-                          {e.name}
-                        </option>
-                      ))
-                  )}
-                </select>
-              </label>
-            )}
+            {edit &&
+              data?.reviewable &&
+              (edit.status === 'confirmed' || edit.canonical_id) && (
+                <label>
+                  {L('同一对象的归并', 'Identity grouping')}
+                  <NativeSelect
+                    name="target"
+                    defaultValue={edit.canonical_id ? 'unmerge' : ''}
+                  >
+                    {!edit.canonical_id && (
+                      <NativeSelectOption value="">
+                        {L('不合并', 'Keep separate')}
+                      </NativeSelectOption>
+                    )}
+                    {edit.canonical_id ? (
+                      <NativeSelectOption value="unmerge">
+                        {L('取消此前合并', 'Undo grouping')}
+                      </NativeSelectOption>
+                    ) : (
+                      data.entities
+                        .filter(
+                          (e) =>
+                            e.id !== edit.id &&
+                            e.kind === edit.kind &&
+                            e.status === 'confirmed' &&
+                            !e.canonical_id,
+                        )
+                        .map((e) => (
+                          <NativeSelectOption value={e.id} key={e.id}>
+                            {e.name}
+                          </NativeSelectOption>
+                        ))
+                    )}
+                  </NativeSelect>
+                </label>
+              )}
             <label>
               {L('依据或修改理由', 'Reason for this change')}
               <Input name="reason" required maxLength={2000} />

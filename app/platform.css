@@ -1237,6 +1237,30 @@
   gap: 12px;
   margin: 16px 0;
 }
+.entity-cards .record-citation {
+  display: block;
+  margin: 12px 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.entity-cards .record-citation:hover span,
+.source-relation .record-citation:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.entity-history {
+  margin: 16px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.entity-history summary {
+  cursor: pointer;
+  color: var(--primary);
+}
 .entity-form {
   display: grid;
   gap: 14px;
@@ -1246,14 +1270,9 @@
   gap: 6px;
   font-size: 13px;
 }
-.entity-form select {
+.entity-form [data-slot='native-select-wrapper'] {
   width: 100%;
   max-width: 100%;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card);
-  color: var(--foreground);
 }
 .claim-support {
   display: inline-block;

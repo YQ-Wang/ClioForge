@@ -1240,6 +1240,8 @@ export default function ProjectDesk({
             projectId={project.id}
             data={workbench}
             sources={sources}
+            versions={versions}
+            canWrite={canWrite}
             onSaved={refresh}
           />
         )}

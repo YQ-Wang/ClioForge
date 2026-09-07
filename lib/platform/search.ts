@@ -1,6 +1,7 @@
 import type { ResearchStore } from '../store';
 import type { SourceVersion } from '../types';
 import { HttpError } from '../errors';
+import { spellingPrefixes, sourceMatchSnippet } from '../search-matching';
 export async function sha256(value: string | Uint8Array) {
   const digest = await crypto.subtle.digest(
     'SHA-256',
@@ -71,12 +72,14 @@ export type SearchHit = {
   revision: number;
   score: number;
   snippet: string;
+  match_kind?: 'exact' | 'similar';
 };
 export async function searchPages(
   store: ResearchStore,
   projectId: string,
   query: string,
   options: {
+    approximate?: boolean;
     limit?: number;
     offset?: number;
     history?: boolean;
@@ -87,7 +90,7 @@ export async function searchPages(
     version_ids?: string[];
     page_refs?: { version_id: string; page: number }[];
   } = {},
-) {
+): Promise<SearchHit[]> {
   await store.project(projectId);
   const terms = query.split('|').map(normalize).filter(Boolean).slice(0, 10);
   if (!terms.length || query.length > 2000)
@@ -183,23 +186,34 @@ export async function searchPages(
     );
     bindings.push(JSON.stringify(options.page_refs));
   }
+  const select = `SELECT sp.id AS id,sp.source_id,sp.version_id,sp.page,sp.text,s.title,v.revision,bm25(page_fts) AS score`;
+  const from = `FROM page_fts JOIN source_pages sp ON sp.id=page_fts.page_id JOIN sources s ON s.id=sp.source_id JOIN source_versions v ON v.id=sp.version_id WHERE ${conditions.join(' AND ')}`;
+  const prefixes = options.approximate
+    ? spellingPrefixes([...new Set(terms)].slice(0, 30))
+    : [];
+  const similarExpression = prefixes
+    .map((term) => '"' + term + '"*')
+    .join(' OR ');
+  const exactQuery = `${select},0 AS match_order ${from}`;
+  const sql = similarExpression
+    ? `${exactQuery} UNION ALL ${select},1 AS match_order ${from} AND sp.id NOT IN (SELECT page_id FROM page_fts WHERE page_fts MATCH ?) ORDER BY match_order,score,id LIMIT ? OFFSET ?`
+    : `${exactQuery} ORDER BY score,sp.id LIMIT ? OFFSET ?`;
   const result = await store.db
-    .prepare(
-      `SELECT sp.id,sp.source_id,sp.version_id,sp.page,sp.text,s.title,v.revision,bm25(page_fts) AS score FROM page_fts JOIN source_pages sp ON sp.id=page_fts.page_id JOIN sources s ON s.id=sp.source_id JOIN source_versions v ON v.id=sp.version_id WHERE ${conditions.join(' AND ')} ORDER BY score,sp.id LIMIT ? OFFSET ?`,
-    )
+    .prepare(sql)
     .bind(
       ...bindings,
+      ...(similarExpression
+        ? [similarExpression, ...bindings.slice(1), expression]
+        : []),
       Math.min(options.limit || 30, 100),
       Math.max(options.offset || 0, 0),
     )
-    .all<Omit<SearchHit, 'snippet'>>();
-  return result.results.map((hit) => {
-    const at = Math.max(
-      0,
-      ...terms.map((term) => normalize(hit.text).indexOf(term)),
-    );
-    return { ...hit, snippet: hit.text.slice(Math.max(0, at - 70), at + 250) };
-  });
+    .all<Omit<SearchHit, 'snippet'> & { match_order: number }>();
+  return result.results.map(({ match_order, ...hit }) => ({
+    ...hit,
+    match_kind: match_order === 0 ? ('exact' as const) : ('similar' as const),
+    snippet: sourceMatchSnippet(hit.text, match_order === 0 ? terms : prefixes),
+  }));
 }
 export async function reindexProject(
   store: ResearchStore,

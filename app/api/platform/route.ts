@@ -99,6 +99,7 @@ export async function GET(request: Request) {
         {
           hits: await searchPages(store, projectId, params.get('q') || '', {
             offset: Number(params.get('offset')) || 0,
+            approximate: params.get('approximate') === '1',
             history: params.get('history') === '1',
             source_id: params.get('source_id') || undefined,
             language: params.get('language') || undefined,

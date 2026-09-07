@@ -56,7 +56,7 @@ export async function listEntities(store: ResearchStore, project: string) {
   const history = (
     await store.db
       .prepare(
-        "SELECT r.*,u.name actor FROM entity_relations r LEFT JOIN user u ON u.id=json_extract(CASE WHEN json_valid(r.basis) THEN r.basis ELSE '{}' END,'$.actor') WHERE r.project_id=? AND r.kind IN ('revision','merge','unmerge') ORDER BY r.created_at DESC LIMIT 100",
+        "SELECT r.*,u.name actor FROM entity_relations r LEFT JOIN user u ON u.id=json_extract(CASE WHEN json_valid(r.basis) THEN r.basis ELSE '{}' END,'$.actor') WHERE r.project_id=? AND r.kind IN ('create','revision','merge','unmerge') ORDER BY r.created_at DESC LIMIT 100",
       )
       .bind(project)
       .all()
@@ -140,24 +140,37 @@ export async function saveEntity(store: ResearchStore, raw: unknown) {
     if (!result[1].meta.changes)
       throw new HttpError(409, '条目已有更新，请重试。');
   } else {
-    await store.db
-      .prepare(
-        'INSERT INTO entities(id,project_id,kind,name,aliases,date_start,date_end,evidence,status,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-      )
-      .bind(
-        id,
-        input.project_id,
-        input.kind,
-        input.name,
-        JSON.stringify([...new Set(input.aliases)]),
-        input.date_start,
-        input.date_end,
-        JSON.stringify(input.evidence),
-        input.status,
-        store.owner,
-        time,
-      )
-      .run();
+    await store.db.batch([
+      store.db
+        .prepare(
+          'INSERT INTO entities(id,project_id,kind,name,aliases,date_start,date_end,evidence,status,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+        )
+        .bind(
+          id,
+          input.project_id,
+          input.kind,
+          input.name,
+          JSON.stringify([...new Set(input.aliases)]),
+          input.date_start,
+          input.date_end,
+          JSON.stringify(input.evidence),
+          input.status,
+          store.owner,
+          time,
+        ),
+      store.db
+        .prepare(
+          "INSERT INTO entity_relations(id,project_id,from_id,to_id,kind,basis,created_at) VALUES(?,?,?,?,'create',?,?)",
+        )
+        .bind(
+          crypto.randomUUID(),
+          input.project_id,
+          id,
+          id,
+          JSON.stringify({ actor: store.owner, reason: input.reason }),
+          time,
+        ),
+    ]);
   }
   return id;
 }

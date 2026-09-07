@@ -20,8 +20,9 @@ import {
 import { Field, Notice } from './workspace';
 import { api } from '@/lib/client-api';
 import { formText } from '@/lib/form-values';
-import type { Source } from '@/lib/types';
-import type { WorkbenchData } from '@/lib/workbench-types';
+import { sourcePath } from '@/lib/navigation';
+import type { Source, SourceVersion } from '@/lib/types';
+import type { WorkbenchData, SourceRelation } from '@/lib/workbench-types';
 const kinds = {
   quotes: '转引自',
   reprint: '转载自',
@@ -38,11 +39,15 @@ export default function ProvenancePanel({
   projectId,
   data,
   sources,
+  versions,
+  canWrite,
   onSaved,
 }: {
   projectId: string;
   data: WorkbenchData;
   sources: Source[];
+  versions: SourceVersion[];
+  canWrite: boolean;
   onSaved: () => Promise<unknown>;
 }) {
   const { t, locale } = useI18n();
@@ -50,6 +55,27 @@ export default function ProvenancePanel({
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState(''),
     [outcome, setOutcome] = useState('found');
+  const [editingRelation, setEditingRelation] = useState<SourceRelation | null>(
+    null,
+  );
+  const latest = (id: string) =>
+    versions
+      .filter((version) => version.source_id === id)
+      .sort((a, b) => b.revision - a.revision)[0];
+  const materialLink = (id: string) => {
+    const version = latest(id),
+      name = sources.find((source) => source.id === id)?.title || t('原文');
+    return version ? (
+      <a
+        className="record-citation"
+        href={sourcePath(projectId, version.id, version.pages[0]?.page || 1)}
+      >
+        {name}
+      </a>
+    ) : (
+      <strong>{name}</strong>
+    );
+  };
   async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -60,9 +86,9 @@ export default function ProvenancePanel({
         dialog === 'relation'
           ? {
               action: 'source_relation',
-              from_source: form.get('from'),
-              to_source: form.get('to'),
-              kind: form.get('kind'),
+              from_source: editingRelation?.from_source || form.get('from'),
+              to_source: editingRelation?.to_source || form.get('to'),
+              kind: editingRelation?.kind || form.get('kind'),
               certainty: form.get('certainty'),
               basis: form.get('basis'),
             }
@@ -93,7 +119,11 @@ export default function ProvenancePanel({
   }
   return (
     <>
-      <HistoricalEntities projectId={projectId} />
+      <HistoricalEntities
+        projectId={projectId}
+        sources={sources}
+        versions={versions}
+      />
       <div className="section-toolbar">
         <div>
           <h2 className="tool-heading">{t('材料脉络与检索盲区')}</h2>
@@ -104,7 +134,14 @@ export default function ProvenancePanel({
       <section className="tool-section">
         <div className="section-toolbar">
           <h2>{t('转引关系')}</h2>
-          <Button variant="secondary" onClick={() => setDialog('relation')}>
+          <Button
+            variant="secondary"
+            disabled={!canWrite || sources.length < 2}
+            onClick={() => {
+              setEditingRelation(null);
+              setDialog('relation');
+            }}
+          >
             <Plus size={15} />
             {t('记录材料关系')}
           </Button>
@@ -117,16 +154,12 @@ export default function ProvenancePanel({
         {data.source_relations.map((relation) => (
           <article className="source-relation" key={relation.id}>
             <div>
-              <strong>
-                {sources.find((s) => s.id === relation.from_source)?.title}
-              </strong>
+              {materialLink(relation.from_source)}
               <span>
                 {t(kinds[relation.kind])}
                 <ArrowRight size={16} />
               </span>
-              <strong>
-                {sources.find((s) => s.id === relation.to_source)?.title}
-              </strong>
+              {materialLink(relation.to_source)}
               <span
                 className="status-tag"
                 data-state={
@@ -137,6 +170,18 @@ export default function ProvenancePanel({
               </span>
             </div>
             <p>{relation.basis}</p>
+            {canWrite && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setEditingRelation(relation);
+                  setDialog('relation');
+                }}
+              >
+                {locale === 'en' ? 'Revise basis or status' : '修订依据与状态'}
+              </Button>
+            )}
           </article>
         ))}
       </section>
@@ -145,6 +190,7 @@ export default function ProvenancePanel({
           <h2>{t('检索记录')}</h2>
           <Button
             variant="secondary"
+            disabled={!canWrite}
             onClick={() => {
               setOutcome('found');
               setDialog('search');
@@ -205,7 +251,12 @@ export default function ProvenancePanel({
             {dialog === 'relation' ? (
               <>
                 <Field label={t('本材料')}>
-                  <NativeSelect className="w-full" name="from">
+                  <NativeSelect
+                    className="w-full"
+                    name="from"
+                    defaultValue={editingRelation?.from_source}
+                    disabled={!!editingRelation}
+                  >
                     {sources.map((source) => (
                       <NativeSelectOption value={source.id} key={source.id}>
                         {source.title}
@@ -214,7 +265,12 @@ export default function ProvenancePanel({
                   </NativeSelect>
                 </Field>
                 <Field label={t('所依赖的来源材料')}>
-                  <NativeSelect className="w-full" name="to">
+                  <NativeSelect
+                    className="w-full"
+                    name="to"
+                    defaultValue={editingRelation?.to_source || sources[1]?.id}
+                    disabled={!!editingRelation}
+                  >
                     {sources.map((source) => (
                       <NativeSelectOption value={source.id} key={source.id}>
                         {source.title}
@@ -224,7 +280,11 @@ export default function ProvenancePanel({
                 </Field>
                 <div className="form-grid">
                   <Field label={t('关系')}>
-                    <NativeSelect name="kind">
+                    <NativeSelect
+                      name="kind"
+                      defaultValue={editingRelation?.kind}
+                      disabled={!!editingRelation}
+                    >
                       {Object.entries(kinds).map(([value, label]) => (
                         <NativeSelectOption value={value} key={value}>
                           {t(label)}
@@ -233,7 +293,10 @@ export default function ProvenancePanel({
                     </NativeSelect>
                   </Field>
                   <Field label={t('核查状态')}>
-                    <NativeSelect name="certainty">
+                    <NativeSelect
+                      name="certainty"
+                      defaultValue={editingRelation?.certainty || 'suspected'}
+                    >
                       <NativeSelectOption value="suspected">
                         {t('待核实')}
                       </NativeSelectOption>
@@ -244,7 +307,12 @@ export default function ProvenancePanel({
                   </Field>
                 </div>
                 <Field label={t('判断依据')}>
-                  <Textarea name="basis" required maxLength={2000} />
+                  <Textarea
+                    name="basis"
+                    required
+                    maxLength={2000}
+                    defaultValue={editingRelation?.basis}
+                  />
                 </Field>
               </>
             ) : (

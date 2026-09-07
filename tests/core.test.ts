@@ -1164,6 +1164,82 @@ async function source(store: ResearchStore) {
   });
   return { project, id, versionId, path };
 }
+void test('similar spelling search ranks exact words first, paginates without duplicates and preserves pinned scopes and raw snippets', async () => {
+  const owner = await user(),
+    sample = await source(owner);
+  const original = await owner.reviseSource({
+    p_source: sample.id,
+    p_expected: 1,
+    p_method: 'manual',
+    p_pages: [
+      {
+        page: 1,
+        text:
+          'Editorial notes.\n'.repeat(80) +
+          ' \n'.repeat(1000) +
+          'Abigail Adams discusses power.',
+      },
+      { page: 2, text: 'Adam wrote a different letter.' },
+      { page: 3, text: 'John Adams replies.' },
+    ],
+  });
+  assert.deepEqual(
+    (await searchPages(owner, sample.project.id, 'adam')).map((h) => h.page),
+    [2],
+  );
+  const all = await searchPages(owner, sample.project.id, 'adam', {
+    approximate: true,
+  });
+  assert.equal(all.length, 3);
+  assert.equal(all[0].page, 2);
+  assert.equal(all[0].match_kind, 'exact');
+  assert.ok(all.slice(1).every((h) => h.match_kind === 'similar'));
+  assert.ok(all.find((h) => h.page === 1)!.snippet.includes('Abigail Adams'));
+  assert.ok(all.every((h) => h.text.includes(h.snippet)));
+  const second = await searchPages(owner, sample.project.id, 'adam', {
+    approximate: true,
+    offset: 1,
+    limit: 1,
+  });
+  assert.equal(second[0].id, all[1].id);
+  const reverse = await searchPages(owner, sample.project.id, 'adams', {
+    approximate: true,
+  });
+  assert.equal(reverse.at(-1)?.page, 2);
+  assert.equal(reverse.at(-1)?.match_kind, 'similar');
+  const next = await owner.reviseSource({
+    p_source: sample.id,
+    p_expected: 2,
+    p_method: 'manual',
+    p_pages: [{ page: 1, text: 'Unrelated material.' }],
+  });
+  assert.equal(
+    (await searchPages(owner, sample.project.id, 'adam', { approximate: true }))
+      .length,
+    0,
+  );
+  const pinned = await searchPages(owner, sample.project.id, 'adam', {
+    approximate: true,
+    history: true,
+    version_ids: [original],
+    page_refs: [{ version_id: original, page: 1 }],
+  });
+  assert.equal(pinned.length, 1);
+  assert.equal(pinned[0].version_id, original);
+  assert.notEqual(pinned[0].version_id, next);
+  const other = await source(await user());
+  assert.equal(
+    (
+      await searchPages(owner, sample.project.id, 'adam', {
+        approximate: true,
+        history: true,
+        version_ids: [other.versionId],
+      })
+    ).length,
+    0,
+  );
+});
+
 void test('automated search and discovery cite the matching passage after source preparation notes', async () => {
   const owner = await user();
   const sample = await source(owner);
@@ -4382,6 +4458,13 @@ void test('historical identities require exact project evidence and reviewer app
   };
   const a = await saveEntity(owner, input),
     b = await saveEntity(owner, { ...input, name: '海港' });
+  const history = (await listEntities(owner, s.project.id)).history;
+  assert.equal(history.filter((row) => row.kind === 'create').length, 2);
+  assert.ok(
+    history.some(
+      (row) => JSON.parse(String(row.basis)).reason === input.reason,
+    ),
+  );
   await assert.rejects(
     saveEntity(owner, {
       ...input,

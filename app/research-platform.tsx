@@ -221,6 +221,8 @@ export default function ResearchPlatform({
     [message, setMessage] = useState(''),
     [create, setCreate] = useState(false),
     [query, setQuery] = useState(''),
+    [approximate, setApproximate] = useState(true),
+    [searched, setSearched] = useState(false),
     [hits, setHits] = useState<SearchHit[]>([]),
     [secret, setSecret] = useState('');
   const [discussionTargetId, setDiscussionTargetId] = useState('');
@@ -950,8 +952,8 @@ export default function ResearchPlatform({
                   </h2>
                   <p>
                     {L(
-                      '关键词和别名检索；结果固定到资料版本与页码。用 | 分隔多个候选词。',
-                      'Search exact terms and aliases. Results retain the source version and page. Separate alternative terms with |.',
+                      '检索关键词、别名和相近写法，精确结果优先。用 | 分隔多个候选词；每条结果都能回到原文。',
+                      'Search terms, aliases and similar spellings, with exact results first. Separate alternatives with |; every result links to its source.',
                     )}
                   </p>
                 </div>
@@ -979,15 +981,17 @@ export default function ResearchPlatform({
                 className="corpus-search"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  void action(async () =>
+                  void action(async () => {
+                    setSearched(false);
                     setHits(
                       (
                         await api<{ hits: SearchHit[] }>(
-                          `/api/platform?project_id=${project.id}&q=${encodeURIComponent(query)}`,
+                          `/api/platform?project_id=${project.id}&q=${encodeURIComponent(query)}&approximate=${approximate ? '1' : '0'}`,
                         )
                       ).hits,
-                    ),
-                  );
+                    );
+                    setSearched(true);
+                  });
                 }}
               >
                 <Search size={20} />
@@ -1004,6 +1008,34 @@ export default function ResearchPlatform({
                   {L('检索', 'Search')}
                 </Button>
               </form>
+              <label className="flex items-center gap-2 text-sm my-3">
+                <input
+                  type="checkbox"
+                  checked={approximate}
+                  onChange={(event) => {
+                    setApproximate(event.target.checked);
+                    setHits([]);
+                    setSearched(false);
+                  }}
+                />
+                {L(
+                  '包含相近写法（如 adam → Adams）；不代表同一人物',
+                  'Include similar spellings (adam → Adams); this does not establish identity',
+                )}
+              </label>
+              {searched && (
+                <output className="muted">
+                  {hits.length
+                    ? L(
+                        `找到 ${hits.length} 页材料`,
+                        `${hits.length} source pages found`,
+                      )
+                    : L(
+                        '本次没有命中。可尝试相近写法、别名或更短的关键词。',
+                        'No matches in this search. Try similar spellings, aliases or a shorter term.',
+                      )}
+                </output>
+              )}
               <p className="muted">
                 {overview.index.indexed_versions}/{overview.index.versions}{' '}
                 {L(
@@ -1016,6 +1048,12 @@ export default function ResearchPlatform({
                 query={query}
                 onResults={setHits}
               />
+              <p className="muted">
+                {L(
+                  '检索包含已确认的别名；命中也可能来自转录中的编者说明，并不代表人物身份或作者关系已获证实。',
+                  'Search includes reviewed aliases. Matches may come from editorial notes in a transcription; they do not establish identity or authorship.',
+                )}
+              </p>
               <div className="search-results">
                 {hits.map((hit) => (
                   <button
@@ -1030,6 +1068,11 @@ export default function ResearchPlatform({
                         v{hit.revision} · {L('页', 'p.')} {hit.page}
                       </span>
                     </div>
+                    {hit.match_kind === 'similar' && (
+                      <span className="status-tag">
+                        {L('相近写法', 'Similar spelling')}
+                      </span>
+                    )}
                     <p>{hit.snippet}</p>
                     <small>
                       {L('打开固定版本原文', 'Open pinned source version')}{' '}
