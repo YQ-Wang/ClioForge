@@ -1,6 +1,24 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { noteExcerpt } from '../lib/notes';
+import { noteExcerpt, noteMarkdown } from '../lib/notes';
+
+void test('downloaded notes retain usable fixed-version links without rewriting source text', () => {
+  const source =
+    '/?project=adams&tab=sources&version=may-letter&page=1&evidence=quote';
+  const body = `| Source |\n| --- |\n| [Letter](${source}) |\n\n[Archive](https://founders.archives.gov/documents/Adams/04-01-02-0259)\n\n\`[Example](${source})\`\n\n\`\`\`md\n[Example](${source})\n\`\`\``;
+  const note = { title: 'Adams comparison', body };
+  const exported = noteMarkdown(note, 'https://canwoo.com');
+  assert.ok(exported.includes(`[Letter](https://canwoo.com${source})`));
+  assert.ok(
+    exported.includes(
+      '[Archive](https://founders.archives.gov/documents/Adams/04-01-02-0259)',
+    ),
+  );
+  assert.ok(exported.includes(`\`[Example](${source})\``));
+  assert.ok(exported.includes(`\`\`\`md\n[Example](${source})\n\`\`\``));
+  assert.equal(note.body, body);
+  assert.equal(noteMarkdown(note), `# ${note.title}\n\n${body}\n`);
+});
 
 void test('note cards display rich text without markdown and preserve literal symbols', () => {
   const document = JSON.stringify({

@@ -92,13 +92,27 @@ export function withNoteState(notes: Note[], states: NoteState[]): Note[] {
   });
 }
 
-export function noteMarkdown(note: Pick<Note, 'title' | 'body'>) {
-  return `# ${note.title}\n\n${note.body}\n`;
+export function noteMarkdown(
+  note: Pick<Note, 'title' | 'body'>,
+  origin?: string,
+) {
+  // Resolve generated project links only on export; stored notes remain portable
+  // between deployments. Preserve examples inside fenced and inline code.
+  const body = origin
+    ? note.body.replace(
+        /(`{3,}|~{3,})[^\n]*\n[\s\S]*?\1|(`+)[^`]*?\2|\]\((\/\?project=[^\s)]+)\)/g,
+        (match, _fence, _inline, href: string | undefined) =>
+          href ? `](${new URL(href, origin).href})` : match,
+      )
+    : note.body;
+  return `# ${note.title}\n\n${body}\n`;
 }
 
 export function downloadNote(note: Pick<Note, 'title' | 'body'>) {
   const url = URL.createObjectURL(
-    new Blob([noteMarkdown(note)], { type: 'text/markdown;charset=utf-8' }),
+    new Blob([noteMarkdown(note, window.location.origin)], {
+      type: 'text/markdown;charset=utf-8',
+    }),
   );
   const link = document.createElement('a');
   link.href = url;
