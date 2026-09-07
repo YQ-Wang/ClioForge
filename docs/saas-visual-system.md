@@ -1,6 +1,6 @@
 # Canwoo visual refinement · 2026-09-05
 
-The interface uses bundled Geist for Latin UI and system Chinese sans-serif fallbacks. The current brand pairs an original gold-paper fan and lowercase Latin vector lettering with Ma Shan Zheng calligraphy outlines for 参伍. Earlier font-based and CW-monogram brand treatments have been retired. See [current brand details](cw-brand.md).
+The interface uses bundled Geist for Latin UI and system Chinese sans-serif fallbacks. The current brand pairs an original gold-paper fan and lowercase Latin vector lettering with Qiji glyph outlines for 參伍. Earlier font-based and CW-monogram brand treatments have been retired. See [current brand details](cw-brand.md).
 
 Design references: [OpenAI](https://openai.com/) and [Google Design](https://design.google/). Canwoo uses its own icon and open-source typefaces. The resulting direction favors neutral surfaces, clear text hierarchy, restrained blue action color, compact navigation, and consistent controls.
 

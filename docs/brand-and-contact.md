@@ -2,7 +2,7 @@
 
 公开支持地址统一由 `lib/platform-contact.ts` 提供：`support@canwoo.com`。隐私页、账号设置的用量与数据页、账号删除完成页均使用同一地址；系统通知沿用 `noreply@canwoo.com`。注册身份、项目成员及用户资料中的邮箱不改写。
 
-CanwooBrand 统一登录页、工作区和隐私页的字标。当前品牌采用原创泥金折扇、原创英文矢量字标，以及马善政楷书的「参伍」字形轮廓。中英文字标均为固定 SVG，不请求字库；主界面继续使用 Geist 与系统中文无衬线字体。马善政楷书的来源及 SIL OFL 1.1 许可见 [品牌标识](cw-brand.md) 和 `public/brand/MaShanZheng-OFL.txt`。旧版字库保留供缓存客户端使用。详见 [当前视觉系统](saas-visual-system.md)。
+CanwooBrand 统一登录页、工作区和隐私页的字标。当前品牌采用原创泥金折扇、原创英文矢量字标，以及齐伋体的「參伍」字形轮廓；繁体展示已在预览后确认。中英文字标均为固定 SVG，不请求字库；主界面继续使用 Geist 与系统中文无衬线字体。齐伋体的来源及 SIL OFL 1.1 许可见 [品牌标识](cw-brand.md) 和 `public/brand/Qiji-OFL.txt`。此前马善政楷书的许可保留在 `public/brand/MaShanZheng-OFL.txt`；旧版字库保留供缓存客户端使用。详见 [当前视觉系统](saas-visual-system.md)。
 
 此前的视觉方向参考 Airbnb 与 Anthropic 的简洁图形及克制排版。早期英文品牌使用官方发布的 [Google Sans Flex](https://design.google/library/google-sans-flex-font)，保留字体文件与许可供缓存客户端使用；当前英文品牌已改为原创矢量字标。字体来源署名不表示品牌关联。
 

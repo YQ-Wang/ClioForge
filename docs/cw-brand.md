@@ -8,9 +8,9 @@ The display mark has eleven paper folds and ten internal ribs, excluding the two
 
 The wordmark is drawn as SVG paths, rather than ordinary text with a new font applied. It uses an open c, a single-storey a, a narrow n, a broad w with softened lower joins, and two slightly squared o counters. Spacing and proportions are fixed across operating systems. The surrounding bilingual brand has an accessible name; the internal artwork is decorative to assistive technology.
 
-The Chinese brand label uses the 参 and 伍 glyph outlines from the open-source Ma Shan Zheng calligraphy font. Each outline is uniformly scaled and optically positioned as fixed SVG artwork beside the Latin lettering. This preserves the simplified brand spelling and avoids loading a full Chinese font. Interface text continues to use Geist and system Chinese sans-serif fallbacks. Historical source-reading typography is unchanged.
+The Chinese brand label displays 參伍 using glyph outlines from the open-source Qiji font. Each outline is uniformly scaled and optically positioned as fixed SVG artwork beside the Latin lettering. The traditional display spelling was selected after reviewing the Qiji preview. No full Chinese font is loaded. Interface text continues to use Geist and system Chinese sans-serif fallbacks. Historical source-reading typography is unchanged.
 
-Qiji was evaluated first: its core font maps simplified 参 and traditional 參 to the same glyph, `glyph3509`. Ma Shan Zheng provides the distinct simplified glyph `uni53C2` and 伍 as `uni4F0D`, so it was selected as the requested fallback. The source is pinned to [googlefonts/mashanzheng revision 72c50ec001cea63d223d35562eeb2ba42f0fe67a](https://github.com/googlefonts/mashanzheng/tree/72c50ec001cea63d223d35562eeb2ba42f0fe67a), copyright 2018 The Ma Shan Zheng Project Authors. Its SIL OFL 1.1 notice is retained in `public/brand/MaShanZheng-OFL.txt`.
+The source is the `qiji.ttf` asset from [Qiji release 0.0.4](https://github.com/LingDong-/qiji-font/releases/tag/0.0.4), copyright 2020 Lingdong Huang. The selected glyphs are `glyph3509` for 參 and `glyph3966` for 伍. Its SIL OFL 1.1 notice is retained in `public/brand/Qiji-OFL.txt`. The earlier Ma Shan Zheng license remains in `public/brand/MaShanZheng-OFL.txt` for previously distributed assets.
 
 Light gold is `#9b7a3f`; dark gold is `#d3b783`. There are no gradients, paper textures, metallic filters or animation. Small marks omit the display artwork's subtle fold shading.
 
@@ -32,7 +32,7 @@ These references inform the design approach. Their logos and proprietary letter 
 
 - `scripts/build-brand.mjs` generates shared path data and public SVG assets. Run it from the repository root, then format `lib/brand-art.ts`.
 - `lib/brand-art.ts` is the generated geometry; `components/canwoo-brand.tsx` renders the shared accessible lockup.
-- `scripts/build-han-wordmark.py` takes a local upstream Ma Shan Zheng TTF, verifies its SHA-256, and uses fontTools to generate `lib/brand-han.json` and `public/brand/canwoo-han-wordmark.svg`.
+- `scripts/build-han-wordmark.py` takes the local upstream Qiji `qiji.ttf` release asset, verifies its SHA-256, and uses fontTools to generate `lib/brand-han.json` and `public/brand/canwoo-han-wordmark.svg`.
 - `app/brand.css` controls lockup sizing; `app/auth.css` scopes the login composition and controls.
 - `public/brand/canwoo-mark.svg` and `canwoo-wordmark.svg` are reusable transparent SVGs.
 - `public/icon.svg` and `public/favicon.svg` retain the eight-rib browser icon. Favicon revision: `atelier4`.
@@ -41,7 +41,7 @@ An isolated, logged-out Chrome validated desktop/mobile Chinese and English, lig
 
 Production verification passed after deployment `7d622cc4-a3a0-4d05-9789-0ef869a7844a`: Google sign-in is visible, all four main controls measure 48px, the 390px view has no horizontal overflow, and favicon revision `atelier4` is present. TypeScript, lint and the Cloudflare build passed. This pass verified the authentication UI without submitting a login or reset request.
 
-The earlier alignment pass extended the straight a/n stems to the shared baseline and adjusted the w terminals. Raster measurements at 10x scale put all six letters between 4.0–4.3 at the top and 37.3–37.5 at the bottom in the 42-unit artwork. At 118px wide, the largest difference is under 0.2px. The monoline 参伍 artwork used in that pass has since been replaced with the Ma Shan Zheng outlines described above. The validation records below concern the earlier fan revisions, not the new Chinese lettering.
+The earlier alignment pass extended the straight a/n stems to the shared baseline and adjusted the w terminals. Raster measurements at 10x scale put all six letters between 4.0–4.3 at the top and 37.3–37.5 at the bottom in the 42-unit artwork. At 118px wide, the largest difference is under 0.2px. The monoline 参伍 artwork used in that pass has since been replaced with the Qiji outlines described above. The validation records below concern the earlier fan revisions, not the new Chinese lettering.
 
 The ten-rib follow-up was compared against the previous eight-rib compact mark at 36, 30 and 26px in light and dark. It preserves the outer silhouette, palette, pivot, strokes and lettering. The 16px favicon keeps eight ribs for clearer small-size rendering. Local comparison: `work/fan-ten/comparison.png`.
 

@@ -1,6 +1,6 @@
 """Build the fixed two-character wordmark from the pinned OFL font.
 
-Usage: python scripts/build-han-wordmark.py /path/to/MaShanZheng-Regular.ttf
+Usage: python scripts/build-han-wordmark.py /path/to/qiji.ttf
 Requires fontTools. Font files are only needed when regenerating the artwork.
 """
 
@@ -17,15 +17,15 @@ from fontTools.ttLib import TTFont
 
 root = Path(__file__).resolve().parent.parent
 font_path = Path(sys.argv[1])
-expected_sha256 = "6d2546bb189c732a8ca29af9e22457b152387d158aa459e4ac2ce1e51788b7fb"
+expected_sha256 = "2ee30738d37b102bfa90e56cd04fde2620ccef012b44390b77b0703cf995cf5b"
 if hashlib.sha256(font_path.read_bytes()).hexdigest() != expected_sha256:
-    raise ValueError("Use the pinned Ma Shan Zheng font documented in public/brand/README.md")
+    raise ValueError("Use the pinned Qiji font documented in public/brand/README.md")
 
 font = TTFont(font_path)
 glyphs = font.getGlyphSet()
 cmap = font.getBestCmap()
 letters = []
-for character in "参伍":
+for character in "參伍":
     glyph = glyphs[cmap[ord(character)]]
     bounds = BoundsPen(glyphs)
     glyph.draw(bounds)
@@ -47,7 +47,7 @@ art = {"viewBox": "0 0 64 32", "paths": paths}
 (root / "lib/brand-han.json").write_text(json.dumps(art, indent=2) + "\n")
 body = "".join(f'<path d="{path}"/>' for path in paths)
 (root / "public/brand/canwoo-han-wordmark.svg").write_text(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 32" role="img" aria-label="参伍">'
-    '<!-- Ma Shan Zheng, SIL OFL 1.1. See MaShanZheng-OFL.txt. -->'
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 32" role="img" aria-label="參伍">'
+    '<!-- Qiji, SIL OFL 1.1. See Qiji-OFL.txt. -->'
     f'<g fill="currentColor">{body}</g></svg>\n'
 )
