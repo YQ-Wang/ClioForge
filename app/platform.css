@@ -1699,15 +1699,15 @@
   line-height: 1.65;
 }
 
-.research-path > header p,
-.research-path-detail p,
+.research-journey > header p,
+.research-journey-detail p,
 .mission-progress p,
 .feature-purpose p {
   color: var(--muted-foreground);
   font-size: 14px;
   line-height: 1.75;
 }
-.research-path ol {
+.research-journey ol {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -1715,10 +1715,10 @@
   padding: 0;
   margin: 18px 0;
 }
-.research-path li {
+.research-journey li {
   min-width: 0;
 }
-.research-path li button {
+.research-journey li button {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -1731,39 +1731,39 @@
   background: var(--card);
   cursor: pointer;
 }
-.research-path li button:hover,
-.research-path li button[aria-pressed='true'] {
+.research-journey li button:hover,
+.research-journey li button[aria-pressed='true'] {
   background: var(--accent);
   border-color: var(--primary);
 }
-.research-path li button > span {
+.research-journey li button > span {
   flex: 1;
   min-width: 0;
 }
-.research-path li button svg {
+.research-journey li button svg {
   flex-shrink: 0;
   color: var(--primary);
 }
-.research-path li strong {
+.research-journey li strong {
   font-size: 13px;
   font-weight: 500;
 }
-.research-path li small {
+.research-journey li small {
   display: block;
   font-size: 12px;
   color: var(--muted-foreground);
   margin-top: 4px;
 }
-.research-path-detail {
+.research-journey-detail {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 14px;
 }
-.research-path-detail h4 {
+.research-journey-detail h4 {
   font-size: 16px;
   margin: 0 0 8px;
 }
-.research-path-detail button {
+.research-journey-detail button {
   margin-top: 8px;
   white-space: normal;
   height: auto;
@@ -1834,7 +1834,7 @@
   border-top: 1px solid var(--border);
 }
 @media (max-width: 600px) {
-  .research-path ol {
+  .research-journey ol {
     grid-template-columns: 1fr;
   }
   .mission-progress {
@@ -1844,4 +1844,11 @@
     margin-left: 0;
     width: 100%;
   }
+}
+
+.overview-section.research-journey > header {
+  display: block;
+}
+.research-journey > header p {
+  margin-top: 8px;
 }

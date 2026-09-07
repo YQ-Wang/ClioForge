@@ -17,6 +17,7 @@ export default function SourceSearch({
   const { locale } = useI18n();
   const L = (zh: string, en: string) => (locale === 'en' ? en : zh);
   const [query, setQuery] = useState(''),
+    [approximate, setApproximate] = useState(true),
     [submitted, setSubmitted] = useState(''),
     [busy, setBusy] = useState(false);
   const [hits, setHits] = useState<SearchHit[]>([]),
@@ -31,6 +32,7 @@ export default function SourceSearch({
       const params = new URLSearchParams({
         project_id: projectId,
         q: term,
+        approximate: approximate ? '1' : '0',
         offset: String(append ? hits.length : 0),
       });
       const data = await api<{ hits: SearchHit[] }>(`/api/platform?${params}`);
@@ -74,6 +76,23 @@ export default function SourceSearch({
           {busy ? L('查找中…', 'Searching…') : L('查找原文', 'Find passages')}
         </Button>
       </form>
+      <label className="flex items-center gap-2 text-sm my-3">
+        <input
+          type="checkbox"
+          checked={approximate}
+          disabled={busy}
+          onChange={(event) => {
+            setApproximate(event.target.checked);
+            setSubmitted('');
+            setHits([]);
+            setMore(false);
+          }}
+        />
+        {L(
+          '包含相近写法（如 adam → Adams）；不代表同一人物',
+          'Include similar spellings (adam → Adams); this does not establish identity',
+        )}
+      </label>
       <p className="search-scope">
         {L(
           '搜索本项目当前版本的文字，点击结果回到原页。尚未转录的照片不在检索范围内。',
@@ -93,8 +112,8 @@ export default function SourceSearch({
       {submitted && (
         <output className="search-summary">
           {L(
-            `「${submitted}」找到 ${hits.length}${more ? '+' : ''} 处`,
-            `${hits.length}${more ? '+' : ''} passages for “${submitted}”`,
+            `「${submitted}」找到 ${hits.length}${more ? '+' : ''} 页材料`,
+            `${hits.length}${more ? '+' : ''} source pages for “${submitted}”`,
           )}
         </output>
       )}
@@ -115,6 +134,11 @@ export default function SourceSearch({
           <strong>
             {hit.title} · {L(`第 ${hit.page} 页`, `p. ${hit.page}`)}
           </strong>
+          {hit.match_kind === 'similar' && (
+            <span className="status-tag">
+              {L('相近写法', 'Similar spelling')}
+            </span>
+          )}
           <p>{hit.snippet}</p>
           <span>{L('对照原页 →', 'Open source page →')}</span>
         </button>

@@ -106,7 +106,7 @@ export default function ResearchPath({
   ];
   const step = steps[selected];
   return (
-    <section className="overview-section research-path">
+    <section className="overview-section research-journey">
       <header>
         <h3>
           {L('研究路径：每一步如何接起来', 'Your research path, connected')}
@@ -138,7 +138,7 @@ export default function ResearchPath({
           </li>
         ))}
       </ol>
-      <div className="research-path-detail" aria-live="polite">
+      <div className="research-journey-detail" aria-live="polite">
         <h4>{step.title}</h4>
         <p>{step.body}</p>
         <p>
