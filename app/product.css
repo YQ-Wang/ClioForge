@@ -2475,3 +2475,10 @@
   color: var(--primary);
   text-decoration: underline;
 }
+
+@media (max-width: 600px) {
+  .source-quick-search > form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

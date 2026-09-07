@@ -549,6 +549,7 @@ export default function ResearchPlatform({
                     <button
                       key={mission.id}
                       className="mission-card"
+                      title={mission.title}
                       onClick={() => void openMission(mission.id)}
                     >
                       <div>
@@ -561,6 +562,7 @@ export default function ResearchPlatform({
                         {L('任务已执行或采纳', 'tasks executed or accepted')}
                       </p>
                       <progress
+                        aria-label={L('研究计划进度', 'Research plan progress')}
                         value={mission.done_count}
                         max={mission.task_count || 1}
                       />

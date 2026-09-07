@@ -71,7 +71,7 @@ export default function SourceSearch({
           onChange={(event) => setQuery(event.target.value)}
           maxLength={2000}
         />
-        <Button type="submit" disabled={busy || !query.trim()}>
+        <Button type="submit" size="lg" disabled={busy || !query.trim()}>
           <Search size={16} />
           {busy ? L('查找中…', 'Searching…') : L('查找原文', 'Find passages')}
         </Button>

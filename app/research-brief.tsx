@@ -143,7 +143,7 @@ export default function ResearchBrief({ projectId }: { projectId: string }) {
                 key={t.id}
                 href={`${projectPath(projectId, 'platform')}&mission=${t.mission_id}&task=${t.id}`}
               >
-                {t.title} →
+                {t.title}
               </Link>
             ))}
             {!data.review.length && (
