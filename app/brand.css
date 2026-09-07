@@ -1,8 +1,8 @@
-/* Original Latin lettering and OFL woodblock glyphs with optical alignment. */
+/* OFL Newsreader and Qiji outlines, aligned by their visible ink bounds. */
 .canwoo-brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   color: var(--foreground);
   white-space: nowrap;
 }
@@ -24,12 +24,13 @@
 .brand-wordmark {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   line-height: 1;
 }
 .brand-latin {
   display: block;
-  width: 118px;
+  /* Both wordmarks use 32-unit viewBoxes and the Han scale, 47 / 64. */
+  width: calc(var(--latin-width) * 0.734375px);
   height: 29px;
   flex: none;
   overflow: visible;
@@ -63,11 +64,12 @@
     min-width: 36px;
   }
   .public-brand .brand-latin {
-    width: 109px;
+    /* Match the mobile Han scale, 43 / 64. */
+    width: calc(var(--latin-width) * 0.671875px);
     height: 26px;
   }
   .public-brand .brand-wordmark {
-    gap: 9px;
+    gap: 8px;
   }
   .public-brand .brand-chinese {
     width: 43px;
