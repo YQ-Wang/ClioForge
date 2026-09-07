@@ -248,7 +248,7 @@ export function manuscriptRecipe(
         output_rate: input.output_rate,
         max_output: 4096,
         effort: index === 0 ? 'low' : 'high',
-        prompt: `Write one manuscript section: ${section.title}. Purpose: ${section.goal}. Audience: ${input.audience}. Central question: ${bundle.question.title}. Target 400–700 Chinese characters or 250–400 English words for this section. The researcher approved the outline, NOT your new prose. Use only the frozen dossier and supplied pages; preserve contrary evidence, uncertain identities and source dependence. Do not invent literature, bibliography, causal links or missing facts. Add an explicit gap paragraph where further research is needed. Previous section results provide continuity, not new evidence. Return data: {paragraphs:[{text:string,basis:"evidence"|"interpretation"|"gap",claim_ids:[UUID],citations:[1-based citation numbers]}]}. Each non-gap paragraph must have at least one selected claim ID and citation. Cite only quotations contained in the dossier's selected evidence excerpts, using their exact fixed version and page. No inline citations or URLs in paragraph text; Canwoo adds links from the citations array. Use at most 10 short quotations total. Do not return headings, tables or a bibliography inside paragraph text.`,
+        prompt: `Write one manuscript section: ${section.title}. Purpose: ${section.goal}. Audience: ${input.audience}. Central question: ${bundle.question.title}. Target 400–700 Chinese characters or 250–400 English words for this section. The researcher approved the outline, NOT your new prose. Use only the frozen dossier and supplied pages; preserve contrary evidence, uncertain identities and source dependence. Do not invent literature, bibliography, causal links or missing facts. Add an explicit gap paragraph where further research is needed. Previous section results provide continuity, not new evidence. Return an empty top-level citations array and data: {citation_mode:"dossier",paragraphs:[{text:string,basis:"evidence"|"interpretation"|"gap",claim_ids:[UUID],citations:[citation_number values from dossier.evidence]}]}. Each non-gap paragraph must have at least one selected claim ID and citation. Choose only citation_number values from the dossier evidence. Canwoo supplies the exact quotation, fixed version and page. Do not write quotation objects. No inline citations or URLs in paragraph text; Canwoo adds links from the citations array. Use at most 10 short quotations total. Do not return headings, tables or a bibliography inside paragraph text.`,
         parameters: {
           manuscript_stage: 'section',
           manuscript_root: root,
@@ -342,7 +342,12 @@ export async function assertManuscriptCurrent(
   return context;
 }
 const paragraphSchema = z.object({
-  text: z.string().trim().min(1).max(2000),
+  text: z
+    .string()
+    .trim()
+    .min(1)
+    .max(2000)
+    .transform((text) => text.replace(/\s*\r?\n\s*/g, ' ')),
   basis: z.enum(['evidence', 'interpretation', 'gap']),
   claim_ids: z.array(z.uuid()).max(20),
   citations: z.array(z.number().int().positive()).max(10),
@@ -351,13 +356,39 @@ export function validateManuscriptSection(
   result: TaskResult,
   bundle: ManuscriptBundle,
 ) {
-  const { paragraphs } = z
-    .object({ paragraphs: z.array(paragraphSchema).min(1).max(12) })
+  const { paragraphs, citation_mode } = z
+    .object({
+      paragraphs: z.array(paragraphSchema).min(1).max(12),
+      citation_mode: z.literal('dossier').optional(),
+    })
     .parse(result.data);
+  let citations = result.citations;
+  if (citation_mode === 'dossier') {
+    if (citations.length)
+      throw new HttpError(
+        400,
+        '章节混用了两种引用格式，请仅选择已确认摘录的编号。',
+      );
+    const selected = [...new Set(paragraphs.flatMap((p) => p.citations))];
+    if (selected.length > 10 || selected.some((n) => !bundle.evidence[n - 1]))
+      throw new HttpError(400, '章节引用编号超出已确认摘录范围。');
+    citations = selected.map((n) => {
+      const evidence = bundle.evidence[n - 1];
+      return {
+        version_id: evidence.version_id,
+        page: evidence.page,
+        quote: evidence.quote,
+      };
+    });
+    for (const paragraph of paragraphs)
+      paragraph.citations = paragraph.citations.map(
+        (n) => selected.indexOf(n) + 1,
+      );
+  }
   if (!paragraphs.some((p) => p.basis !== 'gap'))
     throw new HttpError(400, '章节未包含有依据的正文。');
-  if (result.citations.length > 10) throw new HttpError(400, '章节引文过多。');
-  for (const c of result.citations)
+  if (citations.length > 10) throw new HttpError(400, '章节引文过多。');
+  for (const c of citations)
     if (
       !bundle.evidence.some(
         (e) =>
@@ -377,7 +408,7 @@ export function validateManuscriptSection(
       throw new HttpError(400, '正文段落缺少论点或原文依据。');
     if (p.claim_ids.some((id) => !bundle.claims.some((c) => c.id === id)))
       throw new HttpError(400, '章节引用了未选中的论点。');
-    if (p.citations.some((n) => !result.citations[n - 1]))
+    if (p.citations.some((n) => !citations[n - 1]))
       throw new HttpError(400, '章节引用编号无效。');
     if (
       p.basis !== 'gap' &&
@@ -387,7 +418,7 @@ export function validateManuscriptSection(
             (link) =>
               link.claim_id === claim &&
               p.citations.some((n) => {
-                const citation = result.citations[n - 1];
+                const citation = citations[n - 1];
                 return bundle.evidence.some(
                   (e) =>
                     e.id === link.evidence_id &&
@@ -401,7 +432,7 @@ export function validateManuscriptSection(
     )
       throw new HttpError(400, '段落中有论点缺少与其关联的引文。');
     for (const n of p.citations) {
-      const citation = result.citations[n - 1];
+      const citation = citations[n - 1];
       if (
         p.basis !== 'gap' &&
         !bundle.links.some(
@@ -421,6 +452,7 @@ export function validateManuscriptSection(
   }
   if (paragraphs.reduce((n, p) => n + p.text.length, 0) > 5000)
     throw new HttpError(400, '章节过长，请缩短正文。');
+  result.citations = citations;
   result.data = { paragraphs };
   result.summary = paragraphs
     .map(
@@ -446,7 +478,16 @@ export async function runManuscriptBuiltin(
       ),
       citations: [],
       checks: [],
-      data: { dossier: bundle, outline: config.sections },
+      data: {
+        dossier: {
+          ...bundle,
+          evidence: bundle.evidence.map((e, i) => ({
+            ...e,
+            citation_number: i + 1,
+          })),
+        },
+        outline: config.sections,
+      },
     };
   const sections = deps
     .filter((d) => d.input.parameters.manuscript_stage === 'section')
@@ -478,7 +519,7 @@ export async function runManuscriptBuiltin(
     blocks.push(`## ${safe(config.sections[i].title)}`);
     for (const p of paragraphs) {
       if (p.basis !== 'gap') p.claim_ids.forEach((id) => coveredClaims.add(id));
-      const refs = p.citations.map((n) => {
+      const refs = [...new Set(p.citations)].map((n) => {
         const c = result.citations[n - 1];
         const e = bundle.evidence.find(
           (e) =>
@@ -487,7 +528,14 @@ export async function runManuscriptBuiltin(
             e.quote.includes(c.quote),
         )!;
         usedEvidence.add(e.id);
-        const number = citations.push(c);
+        const existing = citations.findIndex(
+          (saved) =>
+            saved.version_id === c.version_id &&
+            saved.page === c.page &&
+            saved.quote === c.quote &&
+            saved.start === c.start,
+        );
+        const number = existing < 0 ? citations.push(c) : existing + 1;
         return `[${number}](${sourcePath(task.project_id, c.version_id, c.page)}&evidence=${e.id})`;
       });
       blocks.push(
@@ -559,7 +607,7 @@ export async function runManuscriptBuiltin(
       {
         name: 'section_citations',
         passed: true,
-        detail: `${sections.length} sections; ${citations.length} paragraph citations; interpretation not verified`,
+        detail: `${sections.length} sections; ${citations.length} distinct citations; interpretation not verified`,
       },
     ],
     data: {

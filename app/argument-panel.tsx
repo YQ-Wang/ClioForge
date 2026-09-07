@@ -23,6 +23,8 @@ import type { WorkbenchData, Question, Claim } from '@/lib/workbench-types';
 const relationName = { supports: '支持', challenges: '质疑', context: '背景' };
 export default function ArgumentPanel({
   projectId,
+  canReview,
+  canWrite,
   data,
   evidence,
   sources,
@@ -30,13 +32,15 @@ export default function ArgumentPanel({
   onOpenEvidence,
 }: {
   projectId: string;
+  canReview: boolean;
+  canWrite: boolean;
   data: WorkbenchData;
   evidence: Evidence[];
   sources: Source[];
   onSaved: () => Promise<unknown>;
   onOpenEvidence: (evidence: Evidence) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [question, setQuestion] = useState<Question | null | undefined>(
       undefined,
     ),
@@ -98,7 +102,7 @@ export default function ArgumentPanel({
           <h2 className="tool-heading">{t('问题、论证与反证')}</h2>
           <p>{t('把判断、竞争解释和下一步行动分别记录，证据保持独立出处。')}</p>
         </div>
-        <Button onClick={() => setQuestion(null)}>
+        <Button disabled={!canWrite} onClick={() => setQuestion(null)}>
           <Plus size={16} />
           {t('新研究问题')}
         </Button>
@@ -119,11 +123,16 @@ export default function ArgumentPanel({
               <p>{q.detail}</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setQuestion(q)}>
+              <Button
+                variant="ghost"
+                disabled={!canWrite}
+                onClick={() => setQuestion(q)}
+              >
                 {t('编辑问题')}
               </Button>
               <Button
                 variant="secondary"
+                disabled={!canWrite}
                 onClick={() =>
                   setClaim({
                     question_id: q.id,
@@ -194,6 +203,7 @@ export default function ArgumentPanel({
                         <Button
                           variant="ghost"
                           size="sm"
+                          disabled={!canWrite}
                           onClick={() => setClaim(c)}
                         >
                           {t('编辑')}
@@ -201,6 +211,7 @@ export default function ArgumentPanel({
                         <Button
                           variant="ghost"
                           size="sm"
+                          disabled={!canWrite}
                           onClick={() => setLink(c)}
                         >
                           {t('关联证据')}
@@ -315,14 +326,24 @@ export default function ArgumentPanel({
               />
             </Field>
             <Field label={t('复核状态')}>
-              <NativeSelect name="status" defaultValue={claim?.status}>
+              <NativeSelect
+                name="status"
+                defaultValue={canReview ? claim?.status : 'draft'}
+              >
                 <NativeSelectOption value="draft">
                   {t('待核查')}
                 </NativeSelectOption>
-                <NativeSelectOption value="reviewed">
+                <NativeSelectOption value="reviewed" disabled={!canReview}>
                   {t('研究者已复核')}
                 </NativeSelectOption>
               </NativeSelect>
+              {!canReview && (
+                <p className="muted">
+                  {locale === 'en'
+                    ? 'Your changes will be saved for review. A project owner or reviewer can confirm the claim.'
+                    : '修改将保存为待核查，由项目负责人或审读者确认。'}
+                </p>
+              )}
             </Field>
             <Button type="submit" disabled={busy}>
               {t('保存论证')}

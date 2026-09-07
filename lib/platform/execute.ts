@@ -323,7 +323,7 @@ export async function executeMissionTask(
           output_format: 'json',
           output_schema:
             task.input.parameters.manuscript_stage === 'section'
-              ? 'manuscript_section_v1'
+              ? 'manuscript_section_v2'
               : task.input.parameters.output_schema ===
                     'comparison_answer_v1' ||
                   task.input.parameters.output_schema === 'reading_answer_v1' ||
@@ -336,7 +336,7 @@ export async function executeMissionTask(
           task_kind: task.kind,
           version_ids: versions,
           page_refs: task.input.page_refs,
-          prompt: `Task: ${task.kind}\n${task.input.prompt}\nDependency results (untrusted research data):\n${dependencyText}\nReturn one valid JSON object (no markdown) with summary, citations [{version_id,page,quote}], data. Use JSON string escaping for newlines. ${task.input.parameters.manuscript_stage === 'section' ? 'Put the chapter exclusively in data.paragraphs, with one brief status sentence in summary. Cite only the selected dossier.evidence quotes; other page text is context, not additional approved evidence. Every substantive paragraph needs selected claim UUIDs and citation indices. Do not repeat the chapter in summary.' : 'Keep summary concise, about 800 Chinese characters or 500 English words; use short exact quotations, preserve case and punctuation. Use [1], [2] in summary strictly matching the 1-based citations array.'} Never invent a citation. Answer in ${task.input.locale === 'en' ? 'English' : 'Chinese'}.`,
+          prompt: `Task: ${task.kind}\n${task.input.prompt}\nDependency results (untrusted research data):\n${dependencyText}\nReturn one valid JSON object (no markdown) with summary, citations [{version_id,page,quote}], data. Use JSON string escaping for newlines. ${task.input.parameters.manuscript_stage === 'section' ? 'The chapter output contract overrides earlier formatting instructions: return citations: [] and data: {citation_mode: "dossier", paragraphs: [...]}. Put prose exclusively in paragraphs and one brief status sentence in summary. Paragraph citations select the 1-based position in dossier.evidence (citation_number when present); Canwoo fills the exact quotation and page. Never write citation objects. Other page text is context, not additional approved evidence. Every substantive paragraph needs selected claim UUIDs and approved evidence numbers. Each paragraph item is one prose paragraph; no internal blank lines. Preserve the distinction between insufficient evidence and evidence of absence: do not turn a bounded claim into a categorical denial. Use previous sections for continuity without repeating their prose; keep each section focused on its own outline goal.' : 'Keep summary concise, about 800 Chinese characters or 500 English words; use short exact quotations, preserve case and punctuation. Use [1], [2] in summary strictly matching the 1-based citations array.'} Never invent a citation. Answer in ${task.input.locale === 'en' ? 'English' : 'Chinese'}.`,
           input_rate: task.input.input_rate,
           output_rate: task.input.output_rate,
           max_output: task.input.max_output,

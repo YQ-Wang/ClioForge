@@ -37,7 +37,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/client-api';
-import { accountSections, projectSections } from '@/lib/navigation';
+import {
+  accountSections,
+  projectSections,
+  projectNavigationGroups,
+} from '@/lib/navigation';
 import { useI18n } from '@/lib/i18n/provider';
 import type { Project } from '@/lib/types';
 const icons: Record<string, typeof BookOpen> = {
@@ -96,6 +100,7 @@ export default function WorkspaceNavigation({
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     sources: true,
+    analysis: true,
     writing: true,
     research: true,
     manage: false,
@@ -228,12 +233,7 @@ export default function WorkspaceNavigation({
               () => onSection('overview'),
             )}
           </SidebarMenu>
-          {[
-            { id: 'sources', zh: '研究材料', en: 'SOURCES' },
-            { id: 'writing', zh: '解读与写作', en: 'READING & WRITING' },
-            { id: 'research', zh: '研究与协作', en: 'RESEARCH & PEOPLE' },
-            { id: 'manage', zh: '项目管理', en: 'PROJECT TOOLS' },
-          ].map((group) => (
+          {projectNavigationGroups.map((group) => (
             <section className="nav-section" key={group.id}>
               <button
                 className="nav-section-heading"
@@ -246,7 +246,14 @@ export default function WorkspaceNavigation({
                   }))
                 }
               >
-                <span>{L(group.zh, group.en)}</span>
+                <span className="nav-stage-label">
+                  {group.step && (
+                    <span className="nav-stage-number" aria-hidden="true">
+                      {group.step}
+                    </span>
+                  )}
+                  {L(group.zh, group.en)}
+                </span>
                 {expanded[group.id] ? (
                   <ChevronDown size={13} />
                 ) : (

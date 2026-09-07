@@ -390,6 +390,9 @@ export class MissionStore extends ResearchStore {
     const manuscript = task.input.parameters.manuscript_root
       ? await assertManuscriptCurrent(this, task)
       : null;
+    if (task.input.parameters.manuscript_stage === 'section') {
+      validateManuscriptSection(result, manuscript!.bundle);
+    }
     if (
       task.executor === 'model' &&
       task.input.parameters.output_schema === 'claim_review_v1'
@@ -418,9 +421,6 @@ export class MissionStore extends ResearchStore {
         result,
         task.input.parameters.output_schema === 'comparison_answer_v1',
       );
-    if (task.input.parameters.manuscript_stage === 'section') {
-      validateManuscriptSection(result, manuscript!.bundle);
-    }
     const allowed = new Set(task.input.version_ids);
     const dependencies = (
       await this.db

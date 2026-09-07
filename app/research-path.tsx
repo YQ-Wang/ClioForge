@@ -8,6 +8,7 @@ import {
   Network,
   Activity,
   NotebookPen,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/lib/i18n/provider';
@@ -75,6 +76,20 @@ export default function ResearchPath({
       ),
     },
     {
+      icon: MessageSquare,
+      title: L('建立与审读论证', 'Build and review arguments'),
+      tab: 'arguments',
+      action: L('打开问题与论证', 'Open questions and arguments'),
+      body: L(
+        '把研究问题与论点写清楚，关联支持、质疑和补充背景的摘录。对照原页审读后，才能作为论文初稿的依据。',
+        'State your question and claims, link supporting, challenging and contextual excerpts, then review them against the sources before using them in a manuscript draft.',
+      ),
+      output: L(
+        '有证据支撑、保留反证的论点',
+        'Reviewed claims with supporting and contrary evidence',
+      ),
+    },
+    {
       icon: Activity,
       title: L('委托批量研究', 'Delegate a collection'),
       tab: 'platform',
@@ -95,8 +110,8 @@ export default function ResearchPath({
       action: L('打开笔记与写作', 'Open notes and writing'),
       count: `${counts.notes} ${L('篇笔记', 'notes')}`,
       body: L(
-        '对照原文采纳或纠正结果，将证据插入笔记，保留竞争解释和缺口。新问题可以回到检索或创建下一轮研究计划。',
-        'Accept or correct findings against the sources, cite evidence in notes and retain competing explanations and gaps. New questions lead back to search or another research plan.',
+        '选择已审读论点，核对依据、提纲与预算，让助手逐章起草；再逐段审读、编辑并导出。随手笔记可以在任何阶段记录，新问题仍可回到前面的研究步骤。',
+        'Choose reviewed claims, confirm the evidence, outline and budget, then draft chapters in the background. Review, edit and export the result. Take notes at any stage and return to earlier research steps when new questions arise.',
       ),
       output: L(
         '有出处、可修改的研究论述',

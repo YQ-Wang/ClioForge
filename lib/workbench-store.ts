@@ -203,6 +203,8 @@ export class WorkbenchStore extends ResearchStore {
         return id;
       }
       case 'claim': {
+        if (input.status === 'reviewed')
+          await this.project(projectId, 'review');
         await this.ownedRow('research_questions', input.question_id, projectId);
         if (input.id) {
           const result = await this.db

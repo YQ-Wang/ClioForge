@@ -97,7 +97,8 @@ export type Job = {
       | 'reading_answer_v1'
       | 'research_discussion_v1'
       | 'claim_review_v1'
-      | 'manuscript_section_v1';
+      | 'manuscript_section_v1'
+      | 'manuscript_section_v2';
     provider: string;
     model_id: string;
     effort?: import('./model-routing').ThinkingEffort;

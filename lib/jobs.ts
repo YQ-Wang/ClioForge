@@ -369,9 +369,11 @@ export async function executeJob(
       key,
       system:
         researchSystemForLocale(job.locale) +
-        (job.prompt.startsWith('Task:')
-          ? ' 本任务的引用格式覆盖默认格式：summary 中只用 [1]、[2] 对应 citations 数组的序号，不使用材料ID标记；只返回 JSON。不要在 summary 添加未列入 citations 的直接引语。'
-          : ''),
+        (job.model_snapshot.output_schema === 'manuscript_section_v2'
+          ? ' 稿件章节正文放在 data.paragraphs，引用选择已确认摘录的 citation_number；顶层 citations 必须为空，由应用补齐。summary 仅为简短进度说明。'
+          : job.prompt.startsWith('Task:')
+            ? ' 本任务的引用格式覆盖默认格式：summary 中只用 [1]、[2] 对应 citations 数组的序号，不使用材料ID标记；只返回 JSON。不要在 summary 添加未列入 citations 的直接引语。'
+            : ''),
       prompt: `${job.prompt}\n\n<materials>\n${materials}\n</materials>`,
       maxOutput: job.max_output,
       outputFormat: job.model_snapshot.output_format,

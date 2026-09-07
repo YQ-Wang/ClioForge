@@ -21,3 +21,5 @@ Useful background: [research workflows](agentic-workflows.md), [productivity wor
 Latest practical evaluation: [three historical-source pilots, September 6, 2026](research-pilots-2026-09-06.md), including failed attempts, corrections, costs and remaining limitations.
 
 Follow-up: [implemented recovery fixes and live verification](pilot-recovery-2026-09-06.md).
+
+Latest workflow pass: [Adams case, sidebar ordering and live manuscript validation, September 7, 2026](workflow-e2e-2026-09-07.md), including permission fixes, provider failures and browser checks still pending.

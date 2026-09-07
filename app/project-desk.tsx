@@ -1228,6 +1228,8 @@ export default function ProjectDesk({
         {workbench && (
           <ArgumentPanel
             projectId={project.id}
+            canWrite={canWrite}
+            canReview={['owner', 'reviewer'].includes(role)}
             data={workbench}
             evidence={evidence}
             sources={sources}

@@ -19,6 +19,7 @@ import { writingPageReferences, writingDocx } from '../lib/writing-export';
 import type { invoke } from '../lib/providers';
 import type { Note } from '../lib/types';
 import { providerRequest } from '../lib/providers';
+import { WorkbenchStore } from '../lib/workbench-store';
 let mf: Miniflare, db: D1Database;
 before(async () => {
   mf = new Miniflare(
@@ -215,14 +216,22 @@ void test('manuscript workflow freezes research, drafts sequentially, saves once
     calls++;
     assert.match(request.prompt, /dossier/);
     assert.match(request.prompt, /Marital power/);
-    assert.equal(request.outputSchema, 'manuscript_section_v1');
+    assert.equal(request.outputSchema, 'manuscript_section_v2');
+    assert.match(request.system, /citation_number/);
     assert.match(
       JSON.stringify(providerRequest(request).body),
-      /manuscript_section_v1/,
+      /manuscript_section_v2/,
     );
     assert.match(JSON.stringify(providerRequest(request).body), /paragraphs/);
+    const output = f.response();
+    output.data.paragraphs[0].text =
+      'The letter criticizes marital power.\n\nThis excerpt alone cannot establish a voting programme.';
     return {
-      text: JSON.stringify(f.response()),
+      text: JSON.stringify({
+        ...output,
+        citations: [],
+        data: { ...output.data, citation_mode: 'dossier' },
+      }),
       inputTokens: 300,
       outputTokens: 220,
     };
@@ -256,6 +265,13 @@ void test('manuscript workflow freezes research, drafts sequentially, saves once
   assert.match(note.body, /Research gap/);
   assert.match(note.body, /evidence=/);
   assert.doesNotMatch(note.body, /Untrusted model summary/);
+  assert.match(
+    note.body,
+    /marital power\. This excerpt alone cannot establish a voting programme\. \[1\]/,
+  );
+  assert.equal((note.body.match(/\[1\]\(/g) || []).length, 2);
+  assert.doesNotMatch(note.body, /\[2\]\(/);
+  assert.equal((note.body.match(/1\. “/g) || []).length, 1);
   const child = await f.store.saveNote({
     p_project: f.project.id,
     p_parent: note.id,
@@ -308,6 +324,94 @@ void test('manuscript workflow freezes research, drafts sequentially, saves once
       },
     ),
     /依据已有变化/,
+  );
+});
+void test('dossier references resolve exact approved excerpts and reject mixed or out-of-range references', async () => {
+  const f = await fixture();
+  const bundle = {
+    ...f.bundle,
+    evidence: [
+      {
+        ...f.bundle.evidence[0],
+        id: crypto.randomUUID(),
+        quote: 'The surrounding letter addresses other concerns.',
+      },
+      ...f.bundle.evidence,
+    ],
+  };
+  const output = {
+    ...f.response(),
+    citations: [],
+    data: { ...f.response().data, citation_mode: 'dossier' },
+  };
+  output.data.paragraphs[0].citations = [2];
+  validateManuscriptSection(output, bundle);
+  assert.deepEqual(output.citations, f.response().citations);
+  assert.deepEqual(output.data.paragraphs[0].citations, [1]);
+  const bad = {
+    ...f.response(),
+    citations: [],
+    data: { ...f.response().data, citation_mode: 'dossier' },
+  };
+  bad.data.paragraphs[0].citations = [3];
+  assert.throws(() => validateManuscriptSection(bad, bundle), /超出已确认/);
+  assert.deepEqual(bad.citations, []);
+  assert.throws(
+    () =>
+      validateManuscriptSection(
+        {
+          ...f.response(),
+          data: { ...f.response().data, citation_mode: 'dossier' },
+        },
+        bundle,
+      ),
+    /混用了/,
+  );
+});
+void test('editors can propose claim changes but cannot mark claims reviewed for manuscript input', async () => {
+  const f = await fixture(),
+    editor = await fixture();
+  await db
+    .prepare(
+      "INSERT INTO project_members(project_id,user_id,role,added_by,created_at) VALUES(?,?,'editor',?,?)",
+    )
+    .bind(
+      f.project.id,
+      editor.store.owner,
+      f.store.owner,
+      new Date().toISOString(),
+    )
+    .run();
+  const work = new WorkbenchStore(db, editor.store.owner);
+  const proposed = {
+    action: 'claim' as const,
+    project_id: f.project.id,
+    question_id: f.question,
+    body: 'A bounded revised interpretation.',
+    kind: 'claim' as const,
+    status: 'reviewed' as const,
+  };
+  await assert.rejects(work.mutate(proposed), /权限/);
+  await assert.rejects(
+    work.mutate({ ...proposed, id: f.claim, expected: 1 }),
+    /权限/,
+  );
+  await work.mutate({ ...proposed, id: f.claim, expected: 1, status: 'draft' });
+  await assert.rejects(
+    manuscriptBundle(f.store, f.project.id, f.question, [f.claim]),
+    /已审读/,
+  );
+  await db
+    .prepare(
+      "UPDATE project_members SET role='reviewer' WHERE project_id=? AND user_id=?",
+    )
+    .bind(f.project.id, editor.store.owner)
+    .run();
+  await work.mutate({ ...proposed, id: f.claim, expected: 2 });
+  assert.equal(
+    (await manuscriptBundle(f.store, f.project.id, f.question, [f.claim]))
+      .claims[0].body,
+    proposed.body,
   );
 });
 void test('changed claims block paid continuation, flag existing drafts and reject stale confirmation', async () => {

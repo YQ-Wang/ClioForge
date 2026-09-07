@@ -1,7 +1,7 @@
 import { readingOutputJsonSchema } from './reading-output';
 
-export const MANUSCRIPT_OUTPUT_SCHEMA = 'manuscript_section_v1';
-export const manuscriptOutputJsonSchema = {
+export const MANUSCRIPT_OUTPUT_SCHEMA = 'manuscript_section_v2';
+export const legacyManuscriptOutputJsonSchema = {
   ...readingOutputJsonSchema,
   properties: {
     summary: {
@@ -54,6 +54,44 @@ export const manuscriptOutputJsonSchema = {
       },
       required: ['paragraphs'],
       additionalProperties: false,
+    },
+  },
+} as const;
+export const manuscriptOutputJsonSchema = {
+  ...legacyManuscriptOutputJsonSchema,
+  properties: {
+    ...legacyManuscriptOutputJsonSchema.properties,
+    citations: {
+      ...legacyManuscriptOutputJsonSchema.properties.citations,
+      minItems: 0,
+      maxItems: 0,
+      description:
+        'Return an empty array. Canwoo supplies exact citations from the approved dossier; do not write quotation objects.',
+    },
+    data: {
+      ...legacyManuscriptOutputJsonSchema.properties.data,
+      properties: {
+        citation_mode: { type: 'string', enum: ['dossier'] },
+        paragraphs: {
+          ...legacyManuscriptOutputJsonSchema.properties.data.properties
+            .paragraphs,
+          items: {
+            ...legacyManuscriptOutputJsonSchema.properties.data.properties
+              .paragraphs.items,
+            properties: {
+              ...legacyManuscriptOutputJsonSchema.properties.data.properties
+                .paragraphs.items.properties,
+              citations: {
+                type: 'array',
+                items: { type: 'integer' },
+                description:
+                  'citation_number values from the approved dossier.evidence entries. Do not reference any other source text.',
+              },
+            },
+          },
+        },
+      },
+      required: ['citation_mode', 'paragraphs'],
     },
   },
 } as const;

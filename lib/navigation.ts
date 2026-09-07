@@ -1,5 +1,12 @@
 const projectIdPattern =
   /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+export const projectNavigationGroups = [
+  { id: 'sources', zh: '汇集与阅读', en: 'Gather & read', step: '01' },
+  { id: 'analysis', zh: '证据与论证', en: 'Evidence & arguments', step: '02' },
+  { id: 'research', zh: '研究与审读', en: 'Research & review', step: '03' },
+  { id: 'writing', zh: '写作与导出', en: 'Write & export', step: '04' },
+  { id: 'manage', zh: '项目工具', en: 'Project tools', step: '' },
+] as const;
 export const projectSections = [
   { id: 'overview', zh: '项目概览', en: 'Overview', group: 'overview' },
   {
@@ -8,32 +15,32 @@ export const projectSections = [
     en: 'Sources & reading',
     group: 'sources',
   },
+  { id: 'drive', zh: 'Google Drive', en: 'Google Drive', group: 'sources' },
   { id: 'search', zh: '检索材料', en: 'Search sources', group: 'sources' },
   { id: 'bibliography', zh: '书目', en: 'Bibliography', group: 'sources' },
-  { id: 'drive', zh: 'Google Drive', en: 'Google Drive', group: 'sources' },
-  { id: 'notes', zh: '笔记与写作', en: 'Notes & writing', group: 'writing' },
-  { id: 'evidence', zh: '证据摘录', en: 'Evidence', group: 'writing' },
-  {
-    id: 'arguments',
-    zh: '问题与论证',
-    en: 'Questions & arguments',
-    group: 'writing',
-  },
-  { id: 'platform', zh: '研究计划', en: 'Research plans', group: 'research' },
-  { id: 'findings', zh: '研究成果', en: 'Findings', group: 'research' },
-  {
-    id: 'team',
-    zh: '成员与讨论',
-    en: 'People & discussion',
-    group: 'research',
-  },
-  { id: 'runs', zh: '任务与关注', en: 'Tasks & watches', group: 'manage' },
+  { id: 'evidence', zh: '证据摘录', en: 'Evidence', group: 'analysis' },
   {
     id: 'provenance',
     zh: '人物与材料脉络',
     en: 'People & source context',
-    group: 'writing',
+    group: 'analysis',
   },
+  {
+    id: 'arguments',
+    zh: '问题与论证',
+    en: 'Questions & arguments',
+    group: 'analysis',
+  },
+  { id: 'platform', zh: '研究计划', en: 'Research plans', group: 'research' },
+  { id: 'findings', zh: '研究成果', en: 'Findings', group: 'research' },
+  { id: 'notes', zh: '笔记与写作', en: 'Notes & writing', group: 'writing' },
+  {
+    id: 'team',
+    zh: '成员与讨论',
+    en: 'People & discussion',
+    group: 'manage',
+  },
+  { id: 'runs', zh: '任务与关注', en: 'Tasks & watches', group: 'manage' },
   { id: 'history', zh: '修改记录', en: 'Revision history', group: 'manage' },
   {
     id: 'data',

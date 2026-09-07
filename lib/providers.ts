@@ -2,6 +2,7 @@ import { boundedBytes } from './files';
 import {
   MANUSCRIPT_OUTPUT_SCHEMA,
   manuscriptOutputJsonSchema,
+  legacyManuscriptOutputJsonSchema,
 } from './manuscript-output';
 import { CLAIM_REVIEW_SCHEMA, claimReviewJsonSchema } from './claim-review';
 import {
@@ -56,35 +57,36 @@ export type ModelRequest = {
     | typeof READING_OUTPUT_SCHEMA
     | typeof DISCUSSION_OUTPUT_SCHEMA
     | typeof MANUSCRIPT_OUTPUT_SCHEMA
+    | 'manuscript_section_v1'
     | typeof CLAIM_REVIEW_SCHEMA;
   effort?: ThinkingEffort;
   taskKind?: string;
   priceCeiling?: { input: number; output: number };
 };
 function constrainedSchema(input: ModelRequest) {
+  if (input.outputSchema === MANUSCRIPT_OUTPUT_SCHEMA)
+    return manuscriptOutputJsonSchema;
+  if (input.outputSchema === 'manuscript_section_v1')
+    return legacyManuscriptOutputJsonSchema;
   const schema =
     input.outputSchema === CLAIM_REVIEW_SCHEMA
       ? claimReviewJsonSchema
-      : input.outputSchema === MANUSCRIPT_OUTPUT_SCHEMA
-        ? manuscriptOutputJsonSchema
-        : input.outputSchema === COMPARISON_OUTPUT_SCHEMA
-          ? comparisonOutputJsonSchema
-          : input.outputSchema === DISCUSSION_OUTPUT_SCHEMA
-            ? discussionOutputJsonSchema
-            : readingOutputJsonSchema;
+      : input.outputSchema === COMPARISON_OUTPUT_SCHEMA
+        ? comparisonOutputJsonSchema
+        : input.outputSchema === DISCUSSION_OUTPUT_SCHEMA
+          ? discussionOutputJsonSchema
+          : readingOutputJsonSchema;
   if (
     input.outputSchema === CLAIM_REVIEW_SCHEMA ||
     !input.sourceVersionIds?.length
   )
     return schema;
   const reading =
-    input.outputSchema === MANUSCRIPT_OUTPUT_SCHEMA
-      ? manuscriptOutputJsonSchema
-      : input.outputSchema === COMPARISON_OUTPUT_SCHEMA
-        ? comparisonOutputJsonSchema
-        : input.outputSchema === DISCUSSION_OUTPUT_SCHEMA
-          ? discussionOutputJsonSchema
-          : readingOutputJsonSchema;
+    input.outputSchema === COMPARISON_OUTPUT_SCHEMA
+      ? comparisonOutputJsonSchema
+      : input.outputSchema === DISCUSSION_OUTPUT_SCHEMA
+        ? discussionOutputJsonSchema
+        : readingOutputJsonSchema;
   return {
     ...reading,
     properties: {
@@ -135,6 +137,7 @@ export function providerRequest(input: ModelRequest): {
                 input.outputSchema === READING_OUTPUT_SCHEMA ||
                 input.outputSchema === DISCUSSION_OUTPUT_SCHEMA ||
                 input.outputSchema === MANUSCRIPT_OUTPUT_SCHEMA ||
+                input.outputSchema === 'manuscript_section_v1' ||
                 input.outputSchema === CLAIM_REVIEW_SCHEMA
                   ? {
                       type: 'json_schema',
