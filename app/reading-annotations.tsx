@@ -112,15 +112,16 @@ export default function ReadingAnnotations({
   const refresh = useCallback(() => setRevision((v) => v + 1), []);
   const mounted = useRef(false);
   const discussion = useRef<HTMLElement>(null);
+  const discussionReady = !!thread || !!error;
   useEffect(() => {
-    if (!active) return;
+    if (!active || !discussionReady) return;
     // Follow an explicit passage selection once, never each polling refresh.
     const frame = requestAnimationFrame(() => {
       discussion.current?.focus({ preventScroll: true });
       discussion.current?.scrollIntoView({ block: 'start' });
     });
     return () => cancelAnimationFrame(frame);
-  }, [active, evidence.id]);
+  }, [active, evidence.id, discussionReady]);
   useEffect(() => {
     mounted.current = true;
     return () => {
