@@ -107,6 +107,10 @@ export function checkReadingOutput(result: TaskResult, comparison = false) {
       400,
       '阅读回答未符合约定格式，请检查原始返回后再决定是否重试。',
     );
+  checkCitationNumbers(result);
+}
+
+export function checkCitationNumbers(result: TaskResult) {
   const indices = [...result.summary.matchAll(/\[(\d+)\]/g)].map((match) =>
     Number(match[1]),
   );

@@ -1529,11 +1529,15 @@ function SourceReader({
       title: source.title,
       text: '',
       ocrRunId: '',
+      partial: false,
     },
   );
   const ocrDraft = ocrLocal.value.text || null;
-  const setOcrDraft = (text: string, runId = ocrLocal.value.ocrRunId) =>
-    ocrLocal.update({ ...ocrLocal.value, text, ocrRunId: runId });
+  const setOcrDraft = (
+    text: string,
+    runId = ocrLocal.value.ocrRunId,
+    partial = ocrLocal.value.partial,
+  ) => ocrLocal.update({ ...ocrLocal.value, text, ocrRunId: runId, partial });
   const previousOcr = runs
     .filter(
       (run) =>
@@ -1640,9 +1644,15 @@ function SourceReader({
   async function requestOcr(
     requestPage: number,
     reuseCompleted = false,
+    selectedRegion?: Region | null,
   ): Promise<Run> {
     if (!blob) throw new Error(t('无法载入原件，请刷新重试。'));
-    const image = await pageImage(blob, source.media_type, requestPage);
+    const image = await pageImage(
+      blob,
+      source.media_type,
+      requestPage,
+      selectedRegion,
+    );
     const { run } = await api('/api/research', {
       id: crypto.randomUUID(),
       project_id: projectId,
@@ -1656,6 +1666,7 @@ function SourceReader({
       }),
       page: requestPage,
       image,
+      region: selectedRegion || undefined,
       locale,
     });
     await onSaved();
@@ -1664,10 +1675,11 @@ function SourceReader({
   async function ocr() {
     if (!blob) return;
     await perform(async () => {
-      const run = await requestOcr(page);
+      const selectedRegion = region;
+      const run = await requestOcr(page, false, selectedRegion);
       if (run.status !== 'succeeded' || !run.result)
         throw new Error(run.error || t('转录未完成。'));
-      setOcrDraft(run.result, run.id);
+      setOcrDraft(run.result, run.id, !!selectedRegion);
       report(
         'OCR 结果已存入任务记录。请对照原件核查，确认后再保存为资料版本。',
       );
@@ -2253,9 +2265,17 @@ function SourceReader({
             onClick={() => void ocr()}
           >
             <Sparkles size={14} />
-            {busy ? t('处理中…') : t('转录当前页')}
+            {busy
+              ? t('处理中…')
+              : region
+                ? L('转录框选区域', 'Transcribe selected region')
+                : t('转录当前页')}
           </Button>
           <p>
+            {L(
+              '多栏报纸建议先在原件上框选一栏，再转录。',
+              'For multi-column newspapers, select one column on the original before transcribing.',
+            )}{' '}
             {L(
               '图像发送给所选模型；按项目预算预留费用，成功后核算。',
               'The image goes to your selected model. Cost is reserved against the project budget and settled after success.',
@@ -2312,7 +2332,13 @@ function SourceReader({
             <Button
               variant="outline"
               disabled={readOnly}
-              onClick={() => setOcrDraft(previousOcr.result!, previousOcr.id)}
+              onClick={() =>
+                setOcrDraft(
+                  previousOcr.result!,
+                  previousOcr.id,
+                  !!previousOcr.model_snapshot.region,
+                )
+              }
             >
               {L('继续核查上次转录', 'Resume transcription review')}
             </Button>
@@ -2336,13 +2362,29 @@ function SourceReader({
             value={ocrDraft}
             onChange={(e) => setOcrDraft(e.target.value)}
           />
+          {ocrLocal.value.partial && (
+            <p className="settings-feedback">
+              {L(
+                '这是局部转录。插入到本页草稿后，请检查阅读顺序和覆盖范围，再保存资料版本。',
+                'This is a partial transcription. Insert it into the page draft, check reading order and coverage, then save a source version.',
+              )}
+            </p>
+          )}
           <Button
             disabled={
               busy || readOnly || !ocrLocal.loaded || version.id !== current.id
             }
-            onClick={() => void save('ocr-reviewed', ocrDraft)}
+            onClick={() => {
+              if (ocrLocal.value.partial) {
+                setDraft([draft, ocrDraft].filter(Boolean).join('\n\n'));
+                setEditing(true);
+                ocrLocal.clear();
+              } else void save('ocr-reviewed', ocrDraft);
+            }}
           >
-            {t('已核查，保存为新版本')}
+            {ocrLocal.value.partial
+              ? L('插入本页草稿', 'Insert into page draft')
+              : t('已核查，保存为新版本')}
           </Button>
           <Button
             variant="ghost"

@@ -3,6 +3,7 @@ import { HttpError } from '../errors';
 import type { MissionStore } from './missions';
 import { sha256 } from './search';
 import type { TaskResult } from './types';
+import { compactReviewCitations } from '../review-citations';
 
 export const humanReviewInput = z.object({
   summary: z
@@ -59,13 +60,15 @@ export async function submitHumanReview(
     result: row.result ? (JSON.parse(row.result) as TaskResult) : null,
   }));
   const result: TaskResult = {
-    summary: input.summary,
-    citations: dependencies
-      .flatMap((dep) => dep.result?.citations || [])
-      .slice(0, 100),
+    ...compactReviewCitations(
+      input.summary,
+      dependencies.flatMap((dep) => dep.result?.citations || []),
+    ),
     checks: [],
     data: { human_submission: { expected: input.expected, signature } },
   };
+  if (result.citations.length > 100)
+    throw new HttpError(400, '引文超过 100 条，请拆分审读步骤。');
   result.checks = await store.checkResult(task, result);
   const serialized = JSON.stringify(result),
     snapshot = JSON.stringify(dependencies),

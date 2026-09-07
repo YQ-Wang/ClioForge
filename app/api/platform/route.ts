@@ -11,6 +11,7 @@ import { authenticate, failure, jsonBody, HttpError } from '@/lib/server';
 import { MissionStore } from '@/lib/platform/missions';
 import { dispatchMission } from '@/lib/platform/execute';
 import { submitHumanReview } from '@/lib/platform/human-review';
+import { repairProse } from '@/lib/platform/repair';
 import { moveBoardTask } from '@/lib/platform/task-board';
 import { reindexProject, searchPages, sha256 } from '@/lib/platform/search';
 const inputSchema = z.object({
@@ -28,6 +29,7 @@ const inputSchema = z.object({
     'claim_task',
     'submit_task',
     'submit_human_task',
+    'repair_prose',
     'reindex',
     'alias',
     'member',
@@ -328,6 +330,13 @@ export async function POST(request: Request) {
         if (task.project_id !== input.project_id || task.executor !== 'human')
           throw new HttpError(400, '请选择人工任务。');
         result = await store.claim(id, auth.user.id, 'human');
+        break;
+      }
+      case 'repair_prose': {
+        const id = requireId();
+        if ((await store.task(id)).project_id !== input.project_id)
+          throw new HttpError(404, '任务不属于此项目。');
+        result = await repairProse(store, id, input.value);
         break;
       }
       case 'submit_human_task': {

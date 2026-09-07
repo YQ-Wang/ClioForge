@@ -18,3 +18,5 @@ The other files in this directory document implementation decisions, research ex
 Useful background: [research workflows](agentic-workflows.md), [productivity workflows](productivity-workflows.md), [brand artwork](cw-brand.md), and [decorative background provenance](history-background.md).
 
 Latest practical evaluation: [three historical-source pilots, September 6, 2026](research-pilots-2026-09-06.md), including failed attempts, corrections, costs and remaining limitations.
+
+Follow-up: [implemented recovery fixes and live verification](pilot-recovery-2026-09-06.md).

@@ -4,6 +4,7 @@ import { researchTables } from '@/lib/research-report';
 import type { TaskResult } from '@/lib/platform/types';
 import ResearchInsights from './research-insights';
 import ResearchText from './research-text';
+import { groupedCitations } from '@/lib/review-citations';
 export default function ResearchResult({
   result,
   sourceLabel,
@@ -135,9 +136,11 @@ export default function ResearchResult({
       {result.citations.length > 0 && (
         <>
           <h3>{L('回到原文核查', 'Check against the source')}</h3>
-          {result.citations.map((citation, i) => (
-            <blockquote key={i}>
-              <strong className="report-citation-number">[{i + 1}]</strong>
+          {groupedCitations(result.citations).map(({ citation, numbers }) => (
+            <blockquote key={numbers[0]}>
+              <strong className="report-citation-number">
+                {numbers.map((n) => `[${n}]`).join(' · ')}
+              </strong>
               <p className="preserve-text">{citation.quote}</p>
               <button
                 className="report-source"

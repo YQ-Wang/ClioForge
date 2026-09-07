@@ -62,10 +62,10 @@ export async function POST(request: Request) {
         !versions[0].pages.some((page) => page.page === input.page))
     )
       throw new HttpError(400, 'OCR 页码无效。');
-    if (kind === 'ocr' && input.reuse_completed) {
+    if (kind === 'ocr' && input.reuse_completed && !input.region) {
       const cached = await store.db
         .prepare(
-          "SELECT id FROM research_runs WHERE owner_id=? AND project_id=? AND kind='ocr' AND status='succeeded' AND result IS NOT NULL AND json_extract(model_snapshot,'$.page')=? AND source_version_ids=? ORDER BY created_at DESC LIMIT 1",
+          "SELECT id FROM research_runs WHERE owner_id=? AND project_id=? AND kind='ocr' AND status='succeeded' AND result IS NOT NULL AND json_extract(model_snapshot,'$.region') IS NULL AND json_extract(model_snapshot,'$.page')=? AND source_version_ids=? ORDER BY created_at DESC LIMIT 1",
         )
         .bind(user.id, projectId, input.page, JSON.stringify(ids))
         .first<{ id: string }>();
@@ -111,6 +111,7 @@ export async function POST(request: Request) {
             input.effort,
           ),
           page: kind === 'ocr' ? input.page : null,
+          region: kind === 'ocr' ? input.region || null : null,
         },
       },
       price,
@@ -142,7 +143,9 @@ export async function POST(request: Request) {
               ),
         prompt:
           kind === 'ocr'
-            ? '转录本页。'
+            ? input.region
+              ? '仅转录提供的框选区域。保持原始阅读顺序，不补写框外内容。'
+              : '转录本页，按栏阅读；不跨栏拼接段落。'
             : `${prompt}\n\n<materials>\n${materials}\n</materials>`,
         image: kind === 'ocr' ? input.image : undefined,
       });

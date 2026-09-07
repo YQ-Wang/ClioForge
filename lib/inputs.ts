@@ -12,6 +12,7 @@ export const modelInput = z.object({
 });
 export const deleteModelInput = z.object({ id: uuid });
 export const researchInput = z.object({
+  region: regionInput.optional(),
   reuse_completed: z.boolean().default(false),
   locale: z.enum(['zh-CN', 'en']).default('zh-CN'),
   effort: thinkingEffort.optional(),

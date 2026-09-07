@@ -52,9 +52,9 @@ export function reportMarkdown(
     `## ${L('原文依据', 'Source evidence')}`,
     '',
   ];
-  result.citations.forEach((citation, i) =>
+  groupedCitations(result.citations).forEach(({ citation, numbers }) =>
     lines.push(
-      `### ${i + 1}. ${sourceLabel(citation.version_id)} · ${L('页', 'p.')} ${citation.page}`,
+      `### ${numbers.join(', ')}. ${sourceLabel(citation.version_id)} · ${L('页', 'p.')} ${citation.page}`,
       '',
       ...citation.quote.split('\n').map((line) => `> ${line}`),
       '',
@@ -120,3 +120,4 @@ export function reportMarkdown(
   );
   return lines.join('\n');
 }
+import { groupedCitations } from './review-citations';

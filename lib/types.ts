@@ -70,6 +70,7 @@ export type Run = {
   result: string | null;
   error: string | null;
   model_snapshot: {
+    region?: import('./workbench-types').Region | null;
     provider: string;
     model_id: string;
     page?: number;

@@ -4,7 +4,7 @@ import type { MissionTask, TaskCorrection } from './types';
 // Counts describe edits, not ground-truth accuracy. Ambiguous/renamed labels are
 // deliberately counted as additions/removals rather than guessed row matches.
 export function correctionChanges(correction: TaskCorrection) {
-  const before = extractionSchema.safeParse(correction.body.before.data);
+  const before = extractionSchema.safeParse(correction.body.before?.data);
   const after = extractionSchema.safeParse(correction.body.after.data);
   const result = {
     added: 0,
@@ -30,7 +30,7 @@ export function correctionChanges(correction: TaskCorrection) {
       if (!next || cell.value !== next.value) result.values++;
       if (!next || cell.status !== next.status) result.classifications++;
       const oldQuote = cell.citation
-        ? correction.body.before.citations[cell.citation - 1]
+        ? correction.body.before?.citations[cell.citation - 1]
         : null;
       const newQuote = next?.citation
         ? correction.body.after.citations[next.citation - 1]

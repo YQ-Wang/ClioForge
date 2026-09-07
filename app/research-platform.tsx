@@ -1,4 +1,6 @@
 'use client';
+import ResearchRepair from './research-repair';
+import { canRepairProse } from '@/lib/review-citations';
 import { importSampleBatches, type SampleBatch } from '@/lib/sample-import';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -358,7 +360,7 @@ export default function ResearchPlatform({
     }, 5000);
     return () => clearInterval(timer);
   }, [liveMissionId, liveMissionStatus, refresh]);
-  async function action(work: () => Promise<unknown>) {
+  async function action(work: () => Promise<unknown>, propagate = false) {
     setBusy(true);
     setMessage('');
     try {
@@ -370,6 +372,7 @@ export default function ResearchPlatform({
           ? error.message
           : L('操作失败', 'Operation failed'),
       );
+      if (propagate) throw error;
       return false;
     } finally {
       setBusy(false);
@@ -875,7 +878,7 @@ export default function ResearchPlatform({
                       onAction={(actionName, value) =>
                         action(async () => {
                           return mutate(actionName, value, task.id);
-                        })
+                        }, actionName === 'repair_prose')
                       }
                       onOpenSource={onOpenSource}
                     />
@@ -2554,20 +2557,57 @@ function TaskDetail({
         </output>
       )}
       {task.result && task.input.parameters.extraction !== true && (
-        <ResearchResult
-          result={task.result}
-          sourceLabel={(id) => {
-            const version = versions.find((v) => v.id === id);
-            return (
-              sources.find((s) => s.id === version?.source_id)?.title ||
-              L('原始资料', 'Original source')
-            );
-          }}
-          onSource={(id, page) => {
-            const version = versions.find((v) => v.id === id);
-            if (version) onOpenSource(version.source_id, id, page);
-          }}
-        />
+        <>
+          {(view.corrections || []).some((c) => c.task_id === task.id) && (
+            <details className="settings-feedback">
+              <summary>
+                {L(
+                  '此稿已由研究者修订 · 查看修改记录',
+                  'Revised by a researcher · View correction history',
+                )}
+              </summary>
+              {(view.corrections || [])
+                .filter((c) => c.task_id === task.id)
+                .map((c) => (
+                  <article key={c.id}>
+                    <p>{c.reason}</p>
+                    <small>
+                      {members.find((m) => m.user_id === c.actor)?.name ||
+                        L('研究者', 'Researcher')}{' '}
+                      · {new Date(c.created_at).toLocaleString()}
+                    </small>
+                    <details>
+                      <summary>{L('修订前', 'Before correction')}</summary>
+                      <p className="whitespace-pre-wrap">
+                        {c.body.before?.summary ||
+                          L('未保存完整回答', 'No complete answer was saved')}
+                      </p>
+                    </details>
+                    <details>
+                      <summary>{L('修订后', 'After correction')}</summary>
+                      <p className="whitespace-pre-wrap">
+                        {c.body.after.summary}
+                      </p>
+                    </details>
+                  </article>
+                ))}
+            </details>
+          )}
+          <ResearchResult
+            result={task.result}
+            sourceLabel={(id) => {
+              const version = versions.find((v) => v.id === id);
+              return (
+                sources.find((s) => s.id === version?.source_id)?.title ||
+                L('原始资料', 'Original source')
+              );
+            }}
+            onSource={(id, page) => {
+              const version = versions.find((v) => v.id === id);
+              if (version) onOpenSource(version.source_id, id, page);
+            }}
+          />
+        </>
       )}
       {task.result &&
         task.input.parameters.output_schema === 'claim_review_v1' && (
@@ -2782,6 +2822,20 @@ function TaskDetail({
           </Button>
         </form>
       )}
+      {canReview && canRepairProse(task) && (
+        <ResearchRepair
+          task={task}
+          versions={versions.filter((v) =>
+            task.input.version_ids.includes(v.id),
+          )}
+          sourceLabel={(id) => {
+            const v = versions.find((v) => v.id === id);
+            return sources.find((s) => s.id === v?.source_id)?.title || id;
+          }}
+          busy={busy}
+          onSave={(value) => onAction('repair_prose', value)}
+        />
+      )}
       {canReview && ['review', 'succeeded'].includes(task.status) && (
         <form
           onSubmit={(event) => {
@@ -2841,6 +2895,18 @@ function TaskDetail({
             </Button>
           </div>
         </form>
+      )}
+      {task.status === 'uncertain' && task.executor === 'model' && (
+        <p className="settings-feedback">
+          {L(
+            task.result
+              ? '已有候选答案时，可以先修订稿件与引文，无需再次付费。修订不会释放尚未核实的费用预留。'
+              : '这次未保存完整回答。建议在下方追问中缩小问题、选用快速梳理；新追问会另计费用。请先核对模型厂商记录，超时预留不是已确认账单。',
+            task.result
+              ? 'You can repair this candidate without another model call. Repair does not release unverified cost reservations.'
+              : 'No complete answer was saved. Try a narrower follow-up with Quick reading below; it is a new paid request. Check provider records first: a timeout reservation is not a confirmed charge.',
+          )}
+        </p>
       )}
       {canWrite &&
         ['failed', 'uncertain', 'rejected', 'stale'].includes(task.status) && (

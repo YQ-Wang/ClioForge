@@ -89,6 +89,7 @@ export default function BatchTranscription({
             runs.find(
               (run) =>
                 run.kind === 'ocr' &&
+                !run.model_snapshot.region &&
                 run.status === 'succeeded' &&
                 run.result &&
                 run.model_snapshot.page === page &&

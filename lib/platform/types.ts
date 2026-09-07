@@ -171,7 +171,7 @@ export type TaskCorrection = {
   reason: string;
   actor: string;
   created_at: string;
-  body: { before: TaskResult; after: TaskResult };
+  body: { before: TaskResult | null; after: TaskResult };
 };
 export function validateGraph(tasks: TaskDraft[]) {
   const byId = new Map(tasks.map((task) => [task.id, task]));

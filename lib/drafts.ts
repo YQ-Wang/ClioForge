@@ -12,6 +12,7 @@ export const draftValue = z
     versionId: z.string().optional(),
     page: z.number().int().positive().optional(),
     ocrRunId: z.string().optional(),
+    partial: z.boolean().optional(),
     title: z.string().max(2000),
     text: z.string().max(100000),
     document: richDocumentString.nullable().optional(),

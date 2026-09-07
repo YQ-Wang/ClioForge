@@ -1,4 +1,6 @@
 import type { PageText } from './types';
+import type { Region } from './workbench-types';
+import { cropBounds } from './ocr-region';
 let pdfModule: Promise<typeof import('pdfjs-dist')> | undefined;
 async function pdfjs() {
   pdfModule ??= import('pdfjs-dist').then(async (module) => {
@@ -67,7 +69,12 @@ export async function extractPages(
     throw new Error('提取文本过长，请拆分材料后导入。');
   return pages;
 }
-export async function pageImage(blob: Blob, type: string, page: number) {
+export async function pageImage(
+  blob: Blob,
+  type: string,
+  page: number,
+  region?: Region | null,
+) {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   if (!context) throw new Error('浏览器无法处理图像。');
@@ -79,22 +86,43 @@ export async function pageImage(blob: Blob, type: string, page: number) {
     try {
       const p = await pdf.getPage(page);
       const base = p.getViewport({ scale: 1 });
+      const selected = cropBounds(base.width, base.height, region);
       const viewport = p.getViewport({
-        scale: Math.min(2, 2000 / Math.max(base.width, base.height)),
+        scale: Math.min(
+          region ? 4 : 2,
+          2000 / Math.max(selected.width, selected.height),
+        ),
       });
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-      await p.render({ canvas, canvasContext: context, viewport }).promise;
+      const bounds = cropBounds(viewport.width, viewport.height, region);
+      canvas.width = bounds.width;
+      canvas.height = bounds.height;
+      await p.render({
+        canvas,
+        canvasContext: context,
+        viewport,
+        transform: [1, 0, 0, 1, -bounds.x, -bounds.y],
+      }).promise;
     } finally {
       await pdf.destroy();
     }
   } else {
     const bitmap = await createImageBitmap(blob);
     try {
-      const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
-      canvas.width = Math.round(bitmap.width * scale);
-      canvas.height = Math.round(bitmap.height * scale);
-      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const bounds = cropBounds(bitmap.width, bitmap.height, region);
+      const scale = Math.min(1, 2000 / Math.max(bounds.width, bounds.height));
+      canvas.width = Math.max(1, Math.round(bounds.width * scale));
+      canvas.height = Math.max(1, Math.round(bounds.height * scale));
+      context.drawImage(
+        bitmap,
+        bounds.x,
+        bounds.y,
+        bounds.width,
+        bounds.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
     } finally {
       bitmap.close();
     }

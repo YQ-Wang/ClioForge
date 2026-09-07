@@ -6,6 +6,12 @@ import { MissionStore } from '../lib/platform/missions';
 import { submitHumanReview } from '../lib/platform/human-review';
 import { taskInputSchema } from '../lib/platform/types';
 import { HttpError } from '../lib/errors';
+import { repairProse } from '../lib/platform/repair';
+import { correctionChanges } from '../lib/platform/review-quality';
+import {
+  compactReviewCitations,
+  groupedCitations,
+} from '../lib/review-citations';
 import dataset from '../fixtures/led-sample.json';
 
 let mf: Miniflare, db: D1Database;
@@ -150,6 +156,200 @@ function status(code: number) {
   return (error: unknown) =>
     error instanceof HttpError && error.status === code;
 }
+
+void test('review deduplication remaps prose numbers without merging distinct source spans', () => {
+  const a = {
+    version_id: crypto.randomUUID(),
+    page: 1,
+    quote: 'same text',
+    start: 0,
+  };
+  const b = { ...a, start: 20 };
+  const compact = compactReviewCitations(
+    'First [1], repeated [2], second occurrence [3].',
+    [a, { ...a }, b],
+  );
+  assert.equal(
+    compact.summary,
+    'First [1], repeated [1], second occurrence [2].',
+  );
+  assert.deepEqual(compact.citations, [a, b]);
+  assert.deepEqual(groupedCitations([a, { ...a }, b]), [
+    { citation: a, numbers: [1, 2] },
+    { citation: b, numbers: [3] },
+  ]);
+});
+
+void test('repair of an uncertain comparison keeps cost records and requires a new review', async () => {
+  const f = await fixture();
+  const task = await f.store.task(f.human);
+  await db
+    .prepare(
+      "UPDATE mission_tasks SET executor='model',kind='compare',status='uncertain',cost_units=1234,input=? WHERE id=?",
+    )
+    .bind(
+      JSON.stringify({
+        ...task.input,
+        parameters: {
+          output_schema: 'comparison_answer_v1',
+          require_citations: true,
+        },
+      }),
+      f.human,
+    )
+    .run();
+  const repaired = await repairProse(f.store, f.human, {
+    summary: 'The supplied text names a person [1].',
+    citations: [f.citation],
+    reason:
+      'Transcribed and checked the fixed source after a failed model response.',
+    expected: task.revision,
+  });
+  assert.equal(repaired.status, 'review');
+  assert.equal(repaired.cost_units, 1234);
+  assert.equal(repaired.attempt, 0);
+  assert.equal((await f.store.task(f.publish)).status, 'blocked');
+  const correction = await db
+    .prepare('SELECT * FROM task_corrections WHERE task_id=?')
+    .bind(f.human)
+    .first<{
+      id: string;
+      task_id: string;
+      reason: string;
+      actor: string;
+      created_at: string;
+      body: string;
+    }>();
+  assert.doesNotThrow(() =>
+    correctionChanges({ ...correction!, body: JSON.parse(correction!.body) }),
+  );
+});
+
+void test('repair rejects a dependency changed while citations were being checked', async () => {
+  const f = await fixture();
+  const task = await submitHumanReview(f.store, f.human, f.submission);
+  const originalCheck = f.store.checkResult.bind(f.store);
+  f.store.checkResult = async (task, result) => {
+    const checks = await originalCheck(task, result);
+    await db
+      .prepare('UPDATE mission_tasks SET revision=revision+1 WHERE id=?')
+      .bind(f.parent)
+      .run();
+    return checks;
+  };
+  await assert.rejects(
+    repairProse(f.store, f.human, {
+      summary: 'Names [1].',
+      citations: [f.citation],
+      reason: 'Checked.',
+      expected: task.revision,
+    }),
+    status(409),
+  );
+  assert.equal((await f.store.task(f.human)).revision, task.revision);
+  assert.equal(
+    (await db
+      .prepare('SELECT COUNT(*) AS n FROM task_corrections WHERE task_id=?')
+      .bind(f.human)
+      .first<{ n: number }>())!.n,
+    0,
+  );
+});
+
+void test('human submission compacts duplicate inherited citations before exact validation', async () => {
+  const f = await fixture();
+  const parent = await f.store.task(f.parent);
+  await db
+    .prepare('UPDATE mission_tasks SET result=? WHERE id=?')
+    .bind(
+      JSON.stringify({ ...parent.result, citations: [f.citation, f.citation] }),
+      f.parent,
+    )
+    .run();
+  const result = await submitHumanReview(f.store, f.human, {
+    ...f.submission,
+    summary: 'Name [1], same quotation [2].',
+  });
+  assert.equal(result.result?.summary, 'Name [1], same quotation [1].');
+  assert.deepEqual(result.result?.citations, [f.citation]);
+  assert.equal(result.result?.checks.length, 1);
+});
+
+void test('prose repair preserves the original attempt and requires acceptance without paid work', async () => {
+  const f = await fixture();
+  const original = await submitHumanReview(f.store, f.human, f.submission);
+  const repaired = await repairProse(f.store, f.human, {
+    summary: 'Corrected account of the names [1].',
+    citations: [f.citation],
+    reason: 'Compared with the fixed text.',
+    expected: original.revision,
+  });
+  assert.equal(repaired.status, 'review');
+  assert.equal(repaired.attempt, original.attempt);
+  assert.equal(repaired.result?.checks[0].passed, true);
+  assert.equal((await f.store.task(f.publish)).status, 'blocked');
+  const attempt = await db
+    .prepare('SELECT result FROM task_attempts WHERE task_id=?')
+    .bind(f.human)
+    .first<{ result: string }>();
+  assert.equal(JSON.parse(attempt!.result).summary, f.submission.summary);
+  const correction = await db
+    .prepare('SELECT body FROM task_corrections WHERE task_id=?')
+    .bind(f.human)
+    .first<{ body: string }>();
+  assert.equal(
+    JSON.parse(correction!.body).before.summary,
+    f.submission.summary,
+  );
+  assert.equal(
+    JSON.parse(correction!.body).after.summary,
+    repaired.result?.summary,
+  );
+  assert.equal(
+    (await db
+      .prepare('SELECT COUNT(*) AS n FROM research_jobs WHERE project_id=?')
+      .bind(f.project.id)
+      .first<{ n: number }>())!.n,
+    0,
+  );
+});
+
+void test('prose repair rejects invalid quotations, citation numbers, viewers and stale edits', async () => {
+  const f = await fixture(),
+    other = await researcher();
+  const task = await submitHumanReview(f.store, f.human, f.submission);
+  const input = {
+    summary: 'Names [1].',
+    citations: [f.citation],
+    reason: 'Checked.',
+    expected: task.revision,
+  };
+  await assert.rejects(
+    repairProse(f.store, f.human, {
+      ...input,
+      citations: [{ ...f.citation, quote: 'Invented words' }],
+    }),
+  );
+  await assert.rejects(
+    repairProse(f.store, f.human, { ...input, summary: 'Names [2].' }),
+  );
+  await assert.rejects(
+    repairProse(f.store, f.human, { ...input, expected: task.revision - 1 }),
+    status(409),
+  );
+  await db
+    .prepare('INSERT INTO project_members VALUES(?,?,?,?,?)')
+    .bind(
+      f.project.id,
+      other.owner,
+      'viewer',
+      f.store.owner,
+      new Date().toISOString(),
+    )
+    .run();
+  await assert.rejects(repairProse(other, f.human, input), status(403));
+  assert.equal((await f.store.task(f.human)).revision, task.revision);
+});
 
 void test('human review saves once with exact inherited citations and remains a review gate', async () => {
   const f = await fixture();

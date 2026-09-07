@@ -61,7 +61,7 @@ export function emptyConversationDraft(
   return {
     question: '',
     model,
-    effort: 'high',
+    effort: 'low',
     after,
     extra: '',
     pages: '1',
