@@ -27,9 +27,7 @@ export function I18nProvider({
   useEffect(() => {
     document.documentElement.lang = locale;
     document.title =
-      locale === 'en'
-        ? 'Canwoo — Humanities Research'
-        : 'Canwoo 参伍 — 人文研究';
+      locale === 'en' ? 'Canwoo: Humanities Research' : 'Canwoo 参伍: 人文研究';
   }, [locale]);
   const value = useMemo(() => ({ locale, setLocale }), [locale, setLocale]);
   return (

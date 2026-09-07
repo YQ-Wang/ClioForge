@@ -1,4 +1,4 @@
-/* OFL Google Sans Flex and Qiji outlines, aligned by their visible ink bounds. */
+/* Original monoline Latin lettering paired with Qiji outlines. */
 .canwoo-brand {
   display: inline-flex;
   align-items: center;
@@ -29,8 +29,7 @@
 }
 .brand-latin {
   display: block;
-  /* Both wordmarks use 32-unit viewBoxes and the Han scale, 47 / 64. */
-  width: calc(var(--latin-width) * 0.734375px);
+  width: 118px;
   height: 29px;
   flex: none;
   overflow: visible;
@@ -64,8 +63,7 @@
     min-width: 36px;
   }
   .public-brand .brand-latin {
-    /* Match the mobile Han scale, 43 / 64. */
-    width: calc(var(--latin-width) * 0.671875px);
+    width: 109px;
     height: 26px;
   }
   .public-brand .brand-wordmark {

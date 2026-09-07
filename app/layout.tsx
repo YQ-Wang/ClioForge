@@ -29,9 +29,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     icons: { icon: '/icon.svg?v=atelier4' },
     title:
-      locale === 'en'
-        ? 'Canwoo — Humanities Research'
-        : 'Canwoo 参伍 — 人文研究',
+      locale === 'en' ? 'Canwoo: Humanities Research' : 'Canwoo 参伍: 人文研究',
     description:
       locale === 'en'
         ? 'Connect original sources, research questions and traceable evidence.'

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0-alpha.2
+
+- Restore the original Latin wordmark from `8338c9b`, retaining the Qiji Chinese lettering and fan; use a colon in both browser-tab titles.
+- Repair third-party notice formatting so the repository-wide CI format check passes.
+- Make workspace breadcrumbs navigable and improve research draft recovery and selected-region transcription.
+- Accept standard CSL bibliography types, preserve imported metadata, and show research-plan context in findings.
+- Cite matching source passages in automated research, avoid duplicate citation checks, and retain rejection and rerun history.
+- Preserve absolute source links in Markdown exports, provide reusable Word and backup download links, and distinguish file pagination from original historical pagination in footnotes.
+- Document continued production trials using the Adams correspondence. The release remains alpha: three GLM 5.3 Flash calls timed out in the latest trial, and reliable automated research has not been established.
+
 ## 0.1.0-alpha.1
 
 Initial public alpha of Canwoo, including the private research workspace, source reading and annotations, versioned evidence and writing, project collaboration, research task board and bounded AI workflows.

@@ -1,7 +1,5 @@
 import hanWordmark from '@/lib/brand-han.json';
-import latinWordmark from '@/lib/brand-latin.json';
-import { compactFanArt, fanArt } from '@/lib/brand-art';
-import type { CSSProperties } from 'react';
+import { compactFanArt, fanArt, wordmarkPaths } from '@/lib/brand-art';
 
 export function CanwooMark({
   className = '',
@@ -43,14 +41,15 @@ export function CanwooMark({
 
 export function CanwooWordmark() {
   return (
-    <svg
-      className="brand-latin"
-      viewBox={latinWordmark.viewBox}
-      style={{ '--latin-width': latinWordmark.width } as CSSProperties}
-      aria-hidden="true"
-    >
-      <g fill="currentColor">
-        {latinWordmark.paths.map((d, i) => (
+    <svg className="brand-latin" viewBox="0 0 212 42" aria-hidden="true">
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="5.5"
+        strokeLinecap="butt"
+        strokeLinejoin="round"
+      >
+        {wordmarkPaths.map((d, i) => (
           <path key={i} d={d} />
         ))}
       </g>
