@@ -40,9 +40,12 @@ export function researchTemplate(options: {
             input_rate: options.input_rate ?? 0,
             output_rate: options.output_rate ?? 0,
             max_output: 8192,
-            effort: 'high',
-            prompt: `${options.question}\nScope: ${options.scope}\nAcceptance: ${options.acceptance}\nCompare the selected primary sources. Distinguish document text, interpretation, alternative explanations and what the sources cannot establish. Each substantive finding must refer to a numbered citation in the citations array. Copy short quotations verbatim from ONE provided page; never join text across pages. If a document quotes another, identify that dependency. In summary use readable paragraphs with [1], [2] citation markers. Include at least one exact citation from each source used.`,
-            parameters: { require_citations: true },
+            effort: 'low',
+            prompt: `${options.question}\nScope: ${options.scope}\nAcceptance: ${options.acceptance}\nCompare the selected primary sources. Distinguish document text, interpretation, alternative explanations and what the sources cannot establish. Each substantive finding must refer to a numbered citation in the citations array. Copy short quotations verbatim from ONE provided page; never join text across pages. If a document quotes another, identify that dependency. In summary use readable paragraphs with [1], [2] citation markers. Include at least one exact citation from each source used, at most 12 citations. Return data only as {limitations: [up to three source limitations]}; put comparison, alternatives and next checks in summary.`,
+            parameters: {
+              require_citations: true,
+              output_schema: 'comparison_answer_v1',
+            },
           },
         },
         {

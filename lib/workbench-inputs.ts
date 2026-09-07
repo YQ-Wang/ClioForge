@@ -162,7 +162,12 @@ export const jobInput = z.object({
     .optional(),
   output_format: z.literal('json').optional(),
   output_schema: z
-    .enum(['reading_answer_v1', 'research_discussion_v1', 'claim_review_v1'])
+    .enum([
+      'comparison_answer_v1',
+      'reading_answer_v1',
+      'research_discussion_v1',
+      'claim_review_v1',
+    ])
     .optional(),
   effort: thinkingEffort.optional(),
   task_kind: z.string().max(30).optional(),

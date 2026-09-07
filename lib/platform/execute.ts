@@ -309,6 +309,7 @@ export async function executeMissionTask(
           model_id: task.input.model_id,
           output_format: 'json',
           output_schema:
+            task.input.parameters.output_schema === 'comparison_answer_v1' ||
             task.input.parameters.output_schema === 'reading_answer_v1' ||
             task.input.parameters.output_schema === 'research_discussion_v1' ||
             task.input.parameters.output_schema === 'claim_review_v1'

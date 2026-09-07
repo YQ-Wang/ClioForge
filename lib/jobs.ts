@@ -65,7 +65,7 @@ export async function jobMaterials(
   const text = versions
     .map(
       (v) =>
-        `[材料ID ${v.source_id} / 固定版本ID ${v.id} / 版本 ${v.revision}]\n${v.pages
+        `[固定版本ID ${v.id} / 版本 ${v.revision}; citations.version_id must use this fixed version ID]\n${v.pages
           .filter(
             (p) =>
               !refs ||
@@ -356,6 +356,7 @@ export async function executeJob(
       maxOutput: job.max_output,
       outputFormat: job.model_snapshot.output_format,
       outputSchema: job.model_snapshot.output_schema,
+      sourceVersionIds: job.version_ids,
       effort: job.model_snapshot.effort,
       priceCeiling: { input: job.input_rate, output: job.output_rate },
     });

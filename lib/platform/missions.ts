@@ -379,18 +379,22 @@ export class MissionStore extends ResearchStore {
           : '',
       );
     if (
-      task.executor === 'model' &&
-      (task.input.parameters.output_schema === 'reading_answer_v1' ||
-        task.input.parameters.output_schema === 'research_discussion_v1')
-    )
-      checkReadingOutput(result);
-    if (
       task.input.parameters.require_citations === true &&
       !result.citations.length
     )
       throw new HttpError(
         400,
         '研究结果没有提供原文引文，请检查输出后再决定是否重试。',
+      );
+    if (
+      task.executor === 'model' &&
+      (task.input.parameters.output_schema === 'comparison_answer_v1' ||
+        task.input.parameters.output_schema === 'reading_answer_v1' ||
+        task.input.parameters.output_schema === 'research_discussion_v1')
+    )
+      checkReadingOutput(
+        result,
+        task.input.parameters.output_schema === 'comparison_answer_v1',
       );
     const allowed = new Set(task.input.version_ids);
     const dependencies = (

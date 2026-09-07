@@ -2,11 +2,61 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   checkReadingOutput,
+  COMPARISON_OUTPUT_SCHEMA,
   READING_OUTPUT_SCHEMA,
 } from '../lib/reading-output';
 import { invoke, providerRequest, type ModelRequest } from '../lib/providers';
 import { jobInput } from '../lib/workbench-inputs';
 import type { TaskResult } from '../lib/platform/types';
+import { researchTemplate } from '../lib/platform/templates';
+
+void test('source comparisons request constrained JSON and retain independent output language', () => {
+  const draft = researchTemplate({
+    title: 'Letters',
+    question: 'Compare claims',
+    scope: 'Three letters',
+    acceptance: 'Exact quotations',
+    query: '',
+    version_ids: [],
+    locale: 'zh-CN',
+    model_id: '94585fcf-cedf-4016-911f-fdc05fcd0877',
+  });
+  const task = draft.tasks[0];
+  assert.equal(task.input.locale, 'zh-CN');
+  assert.equal(task.input.parameters.output_schema, COMPARISON_OUTPUT_SCHEMA);
+  const request = providerRequest({
+    ...input,
+    outputSchema: COMPARISON_OUTPUT_SCHEMA,
+    sourceVersionIds: [result.citations[0].version_id],
+  });
+  const body = JSON.parse(JSON.stringify(request.body));
+  assert.equal(body.response_format.type, 'json_schema');
+  assert.equal(body.response_format.json_schema.strict, true);
+  assert.equal(body.response_format.json_schema.name, COMPARISON_OUTPUT_SCHEMA);
+  assert.equal(
+    body.response_format.json_schema.schema.additionalProperties,
+    false,
+  );
+  assert.deepEqual(
+    body.response_format.json_schema.schema.properties.citations.items
+      .properties.version_id.enum,
+    [result.citations[0].version_id],
+  );
+  const citations = Array.from({ length: 10 }, () => result.citations[0]);
+  const tenSources = {
+    ...result,
+    summary: citations.map((_, i) => `[${i + 1}]`).join(' '),
+    citations,
+  };
+  assert.doesNotThrow(() => checkReadingOutput(tenSources, true));
+  assert.throws(() =>
+    checkReadingOutput(
+      { ...tenSources, summary: 'Missing citation references [1]' },
+      true,
+    ),
+  );
+  assert.throws(() => checkReadingOutput(tenSources));
+});
 
 const input: ModelRequest = {
   provider: 'openrouter',

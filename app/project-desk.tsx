@@ -1608,6 +1608,7 @@ function SourceReader({
     }
   }, [localDraft.loaded, location, versionId, page]);
   async function perform(work: () => Promise<void>) {
+    report('');
     setBusy(true);
     try {
       await work();

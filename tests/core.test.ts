@@ -2884,7 +2884,7 @@ void test('AI reading plans require real citations and do not trust model-author
     draft.tasks.map((task) => task.executor),
     ['model', 'builtin', 'human', 'builtin'],
   );
-  assert.equal(draft.tasks[0].input.effort, 'high');
+  assert.equal(draft.tasks[0].input.effort, 'low');
   const missionId = await store.create(material.project.id, draft);
   await store.control(missionId, 'start');
   const claim = await store.claim(draft.tasks[0].id, 'test-model', 'model');
@@ -2902,7 +2902,8 @@ void test('AI reading plans require real citations and do not trust model-author
   const quote = version.pages[0].text.slice(0, 12);
   await assert.rejects(
     store.submit(draft.tasks[0].id, claim.lease, 'test-model', {
-      summary: 'Invented quotation',
+      summary: 'Invented quotation [1]',
+      data: { limitations: [] },
       citations: [
         {
           version_id: version.id,
@@ -2915,6 +2916,7 @@ void test('AI reading plans require real citations and do not trust model-author
   );
   await store.submit(draft.tasks[0].id, claim.lease, 'test-model', {
     summary: 'A bounded reading [1]',
+    data: { limitations: [] },
     citations: [{ version_id: version.id, page: 1, quote }],
     checks: [{ name: 'Model says verified', passed: true, detail: 'Trust me' }],
   });
@@ -4628,6 +4630,29 @@ async function conversationFixture() {
   };
   return { ...f, store, root, mission, input };
 }
+void test('a failed answer cannot inject invented source IDs into a follow-up scope', async () => {
+  const f = await conversationFixture();
+  await db
+    .prepare("UPDATE mission_tasks SET status='uncertain',result=? WHERE id=?")
+    .bind(
+      JSON.stringify({
+        summary: 'Unverified response',
+        citations: [
+          { version_id: crypto.randomUUID(), page: 1, quote: 'Invented' },
+        ],
+        checks: [],
+      }),
+      f.root,
+    )
+    .run();
+  const next = await startTaskMessage(f.store, f.input, async () => {});
+  const task = await f.store.task(next.task_id);
+  assert.deepEqual(task.input.version_ids, [f.a.versionId]);
+  assert.deepEqual(task.input.page_refs, [
+    { version_id: f.a.versionId, page: 1 },
+  ]);
+});
+
 void test('task follow-ups persist one graph per request, check source scope and require researcher review', async () => {
   const f = await conversationFixture();
   let dispatches = 0,

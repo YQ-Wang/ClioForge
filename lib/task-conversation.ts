@@ -122,7 +122,9 @@ export async function startTaskMessage(
       context
         .flatMap((t) => [
           ...t.input.version_ids,
-          ...(t.result?.citations.map((c) => c.version_id) || []),
+          ...(['succeeded', 'accepted', 'review'].includes(t.status)
+            ? t.result?.citations.map((c) => c.version_id) || []
+            : []),
         ])
         .concat(value.extra_pages.map((p) => p.version_id)),
     ),
@@ -140,7 +142,10 @@ export async function startTaskMessage(
       extras = value.extra_pages.filter((p) => p.version_id === id),
       cited = context.flatMap(
         (t) =>
-          t.result?.citations
+          (['succeeded', 'accepted', 'review'].includes(t.status)
+              ? t.result?.citations || []
+            : []
+          )
             .filter((c) => c.version_id === id)
             .map((c) => ({ version_id: id, page: c.page })) || [],
       );

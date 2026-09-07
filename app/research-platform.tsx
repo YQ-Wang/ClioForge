@@ -290,7 +290,9 @@ export default function ResearchPlatform({
       sourceLabel,
       locale,
       artifact.license,
-      (version, page) => sourcePath(project.id, version, page),
+      (version, page) =>
+        new URL(sourcePath(project.id, version, page), window.location.origin)
+          .href,
     );
     const url = URL.createObjectURL(
       new Blob([text], { type: 'text/markdown;charset=utf-8' }),
@@ -1507,7 +1509,7 @@ function MissionForm({
 }) {
   const { L, locale } = useWords();
   const [selected, setSelected] = useState<string[]>(
-    sources.slice(0, 3).map((source) => source.id),
+    sources.slice(0, 10).map((source) => source.id),
   );
   const [modelId, setModelId] = useState(
     models.find((model) => model.model_id === DEFAULT_RESEARCH_MODEL)?.id ||
@@ -1522,6 +1524,7 @@ function MissionForm({
   const currentModel = models.find((model) => model.id === modelId);
   const [advanced, setAdvanced] = useState('');
   const [formError, setFormError] = useState('');
+  const [outputLocale, setOutputLocale] = useState<'zh-CN' | 'en'>(locale);
   const [recipe, setRecipe] = useState<RecipeKind | ''>('extract');
   const [fields, setFields] = useState(
     locale === 'en' ? 'Person, Date, Place, Event' : '人物，日期，地点，事件',
@@ -1599,7 +1602,7 @@ function MissionForm({
                   .sort((a, b) => b.revision - a.revision)[0]?.id,
             )
             .filter(Boolean),
-          locale,
+          locale: outputLocale,
         });
         if (mode === 'model' && recipe) {
           try {
@@ -1626,7 +1629,7 @@ function MissionForm({
               model_id: modelId,
               input_rate: Number(inputRate),
               output_rate: Number(outputRate),
-              locale,
+              locale: outputLocale,
               external,
               comparisonText: formText(data, 'comparison'),
             });
@@ -1817,6 +1820,24 @@ function MissionForm({
       )}
       {mode === 'model' && (
         <div className="research-model-settings">
+          <label>
+            {L('成果语言', 'Output language')}
+            <select
+              value={outputLocale}
+              onChange={(event) =>
+                setOutputLocale(event.target.value === 'en' ? 'en' : 'zh-CN')
+              }
+            >
+              <option value="zh-CN">中文</option>
+              <option value="en">English</option>
+            </select>
+            <small>
+              {L(
+                '独立于页面语言；引文保留原文。',
+                'Independent of interface language; quotations retain their original wording.',
+              )}
+            </small>
+          </label>
           <label>
             {L('研究助手', 'Research assistant')}
             <select

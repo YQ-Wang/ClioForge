@@ -255,7 +255,7 @@ export default function TaskConversation({
             model_id: current.model,
             after_id: current.after || null,
             extra_pages: extraPages,
-            locale,
+            locale: data.root.input.locale,
             effort: current.effort,
           },
           null,

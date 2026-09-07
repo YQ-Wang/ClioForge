@@ -3,6 +3,7 @@ import { HttpError } from './errors';
 import { citationSchema, type TaskResult } from './platform/types';
 
 export const READING_OUTPUT_SCHEMA = 'reading_answer_v1';
+export const COMPARISON_OUTPUT_SCHEMA = 'comparison_answer_v1';
 export const DISCUSSION_OUTPUT_SCHEMA = 'research_discussion_v1';
 // Reading answers and bounded discussions request constrained decoding.
 // Other research methods retain their domain-specific data shapes.
@@ -70,6 +71,22 @@ export const discussionOutputJsonSchema = {
   },
 } as const;
 
+export const comparisonOutputJsonSchema = {
+  ...discussionOutputJsonSchema,
+  properties: {
+    ...discussionOutputJsonSchema.properties,
+    summary: {
+      type: 'string',
+      description:
+        'A concise source comparison with numbered citations. Distinguish text, interpretation, alternative explanations and next research checks. Include at least one citation from each source used.',
+    },
+    citations: {
+      ...readingOutputJsonSchema.properties.citations,
+      maxItems: 12,
+    },
+  },
+} as const;
+
 const answer = z.object({
   summary: z.string().trim().min(1).max(4000),
   citations: z.array(citationSchema).min(1).max(6),
@@ -78,8 +95,14 @@ const answer = z.object({
     .strict(),
 });
 
-export function checkReadingOutput(result: TaskResult) {
-  if (!answer.safeParse(result).success)
+export function checkReadingOutput(result: TaskResult, comparison = false) {
+  const schema = comparison
+    ? answer.extend({
+        summary: z.string().trim().min(1).max(6000),
+        citations: z.array(citationSchema).min(1).max(12),
+      })
+    : answer;
+  if (!schema.safeParse(result).success)
     throw new HttpError(
       400,
       '阅读回答未符合约定格式，请检查原始返回后再决定是否重试。',

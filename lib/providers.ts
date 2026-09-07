@@ -8,6 +8,8 @@ import {
 } from './model-routing';
 import type { Provider } from './types';
 import {
+  COMPARISON_OUTPUT_SCHEMA,
+  comparisonOutputJsonSchema,
   READING_OUTPUT_SCHEMA,
   DISCUSSION_OUTPUT_SCHEMA,
   discussionOutputJsonSchema,
@@ -44,7 +46,9 @@ export type ModelRequest = {
   image?: string;
   maxOutput?: number;
   outputFormat?: 'json';
+  sourceVersionIds?: string[];
   outputSchema?:
+    | typeof COMPARISON_OUTPUT_SCHEMA
     | typeof READING_OUTPUT_SCHEMA
     | typeof DISCUSSION_OUTPUT_SCHEMA
     | typeof CLAIM_REVIEW_SCHEMA;
@@ -52,6 +56,47 @@ export type ModelRequest = {
   taskKind?: string;
   priceCeiling?: { input: number; output: number };
 };
+function constrainedSchema(input: ModelRequest) {
+  const schema =
+    input.outputSchema === CLAIM_REVIEW_SCHEMA
+      ? claimReviewJsonSchema
+      : input.outputSchema === COMPARISON_OUTPUT_SCHEMA
+        ? comparisonOutputJsonSchema
+        : input.outputSchema === DISCUSSION_OUTPUT_SCHEMA
+          ? discussionOutputJsonSchema
+          : readingOutputJsonSchema;
+  if (
+    input.outputSchema === CLAIM_REVIEW_SCHEMA ||
+    !input.sourceVersionIds?.length
+  )
+    return schema;
+  const reading =
+    input.outputSchema === COMPARISON_OUTPUT_SCHEMA
+      ? comparisonOutputJsonSchema
+      : input.outputSchema === DISCUSSION_OUTPUT_SCHEMA
+        ? discussionOutputJsonSchema
+        : readingOutputJsonSchema;
+  return {
+    ...reading,
+    properties: {
+      ...reading.properties,
+      citations: {
+        ...reading.properties.citations,
+        items: {
+          ...reading.properties.citations.items,
+          properties: {
+            ...reading.properties.citations.items.properties,
+            version_id: {
+              ...reading.properties.citations.items.properties.version_id,
+              enum: [...new Set(input.sourceVersionIds)],
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
 export function providerRequest(input: ModelRequest): {
   url: string;
   headers: Record<string, string>;
@@ -77,6 +122,7 @@ export function providerRequest(input: ModelRequest): {
         ...(input.outputFormat === 'json'
           ? {
               response_format:
+                input.outputSchema === COMPARISON_OUTPUT_SCHEMA ||
                 input.outputSchema === READING_OUTPUT_SCHEMA ||
                 input.outputSchema === DISCUSSION_OUTPUT_SCHEMA ||
                 input.outputSchema === CLAIM_REVIEW_SCHEMA
@@ -85,12 +131,7 @@ export function providerRequest(input: ModelRequest): {
                       json_schema: {
                         name: input.outputSchema,
                         strict: true,
-                        schema:
-                          input.outputSchema === CLAIM_REVIEW_SCHEMA
-                            ? claimReviewJsonSchema
-                            : input.outputSchema === DISCUSSION_OUTPUT_SCHEMA
-                              ? discussionOutputJsonSchema
-                              : readingOutputJsonSchema,
+                        schema: constrainedSchema(input),
                       },
                     }
                   : { type: 'json_object' },
