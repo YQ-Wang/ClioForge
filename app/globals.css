@@ -283,10 +283,54 @@
   min-width: 0;
   color: var(--muted-foreground);
 }
-.workspace-breadcrumb > svg {
+.workspace-breadcrumb > button {
   flex-shrink: 0;
 }
+.workspace-path {
+  min-width: 0;
+}
+.workspace-path ol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.workspace-path a {
+  display: block;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition:
+    background-color 120ms,
+    color 120ms;
+}
+.workspace-path a:hover {
+  background: var(--accent);
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.workspace-path a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.breadcrumb-root,
+.breadcrumb-separator {
+  flex-shrink: 0;
+}
+.breadcrumb-project {
+  min-width: 0;
+  flex: 0 1 auto;
+}
 .breadcrumb-current {
+  min-width: 0;
   color: var(--foreground);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1452,8 +1496,11 @@ button.project-card:hover {
     padding: 24px 16px;
     border-radius: 0;
   }
-  .breadcrumb-root {
-    display: none;
+  .workspace-path ol {
+    gap: 2px;
+  }
+  .workspace-path a {
+    padding-inline: 3px;
   }
   .auth-panel {
     padding: 24px 20px;

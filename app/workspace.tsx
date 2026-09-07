@@ -2,7 +2,13 @@
 import RestoreProject from './restore-project';
 import { useI18n } from '@/lib/i18n/provider';
 import { LOCALE_COOKIE } from '@/lib/i18n/core';
-import { useCallback, useEffect, useEffectEvent, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useState,
+  type MouseEvent,
+} from 'react';
 import { authClient } from '@/lib/auth-client';
 import { authReturnPath } from '@/lib/auth-return';
 import { api } from '@/lib/client-api';
@@ -157,6 +163,18 @@ export default function Workspace({
       live = false;
     };
   }, [session?.user.id, setLocale]);
+  function followBreadcrumb(event: MouseEvent<HTMLAnchorElement>) {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    )
+      return;
+    event.preventDefault();
+    navigateWorkspace(event.currentTarget.getAttribute('href') || '/');
+  }
   function openProject(value: Project | null) {
     setProject(value);
     setCounts({});
@@ -304,33 +322,59 @@ export default function Workspace({
               aria-label={t('展开或收起导航')}
               title={t('展开或收起导航（⌘/Ctrl B）')}
             />
-            <span className="breadcrumb-root">{t('工作台')}</span>
-            <ChevronRight size={15} className="breadcrumb-root" />
-            <span className="breadcrumb-current">
-              {view === 'settings'
-                ? locale === 'en'
-                  ? 'Account settings'
-                  : '账号设置'
-                : view === 'inbox'
-                  ? locale === 'en'
-                    ? 'Research inbox'
-                    : '研究收件箱'
-                  : project?.title ||
-                    (locale === 'en' ? 'My research' : '我的研究')}
-              {project && view === 'projects' && (
-                <>
-                  {' '}
+            <nav
+              aria-label={locale === 'en' ? 'Breadcrumb' : '当前位置'}
+              className="workspace-path"
+            >
+              <ol>
+                <li className="breadcrumb-root">
+                  <Link prefetch={false} href="/" onClick={followBreadcrumb}>
+                    {t('工作台')}
+                  </Link>
+                </li>
+                <li aria-hidden="true" className="breadcrumb-separator">
                   <ChevronRight size={14} />
-                  <span>
-                    {
-                      projectSections.find((item) => item.id === route.tab)?.[
-                        locale === 'en' ? 'en' : 'zh'
-                      ]
-                    }
-                  </span>
-                </>
-              )}
-            </span>
+                </li>
+                {project && view === 'projects' && (
+                  <>
+                    <li className="breadcrumb-project">
+                      <Link
+                        prefetch={false}
+                        href={projectPath(project.id)}
+                        onClick={followBreadcrumb}
+                        title={project.title}
+                      >
+                        {project.title}
+                      </Link>
+                    </li>
+                    <li aria-hidden="true" className="breadcrumb-separator">
+                      <ChevronRight size={14} />
+                    </li>
+                  </>
+                )}
+                <li className="breadcrumb-current" aria-current="page">
+                  {view === 'settings'
+                    ? locale === 'en'
+                      ? 'Account settings'
+                      : '账号设置'
+                    : view === 'inbox'
+                      ? locale === 'en'
+                        ? 'Research inbox'
+                        : '研究收件箱'
+                      : view === 'guide'
+                        ? locale === 'en'
+                          ? 'Research guide'
+                          : '使用指南'
+                        : project
+                          ? projectSections.find(
+                              (item) => item.id === route.tab,
+                            )?.[locale === 'en' ? 'en' : 'zh']
+                          : locale === 'en'
+                            ? 'My research'
+                            : '我的研究'}
+                </li>
+              </ol>
+            </nav>
           </div>
           <div className="workspace-bar-actions">
             <ThemeSwitcher />
