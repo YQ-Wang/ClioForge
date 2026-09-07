@@ -434,11 +434,11 @@ export async function recoverMissions(env: JobsEnv) {
   const missions = (
     await env.DB.prepare(
       `SELECT m.id,m.created_by FROM missions m WHERE m.status='active' AND (
-        EXISTS(SELECT 1 FROM mission_tasks t WHERE t.mission_id=m.id AND (
+        EXISTS(SELECT 1 FROM mission_tasks t WHERE t.project_id=m.project_id AND t.mission_id=m.id AND (
           (t.status='ready' AND t.executor IN ('builtin','model')) OR
           (t.status='blocked' AND NOT EXISTS(SELECT 1 FROM task_dependencies d JOIN mission_tasks p ON p.id=d.depends_on WHERE d.task_id=t.id AND p.status NOT IN ('succeeded','accepted'))) OR
           (t.status IN ('ready','queued','running','review','succeeded','accepted') AND EXISTS(SELECT 1 FROM task_dependencies d JOIN mission_tasks p ON p.id=d.depends_on WHERE d.task_id=t.id AND p.status IN ('stale','rejected')))
-        )) OR NOT EXISTS(SELECT 1 FROM mission_tasks t WHERE t.mission_id=m.id AND t.status NOT IN ('succeeded','accepted'))
+        )) OR NOT EXISTS(SELECT 1 FROM mission_tasks t WHERE t.project_id=m.project_id AND t.mission_id=m.id AND t.status NOT IN ('succeeded','accepted'))
       ) ORDER BY m.updated_at,m.id LIMIT 30`,
     ).all<{ id: string; created_by: string }>()
   ).results;
