@@ -42,7 +42,9 @@ import {
   uploadOriginal,
   readOriginal,
   rpc,
-  type Snapshot,
+  loadSnapshot,
+  projectHeader,
+  loadWorkbench,
 } from '@/lib/client-api';
 import { documentType, extractPages, pageImage } from '@/lib/documents';
 import type {
@@ -156,6 +158,12 @@ export default function ProjectDesk({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [detailsLoaded, setDetailsLoaded] = useState(false);
+  const [overviewCounts, setOverviewCounts] = useState<{
+    sources: number;
+    notes: number;
+    evidence: number;
+  } | null>(null);
   const [role, setRole] = useState(project.role || 'viewer');
   const [accessLost, setAccessLost] = useState(false);
   const canWrite = ['owner', 'editor', 'reviewer'].includes(role);
@@ -184,23 +192,25 @@ export default function ProjectDesk({
   const [bibliographySource, setBibliographySource] = useState('');
   const upload = useRef<HTMLInputElement>(null);
   const mounted = useRef(true);
+  const refreshController = useRef<AbortController | null>(null);
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
+      refreshController.current?.abort();
     };
   }, []);
   const refresh = useCallback(async () => {
+    refreshController.current?.abort();
+    const controller = new AbortController();
+    refreshController.current = controller;
     try {
+      const header = await projectHeader(project.id, controller.signal);
       const [snapshot, detail] = await Promise.all([
-        api<Snapshot>(
-          `/api/workspace?project_id=${encodeURIComponent(project.id)}`,
-        ),
-        api<WorkbenchData>(
-          `/api/workbench?project_id=${encodeURIComponent(project.id)}`,
-        ),
+        loadSnapshot(project.id, controller.signal, header),
+        loadWorkbench(project.id, controller.signal, header.checkpoint),
       ]);
-      if (!mounted.current) return;
+      if (!mounted.current || controller.signal.aborted) return;
       setRole(snapshot.project.role || 'viewer');
       setWorkbench(detail);
       setSources(snapshot.sources);
@@ -210,21 +220,65 @@ export default function ProjectDesk({
       setRuns(snapshot.research_runs);
       setModels(snapshot.models);
       setSourceId((current) => current || snapshot.sources[0]?.id || '');
+      setDetailsLoaded(true);
       return { ...snapshot, workbench: detail };
     } catch (error) {
+      if (controller.signal.aborted) return;
+      controller.abort();
       if (error instanceof ApiError && [401, 403, 404].includes(error.status))
         setAccessLost(true);
       if (mounted.current)
         setMessage(
-          '暂时无法读取项目，请刷新重试。未保存的笔记仍可从本机草稿恢复。',
+          error instanceof ApiError && error.status === 429
+            ? error.message
+            : '暂时无法读取项目，请刷新重试。未保存的笔记仍可从本机草稿恢复。',
         );
     } finally {
-      if (mounted.current) setLoading(false);
+      if (mounted.current && refreshController.current === controller)
+        setLoading(false);
     }
   }, [project.id]);
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (detailsLoaded) return;
+    setLoading(true);
+    if (tab !== 'overview') {
+      void refresh();
+      return;
+    }
+    refreshController.current?.abort();
+    const controller = new AbortController();
+    refreshController.current = controller;
+    void api<{
+      project: Project;
+      sources: Source[];
+      counts: { sources: number; notes: number; evidence: number };
+    }>(
+      `/api/workspace?project_id=${encodeURIComponent(project.id)}&overview=1`,
+      undefined,
+      'GET',
+      controller.signal,
+    )
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setRole(data.project.role || 'viewer');
+        setSources(data.sources);
+        setOverviewCounts(data.counts);
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiError && [401, 403, 404].includes(error.status))
+          setAccessLost(true);
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : '暂时无法读取项目，请刷新重试。未保存的笔记仍可从本机草稿恢复。',
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [refresh, tab, detailsLoaded, project.id]);
   useEffect(() => {
     void api<{ prices: { model_id: string }[] }>('/api/models/pricing')
       .then((data) => setPreferredModel(data.prices[0]?.model_id || ''))
@@ -301,11 +355,27 @@ export default function ProjectDesk({
   const latestNotes = noteHeads(notes).filter((note) => !note.archived);
   useEffect(() => {
     onCounts({
-      sources: sources.length,
-      notes: latestNotes.length,
-      evidence: evidence.length,
+      sources:
+        !detailsLoaded && overviewCounts
+          ? overviewCounts.sources
+          : sources.length,
+      notes:
+        !detailsLoaded && overviewCounts
+          ? overviewCounts.notes
+          : latestNotes.length,
+      evidence:
+        !detailsLoaded && overviewCounts
+          ? overviewCounts.evidence
+          : evidence.length,
     });
-  }, [sources.length, latestNotes.length, evidence.length, onCounts]);
+  }, [
+    sources.length,
+    latestNotes.length,
+    evidence.length,
+    onCounts,
+    detailsLoaded,
+    overviewCounts,
+  ]);
   const currentSource = sources.find((s) => s.id === sourceId);
   const visibleSources = sources.filter(
     (source) =>
@@ -762,6 +832,7 @@ export default function ProjectDesk({
           <ProjectOverview
             projectId={project.id}
             sources={sources}
+            counts={!detailsLoaded ? overviewCounts : null}
             notes={latestNotes}
             evidence={evidence}
             busy={busy}

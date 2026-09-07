@@ -88,6 +88,8 @@ export type Job = {
   project_id: string;
   model_id: string;
   model_snapshot: {
+    execution_version?: number;
+    mission_task?: { id: string; attempt: number };
     page_refs?: { version_id: string; page: number }[];
     output_format?: 'json';
     output_schema?:

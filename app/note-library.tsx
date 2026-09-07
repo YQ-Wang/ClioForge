@@ -27,22 +27,9 @@ import {
 import { useI18n } from '@/lib/i18n/provider';
 import { useProjectDrafts } from '@/hooks/use-project-drafts';
 import { api } from '@/lib/client-api';
-import { downloadNote, noteHeads } from '@/lib/notes';
+import { downloadNote, noteExcerpt, noteHeads } from '@/lib/notes';
 import type { DraftRecord } from '@/lib/drafts';
 import type { Note } from '@/lib/types';
-
-function excerpt(body: string) {
-  return body
-    .split('\n')
-    .filter((line) => !/^#{1,6}\s/.test(line))
-    .map((line) => line.replace(/^\s*>\s?/, ''))
-    .join(' ')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/\\([\\`*_[\]<>])/g, '$1')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 220);
-}
 
 export default function NoteLibrary({
   notes,
@@ -291,7 +278,7 @@ export default function NoteLibrary({
                       {draft.value.title || L('未命名笔记', 'Untitled note')}
                     </strong>
                     <p>
-                      {excerpt(draft.value.text) ||
+                      {noteExcerpt(draft.value.text, draft.value.document) ||
                         L('继续写下你的想法', 'Continue your writing')}
                     </p>
                     <small>
@@ -324,7 +311,7 @@ export default function NoteLibrary({
                     <div>
                       <h3>{note.title}</h3>
                       <p>
-                        {excerpt(note.body) ||
+                        {noteExcerpt(note.body, note.document) ||
                           L(
                             '还没有正文，打开继续写作。',
                             'No text yet. Open to start writing.',

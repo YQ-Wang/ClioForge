@@ -27,11 +27,12 @@ export function indexText(value: string) {
     plain +
     ' ' +
     han
-      .flatMap((word) =>
-        Array.from(word).map(
-          (letter, index) => letter + (Array.from(word)[index + 1] || ''),
-        ),
-      )
+      .flatMap((word) => {
+        const characters = Array.from(word);
+        return characters.map(
+          (letter, index) => letter + (characters[index + 1] || ''),
+        );
+      })
       .join(' ')
   );
 }

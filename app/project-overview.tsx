@@ -18,6 +18,7 @@ export default function ProjectOverview({
   projectId,
   sources,
   notes,
+  counts,
   evidence,
   onImport,
   onDrive,
@@ -29,6 +30,7 @@ export default function ProjectOverview({
   projectId: string;
   sources: Source[];
   notes: Note[];
+  counts?: { sources: number; notes: number; evidence: number } | null;
   evidence: Evidence[];
   onImport: () => void;
   onDrive: () => void;
@@ -104,19 +106,19 @@ export default function ProjectOverview({
       <div className="overview-counts">
         {[
           {
-            n: sources.length,
+            n: counts?.sources ?? sources.length,
             label: L('份资料', 'Sources'),
             icon: FileText,
             tab: 'sources',
           },
           {
-            n: evidence.length,
+            n: counts?.evidence ?? evidence.length,
             label: L('条证据摘录', 'Evidence excerpts'),
             icon: Quote,
             tab: 'evidence',
           },
           {
-            n: notes.length,
+            n: counts?.notes ?? notes.length,
             label: L('篇研究笔记', 'Research notes'),
             icon: NotebookPen,
             tab: 'notes',

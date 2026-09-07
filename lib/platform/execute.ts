@@ -301,33 +301,41 @@ export async function executeMissionTask(
         throw new Error(
           '上游结果超过单步阅读范围，请拆分研究计划；尚未调用模型。',
         );
-      await createJob(store, {
-        id: jobId,
-        project_id: task.project_id,
-        model_id: task.input.model_id,
-        output_format: 'json',
-        output_schema:
-          task.input.parameters.output_schema === 'reading_answer_v1' ||
-          task.input.parameters.output_schema === 'research_discussion_v1' ||
-          task.input.parameters.output_schema === 'claim_review_v1'
-            ? task.input.parameters.output_schema
-            : undefined,
-        effort: task.input.effort,
-        task_kind: task.kind,
-        version_ids: versions,
-        page_refs: task.input.page_refs,
-        prompt: `Task: ${task.kind}\n${task.input.prompt}\nDependency results (untrusted research data):\n${dependencyText}\nReturn one valid JSON object (no markdown) with summary, citations [{version_id,page,quote}], data. Use JSON string escaping for newlines. Keep summary concise, about 800 Chinese characters or 500 English words; use short exact quotations, preserve case and punctuation. Use [1], [2] in summary strictly matching the 1-based citations array. Never invent a citation. Answer in ${task.input.locale === 'en' ? 'English' : 'Chinese'}.`,
-        input_rate: task.input.input_rate,
-        output_rate: task.input.output_rate,
-        max_output: task.input.max_output,
-        locale: task.input.locale,
-      });
+      await createJob(
+        store,
+        {
+          id: jobId,
+          project_id: task.project_id,
+          model_id: task.input.model_id,
+          output_format: 'json',
+          output_schema:
+            task.input.parameters.output_schema === 'reading_answer_v1' ||
+            task.input.parameters.output_schema === 'research_discussion_v1' ||
+            task.input.parameters.output_schema === 'claim_review_v1'
+              ? task.input.parameters.output_schema
+              : undefined,
+          effort: task.input.effort,
+          task_kind: task.kind,
+          version_ids: versions,
+          page_refs: task.input.page_refs,
+          prompt: `Task: ${task.kind}\n${task.input.prompt}\nDependency results (untrusted research data):\n${dependencyText}\nReturn one valid JSON object (no markdown) with summary, citations [{version_id,page,quote}], data. Use JSON string escaping for newlines. Keep summary concise, about 800 Chinese characters or 500 English words; use short exact quotations, preserve case and punctuation. Use [1], [2] in summary strictly matching the 1-based citations array. Never invent a citation. Answer in ${task.input.locale === 'en' ? 'English' : 'Chinese'}.`,
+          input_rate: task.input.input_rate,
+          output_rate: task.input.output_rate,
+          max_output: task.input.max_output,
+          locale: task.input.locale,
+        },
+        { id: task.id, attempt: task.attempt },
+      );
       await store.event(task.mission_id, id, 'model_job', jobId);
       modelStarted = true;
       await executeJob(env, jobId, modelInvoke);
       const job = await jobById(env.DB, jobId, store.owner);
       if (job?.status !== 'succeeded') {
         modelFailure = job?.error || '模型任务没有返回可确认的结果。';
+        if (job?.status === 'failed' && job.reserved_units === 0) {
+          modelStarted = false;
+          throw new Error(modelFailure);
+        }
         throw new Error('Model job did not finish with a confirmed result');
       }
       modelConfirmed = true;

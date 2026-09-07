@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { api } from '@/lib/client-api';
+import { api, projectRows } from '@/lib/client-api';
 import { useI18n } from '@/lib/i18n/provider';
 import { agentRecipe, interleavePages } from '@/lib/platform/research-recipes';
 import { DEFAULT_RESEARCH_MODEL, GLM_PRICE_CEILING } from '@/lib/model-routing';
@@ -63,9 +63,13 @@ export default function WritingSeminar({
         if (e.currentTarget.open && !data && !busy) {
           setBusy(true);
           void Promise.all([
-            api<{ sources: Source[]; source_versions: SourceVersion[] }>(
-              `/api/workspace?project_id=${projectId}`,
-            ),
+            Promise.all([
+              projectRows<Source>(projectId, 'sources'),
+              projectRows<SourceVersion>(projectId, 'source_versions'),
+            ]).then(([sources, source_versions]) => ({
+              sources,
+              source_versions,
+            })),
             api<{ models: Model[] }>('/api/workspace?models=1'),
           ])
             .then(([snapshot, models]) => {

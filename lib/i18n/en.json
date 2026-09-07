@@ -657,5 +657,13 @@
   "恢复已完成，不能作为未完成任务取消。": "This restore is complete and cannot be cancelled as an unfinished copy.",
   "恢复操作无效。": "Invalid restore action.",
   "原件超过 20 MB。": "The original exceeds 20 MB.",
-  "恢复完成，请刷新项目列表。": "Restore complete. Refresh the project list."
+  "恢复完成，请刷新项目列表。": "Restore complete. Refresh the project list.",
+  "研究步骤已暂停、取消或执行轮次已改变。本次没有发起模型调用，预留预算已释放。": "The research step was paused, cancelled, or replaced. No model call was made; the budget reservation was released.",
+  "此任务由旧版创建，需要重新确认。本次没有发起模型调用，预留预算已释放；请检查任务后手动重试。": "This task was created by an older version and needs confirmation. No model call was made and the budget reservation was released. Review the task, then retry explicitly.",
+  "操作较频繁，请稍后重试。未提交的内容仍保留在当前页面。": "Too many requests. Please wait and try again. Unsubmitted content remains on this page.",
+  "未知资料集合。": "Unknown project collection.",
+  "分页位置无效，请刷新重试。": "Invalid page position. Please refresh and try again.",
+  "单条记录过大，无法在页面中加载。请联系支持。": "This record is too large to load. Please contact support.",
+  "记录在读取时发生变化，请刷新重试。": "The record changed while loading. Please refresh and try again.",
+  "服务器暂时无法响应，请稍后重试。": "The server is temporarily unavailable. Please try again shortly."
 }

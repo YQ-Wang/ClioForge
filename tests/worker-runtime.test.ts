@@ -163,3 +163,59 @@ void test('PDF layout alignment returns exact original spans without correcting 
   assert.equal(alignCitation('free. free.', 'free.'), null);
   assert.equal(alignCitation('first page', 'first page second page'), null);
 });
+
+void test('Worker API throttling returns a private response and a usable retry interval', async () => {
+  const bundle = await build({
+    stdin: {
+      contents: `import {enforceApiLimit} from './lib/api-limits';
+      import {failure} from './lib/server';
+      export default {async fetch(request, env) {
+        try { await enforceApiLimit(env.DB,'test-account',request.method); return new Response('saved'); }
+        catch(error) {return failure(error);}
+      }};`,
+      resolveDir: process.cwd(),
+      loader: 'ts',
+    },
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    write: false,
+    external: ['cloudflare:workers'],
+  });
+  const mf = new Miniflare(
+    convertV4MiniflareOptions({
+      modules: true,
+      compatibilityDate: '2026-09-04',
+      compatibilityFlags: ['nodejs_compat'],
+      script: bundle.outputFiles[0].text,
+      d1Databases: ['DB'],
+    }),
+  );
+  try {
+    const db = await mf.getD1Database('DB');
+    await db
+      .prepare(
+        'CREATE TABLE rate_limit(id TEXT PRIMARY KEY,key TEXT UNIQUE,count INTEGER,last_request INTEGER)',
+      )
+      .run();
+    const start = Math.floor(Date.now() / 60000) * 60000;
+    await db
+      .prepare('INSERT INTO rate_limit VALUES(?,?,120,?)')
+      .bind('test', 'canwoo:api:write:test-account', start)
+      .run();
+    const response = await mf.dispatchFetch('http://test.local/', {
+      method: 'POST',
+    });
+    assert.equal(response.status, 429);
+    assert.equal(response.headers.get('Cache-Control'), 'private, no-store');
+    assert.ok(Number(response.headers.get('Retry-After')) >= 1);
+    assert.ok(Number(response.headers.get('Retry-After')) <= 60);
+    assert.equal(
+      typeof ((await response.json()) as { error: string }).error,
+      'string',
+    );
+    assert.equal((await mf.dispatchFetch('http://test.local/')).status, 200);
+  } finally {
+    await mf.dispose();
+  }
+});

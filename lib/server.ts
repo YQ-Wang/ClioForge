@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers';
 import { createAuth, authConfigured, type AppEnv } from './auth';
 import { ResearchStore } from './store';
 import { HttpError } from './errors';
+import { ApiLimitError, enforceApiLimit } from './api-limits';
 export { HttpError, textField } from './errors';
 export async function authenticate(request: Request) {
   const settings = env as unknown as AppEnv;
@@ -24,6 +25,7 @@ export async function authenticate(request: Request) {
       .first()
   )
     throw new HttpError(401, '账号已关闭。');
+  await enforceApiLimit(settings.DB, session.user.id, request.method);
   return {
     user: session.user,
     session: session.session,
@@ -70,6 +72,14 @@ export function failure(error: unknown) {
       error:
         error instanceof HttpError ? error.message : '操作失败，请稍后重试。',
     },
-    { status: error instanceof HttpError ? error.status : 500 },
+    {
+      status: error instanceof HttpError ? error.status : 500,
+      headers: {
+        'Cache-Control': 'private, no-store',
+        ...(error instanceof ApiLimitError
+          ? { 'Retry-After': String(error.retryAfter) }
+          : {}),
+      },
+    },
   );
 }

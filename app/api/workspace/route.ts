@@ -1,3 +1,7 @@
+import {
+  readCollection,
+  collectionCheckpoint,
+} from '@/lib/project-collections';
 import { workspaceInput } from '@/lib/inputs';
 import { authenticate, failure, HttpError, jsonBody } from '@/lib/server';
 export const dynamic = 'force-dynamic';
@@ -16,9 +20,27 @@ export async function GET(request: Request) {
         { project: await store.project(id) },
         { headers: { 'Cache-Control': 'private, no-store' } },
       );
+    if (id && params.get('overview') === '1')
+      return Response.json(await store.overview(id), {
+        headers: { 'Cache-Control': 'private, no-store' },
+      });
+    if (id && params.has('collection'))
+      return Response.json(
+        await readCollection(
+          store,
+          id,
+          params.get('collection')!,
+          params.get('before'),
+        ),
+        { headers: { 'Cache-Control': 'private, no-store' } },
+      );
     return Response.json(
       id
-        ? await store.readProject(id)
+        ? {
+            project: await store.project(id),
+            models: await store.models(),
+            checkpoint: await collectionCheckpoint(store, id),
+          }
         : { projects: await store.listProjects() },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );

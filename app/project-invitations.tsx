@@ -48,7 +48,7 @@ export default function ProjectInvitations({
       await refresh();
       if (projectId) {
         const { project } = await api<{ project: Project }>(
-          `/api/workspace?project_id=${projectId}`,
+          `/api/workspace?project_id=${projectId}&access=1`,
         );
         onOpen(project);
       }

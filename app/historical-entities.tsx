@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { api } from '@/lib/client-api';
+import { api, projectRows } from '@/lib/client-api';
 import { useI18n } from '@/lib/i18n/provider';
 import { sourcePath } from '@/lib/navigation';
 import type { HistoricalEntity } from '@/lib/historical-entities';
@@ -42,10 +42,10 @@ export default function HistoricalEntities({
   const refresh = useCallback(async () => {
     const [rows, snapshot] = await Promise.all([
       api<NonNullable<typeof data>>(`/api/entities?project_id=${projectId}`),
-      api<{ evidence: Evidence[] }>(`/api/workspace?project_id=${projectId}`),
+      projectRows<Evidence>(projectId, 'evidence'),
     ]);
     setData(rows);
-    setEvidence(snapshot.evidence);
+    setEvidence(snapshot);
   }, [projectId]);
   useEffect(() => {
     void refresh().catch((e) => setError(e.message));

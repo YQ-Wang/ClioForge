@@ -1,3 +1,4 @@
+import { boundedBytes } from './files';
 import type { JobsEnv } from './jobs';
 export async function checkWatches(
   env: JobsEnv,
@@ -38,8 +39,9 @@ export async function checkWatches(
         signal: AbortSignal.timeout(20000),
       });
       if (!response.ok) throw new Error('source unavailable');
-      const text = await response.text();
-      if (text.length > 2_000_000) throw new Error('source too large');
+      const text = new TextDecoder().decode(
+        await boundedBytes(response, 2_000_000),
+      );
       const data = JSON.parse(text) as {
         message: { items: Record<string, unknown>[] };
       };

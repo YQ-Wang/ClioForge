@@ -187,6 +187,26 @@ export class ResearchStore {
       throw new HttpError(409, '项目资料已有更新，请刷新后再保存。');
     return this.project(input.id);
   }
+  async overview(id: string) {
+    const project = await this.project(id);
+    const [sources, counts] = await Promise.all([
+      this.db
+        .prepare(
+          'SELECT * FROM sources WHERE project_id=? ORDER BY created_at DESC,id DESC LIMIT 6',
+        )
+        .bind(id)
+        .all<Source>(),
+      this.db
+        .prepare(`SELECT
+        (SELECT COUNT(*) FROM sources WHERE project_id=?) AS sources,
+        (SELECT COUNT(*) FROM evidence WHERE project_id=?) AS evidence,
+        (SELECT COUNT(*) FROM notes n WHERE n.project_id=? AND n.parent_id IS NULL
+          AND NOT EXISTS(SELECT 1 FROM note_state s WHERE s.note_id=n.id AND s.archived=1)) AS notes`)
+        .bind(id, id, id)
+        .first<{ sources: number; evidence: number; notes: number }>(),
+    ]);
+    return { project, sources: sources.results, counts: counts! };
+  }
   async readProject(id: string) {
     const project = await this.project(id);
     const tables = [

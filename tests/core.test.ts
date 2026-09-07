@@ -4914,3 +4914,515 @@ void test('writing page citations are resolved from the authorized project and n
     0,
   );
 });
+
+void test('watch responses are bounded while streaming, before the body is buffered', async () => {
+  const { a, work } = await jobSetup();
+  await work.mutate({
+    action: 'watch',
+    project_id: a.project.id,
+    query: 'bounded response',
+    interval_days: 1,
+  });
+  let cancelled = false;
+  let chunks = 0;
+  await checkWatches(
+    { DB: db },
+    async () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          pull(controller) {
+            if (++chunks <= 4) controller.enqueue(new Uint8Array(1_000_000));
+            else controller.close();
+          },
+          cancel() {
+            cancelled = true;
+          },
+        }),
+      ),
+  );
+  assert.equal(
+    cancelled,
+    true,
+    'Oversized response must be cancelled, not fully buffered',
+  );
+  assert.match(
+    (await work.workbench(a.project.id)).watches[0].error || '',
+    /失败/,
+  );
+});
+
+void test('stale recovery cannot reset or settle a freshly reclaimed job', async () => {
+  for (const snapshot of ['current', 'stale'] as const) {
+    const { owner, input } = await jobSetup();
+    await createJob(owner, input);
+    await db
+      .prepare(
+        "UPDATE research_jobs SET status='running',stage='preparing',attempt=1,started_at='2000-01-01' WHERE id=?",
+      )
+      .bind(input.id)
+      .run();
+    let intercepted = false;
+    const racingDb = {
+      prepare(sql: string) {
+        if (sql !== 'SELECT * FROM research_jobs WHERE id=?')
+          return db.prepare(sql);
+        return {
+          bind(...values: unknown[]) {
+            return {
+              async first() {
+                const previous = await db
+                  .prepare(sql)
+                  .bind(...values)
+                  .first();
+                if (!intercepted && values[0] === input.id) {
+                  intercepted = true;
+                  await db
+                    .prepare(
+                      'UPDATE research_jobs SET attempt=2,stage=?,started_at=? WHERE id=?',
+                    )
+                    .bind(
+                      snapshot === 'current' ? 'calling' : 'preparing',
+                      new Date().toISOString(),
+                      input.id,
+                    )
+                    .run();
+                  if (snapshot === 'current')
+                    return db
+                      .prepare(sql)
+                      .bind(...values)
+                      .first();
+                }
+                return previous;
+              },
+            };
+          },
+        } as D1PreparedStatement;
+      },
+      batch: db.batch.bind(db),
+    } as D1Database;
+    await recoverAndDispatch({
+      DB: racingDb,
+      JOB_QUEUE: { async send() {} } as unknown as Queue<{ id: string }>,
+    });
+    const job = await jobById(db, input.id);
+    assert.equal(
+      job?.status,
+      'running',
+      `${snapshot} snapshot must not invalidate the fresh attempt`,
+    );
+    assert.equal(job?.attempt, 2);
+    assert.equal(job?.result, null);
+  }
+});
+
+void test('model jobs stop spending when their mission is paused, cancelled, superseded or loses its execution record', async () => {
+  for (const interruption of [
+    'pause',
+    'cancel',
+    'supersede',
+    'expired',
+    'event_failure',
+  ] as const) {
+    const { owner, a, input, secret, work } = await jobSetup();
+    const store = new MissionStore(db, owner.owner);
+    const taskId = crypto.randomUUID();
+    const missionId = await store.create(a.project.id, {
+      title: 'Execution guard',
+      question: 'What does this source say?',
+      scope: 'One source',
+      acceptance: 'Human review',
+      tasks: [
+        {
+          id: taskId,
+          title: 'Read source',
+          kind: 'extract',
+          executor: 'model',
+          dependencies: [],
+          input: {
+            version_ids: input.version_ids,
+            model_id: input.model_id,
+            prompt: 'Read the source',
+            input_rate: 1,
+            output_rate: 2,
+            max_output: 128,
+          },
+        },
+      ],
+    });
+    await store.control(missionId, 'start');
+    let intercepted = false;
+    const interruptedDb = {
+      prepare(sql: string) {
+        if (!sql.startsWith('INSERT INTO task_events')) return db.prepare(sql);
+        return {
+          bind(...values: unknown[]) {
+            return {
+              async run() {
+                if (!intercepted && values[3] === 'model_job') {
+                  intercepted = true;
+                  if (interruption === 'event_failure')
+                    throw new Error('Simulated lost event write');
+                  if (interruption === 'supersede')
+                    await db
+                      .prepare(
+                        "UPDATE mission_tasks SET attempt=attempt+1,lease_hash='superseding-lease' WHERE id=?",
+                      )
+                      .bind(taskId)
+                      .run();
+                  else if (interruption === 'expired')
+                    await db
+                      .prepare(
+                        "UPDATE mission_tasks SET lease_until='2000-01-01' WHERE id=?",
+                      )
+                      .bind(taskId)
+                      .run();
+                  else await store.control(missionId, interruption);
+                }
+                return db
+                  .prepare(sql)
+                  .bind(...values)
+                  .run();
+              },
+            };
+          },
+        } as D1PreparedStatement;
+      },
+      batch: db.batch.bind(db),
+    } as D1Database;
+    let calls = 0;
+    const model: typeof invoke = async () => {
+      calls++;
+      return {
+        text: JSON.stringify({ summary: 'Candidate', citations: [] }),
+        inputTokens: 10,
+        outputTokens: 10,
+      };
+    };
+    const env = { DB: interruptedDb, FOLIOTRACE_ENCRYPTION_KEY: secret };
+    await executeMissionTask(env, taskId, model);
+    const jobs = (
+      await db
+        .prepare('SELECT id FROM research_jobs WHERE project_id=?')
+        .bind(a.project.id)
+        .all<{ id: string }>()
+    ).results;
+    assert.equal(jobs.length, 1);
+    // Recovery can redeliver the durable job even after the parent executor has exited.
+    await executeJob(
+      { DB: db, FOLIOTRACE_ENCRYPTION_KEY: secret },
+      jobs[0].id,
+      model,
+    );
+    assert.equal(calls, 0, `${interruption} must not start a paid model call`);
+    assert.equal((await jobById(db, jobs[0].id))?.status, 'failed');
+    const currentTask = await store.task(taskId);
+    assert.equal(
+      currentTask.status,
+      interruption === 'supersede'
+        ? 'running'
+        : interruption === 'cancel'
+          ? 'cancelled'
+          : 'failed',
+    );
+    if (interruption === 'supersede') assert.equal(currentTask.attempt, 2);
+    assert.equal(
+      (await work.workbench(a.project.id)).budget?.committed_units,
+      0,
+    );
+  }
+});
+
+void test('legacy queued jobs require explicit retry under the current execution contract', async () => {
+  const { owner, a, work, input, secret } = await jobSetup();
+  await createJob(owner, input);
+  await db
+    .prepare(
+      "UPDATE research_jobs SET model_snapshot=json_remove(model_snapshot,'$.execution_version') WHERE id=?",
+    )
+    .bind(input.id)
+    .run();
+  let calls = 0;
+  const model: typeof invoke = async () => {
+    calls++;
+    return { text: 'Confirmed new request', inputTokens: 10, outputTokens: 10 };
+  };
+  const env = { DB: db, FOLIOTRACE_ENCRYPTION_KEY: secret };
+  await executeJob(env, input.id, model);
+  assert.equal(calls, 0);
+  assert.equal((await jobById(db, input.id))?.status, 'failed');
+  assert.match((await jobById(db, input.id))?.error || '', /旧版/);
+  assert.equal((await work.workbench(a.project.id)).budget?.committed_units, 0);
+  const retry = await createJob(owner, { ...input, id: crypto.randomUUID() });
+  await executeJob(env, retry.id, model);
+  assert.equal(calls, 1);
+  assert.equal((await jobById(db, retry.id))?.status, 'succeeded');
+});
+
+void test('project collection pages are bounded, tenant-scoped and stable across concurrent imports', async () => {
+  const { readCollection, COLLECTION_PAGE_BYTES } =
+    await import('../lib/project-collections');
+  const owner = await user(),
+    outsider = await user();
+  const { project, id } = await source(owner);
+  const text = '史'.repeat(100000);
+  const pages = JSON.stringify(
+    Array.from({ length: 5 }, (_, i) => ({ page: i + 1, text })),
+  );
+  await db.batch(
+    Array.from({ length: 6 }, (_, i) =>
+      db
+        .prepare('INSERT INTO source_versions VALUES(?,?,?,?,?,?,?)')
+        .bind(
+          crypto.randomUUID(),
+          id,
+          project.id,
+          i + 2,
+          pages,
+          'manual',
+          new Date().toISOString(),
+        ),
+    ),
+  );
+  const first = await readCollection(owner, project.id, 'source_versions');
+  assert.ok(first.next);
+  assert.ok(
+    new TextEncoder().encode(JSON.stringify(first)).length <
+      COLLECTION_PAGE_BYTES,
+  );
+  assert.ok(first.rows.length > 0 && first.rows.length < 7);
+  const added = crypto.randomUUID();
+  await db
+    .prepare('INSERT INTO source_versions VALUES(?,?,?,?,?,?,?)')
+    .bind(added, id, project.id, 8, pages, 'manual', new Date().toISOString())
+    .run();
+  const rows = [...first.rows];
+  let cursor: string | null = first.next;
+  while (cursor) {
+    const page = await readCollection(
+      owner,
+      project.id,
+      'source_versions',
+      cursor,
+    );
+    rows.push(...page.rows);
+    cursor = page.next;
+  }
+  assert.equal(rows.length, 7);
+  assert.equal(new Set(rows.map((row) => row.id)).size, 7);
+  assert.ok(!rows.some((row) => row.id === added));
+  assert.ok(Array.isArray(rows[0].pages));
+  await assert.rejects(
+    readCollection(outsider, project.id, 'source_versions', first.next),
+    /不存在/,
+  );
+  await assert.rejects(
+    readCollection(owner, project.id, 'model_connections'),
+    /未知/,
+  );
+  for (const invalid of ['-1', '1 OR 1=1', 'NaN', '9007199254740992'])
+    await assert.rejects(
+      readCollection(owner, project.id, 'notes', invalid),
+      /分页/,
+    );
+  assert.deepEqual(await readCollection(owner, project.id, 'notes'), {
+    rows: [],
+    next: null,
+  });
+});
+void test('concurrent API requests respect account-wide limits without blocking reads or extending a rejected window', async () => {
+  const { enforceApiLimit, ApiLimitError } = await import('../lib/api-limits');
+  const owner = await user();
+  const time = 1_800_000_010_000;
+  const outcomes = await Promise.allSettled(
+    Array.from({ length: 130 }, () =>
+      enforceApiLimit(db, owner.owner, 'POST', time),
+    ),
+  );
+  assert.equal(
+    outcomes.filter((item) => item.status === 'fulfilled').length,
+    120,
+  );
+  const rejected = outcomes.filter((item) => item.status === 'rejected');
+  assert.ok(
+    rejected.every(
+      (item) =>
+        item.reason instanceof ApiLimitError && item.reason.retryAfter === 50,
+    ),
+  );
+  await enforceApiLimit(db, owner.owner, 'GET', time);
+  await enforceApiLimit(db, (await user()).owner, 'POST', time);
+  await assert.rejects(
+    enforceApiLimit(db, owner.owner, 'POST', time + 49_999),
+    (error: unknown) =>
+      error instanceof ApiLimitError && error.retryAfter === 1,
+  );
+  await enforceApiLimit(db, owner.owner, 'POST', time + 50_000);
+  assert.equal(
+    await db
+      .prepare('SELECT count FROM rate_limit WHERE key=?')
+      .bind(`canwoo:api:write:${owner.owner}`)
+      .first('count'),
+    1,
+  );
+  assert.equal(
+    await db
+      .prepare('SELECT COUNT(*) AS n FROM rate_limit WHERE key LIKE ?')
+      .bind(`canwoo:api:%:${owner.owner}`)
+      .first('n'),
+    2,
+  );
+});
+
+void test('project overview counts note families rather than revisions without downloading historical bodies', async () => {
+  const owner = await user(),
+    outsider = await user();
+  const { project } = await source(owner);
+  await db.batch(
+    Array.from({ length: 8 }, (_, i) =>
+      db
+        .prepare('INSERT INTO sources VALUES(?,?,?,?,?,?)')
+        .bind(
+          crypto.randomUUID(),
+          project.id,
+          `Source ${i}`,
+          `overview/${project.id}/${i}`,
+          'text/plain',
+          new Date().toISOString(),
+        ),
+    ),
+  );
+  const root = await owner.saveNote({
+    p_project: project.id,
+    p_parent: null,
+    p_title: 'Reading notes',
+    p_body: 'private manuscript body',
+  });
+  await owner.saveNote({
+    p_project: project.id,
+    p_parent: root,
+    p_title: 'Revised notes',
+    p_body: 'private manuscript revision',
+  });
+  const archived = await owner.saveNote({
+    p_project: project.id,
+    p_parent: null,
+    p_title: 'Archive',
+    p_body: 'Archived',
+  });
+  await owner.setNoteState({
+    p_project: project.id,
+    p_note: archived,
+    archived: true,
+  });
+  const overview = await owner.overview(project.id);
+  assert.deepEqual(overview.counts, { sources: 9, notes: 1, evidence: 0 });
+  assert.equal(overview.sources.length, 6);
+  assert.ok(!JSON.stringify(overview).includes('private manuscript'));
+  await assert.rejects(outsider.overview(project.id), /不存在/);
+});
+
+void test('one insertion checkpoint keeps linked collections aligned during a project load', async () => {
+  const { collectionCheckpoint, readCollection } =
+    await import('../lib/project-collections');
+  const owner = await user();
+  const first = await source(owner);
+  const checkpoint = await collectionCheckpoint(owner, first.project.id);
+  const addedSource = crypto.randomUUID(),
+    addedVersion = crypto.randomUUID();
+  await db.batch([
+    db
+      .prepare('INSERT INTO sources VALUES(?,?,?,?,?,?)')
+      .bind(
+        addedSource,
+        first.project.id,
+        'Concurrent import',
+        `checkpoint/${addedSource}`,
+        'text/plain',
+        new Date().toISOString(),
+      ),
+    db
+      .prepare('INSERT INTO source_versions VALUES(?,?,?,?,?,?,?)')
+      .bind(
+        addedVersion,
+        addedSource,
+        first.project.id,
+        1,
+        '[{"page":1,"text":"New material"}]',
+        'import',
+        new Date().toISOString(),
+      ),
+  ]);
+  const oldSources = await readCollection(
+    owner,
+    first.project.id,
+    'sources',
+    checkpoint.sources,
+  );
+  const oldVersions = await readCollection(
+    owner,
+    first.project.id,
+    'source_versions',
+    checkpoint.source_versions,
+  );
+  assert.deepEqual(
+    oldSources.rows.map((row) => row.id),
+    [first.id],
+  );
+  assert.deepEqual(
+    oldVersions.rows.map((row) => row.id),
+    [first.versionId],
+  );
+  const refreshed = await collectionCheckpoint(owner, first.project.id);
+  assert.equal(
+    (
+      await readCollection(
+        owner,
+        first.project.id,
+        'sources',
+        refreshed.sources,
+      )
+    ).rows.length,
+    2,
+  );
+  assert.equal(
+    (
+      await readCollection(
+        owner,
+        first.project.id,
+        'source_versions',
+        refreshed.source_versions,
+      )
+    ).rows.length,
+    2,
+  );
+});
+
+void test('valid quote-heavy source versions can be paged without an oversized intermediate JSON string', async () => {
+  const { readCollection } = await import('../lib/project-collections');
+  const owner = await user();
+  const material = await source(owner);
+  const pages = Array.from({ length: 8 }, (_, i) => ({
+    page: i + 1,
+    text: '"'.repeat(100000),
+  }));
+  validatePages(pages);
+  const id = crypto.randomUUID();
+  await db
+    .prepare('INSERT INTO source_versions VALUES(?,?,?,?,?,?,?)')
+    .bind(
+      id,
+      material.id,
+      material.project.id,
+      2,
+      JSON.stringify(pages),
+      'manual',
+      new Date().toISOString(),
+    )
+    .run();
+  const result = await readCollection(
+    owner,
+    material.project.id,
+    'source_versions',
+  );
+  assert.deepEqual(result.rows.find((row) => row.id === id)?.pages, pages);
+});

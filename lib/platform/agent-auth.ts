@@ -1,6 +1,7 @@
 import { sha256 } from './search';
 import { MissionStore } from './missions';
 import { HttpError } from '../errors';
+import { enforceApiLimit } from '../api-limits';
 export async function agentAuth(db: D1Database, request: Request) {
   const token = request.headers
     .get('authorization')
@@ -21,6 +22,7 @@ export async function agentAuth(db: D1Database, request: Request) {
   if (!key) throw new HttpError(401, 'Agent credential expired or revoked.');
   const store = new MissionStore(db, key.owner_id);
   await store.project(key.project_id, 'write');
+  await enforceApiLimit(db, key.owner_id, request.method);
   await db
     .prepare('UPDATE agent_credentials SET last_used_at=? WHERE id=?')
     .bind(new Date().toISOString(), key.id)

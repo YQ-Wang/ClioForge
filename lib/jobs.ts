@@ -82,6 +82,7 @@ export async function jobMaterials(
 export async function createJob(
   store: ResearchStore,
   input: z.infer<typeof jobInput>,
+  missionTask?: Job['model_snapshot']['mission_task'],
 ) {
   await store.project(input.project_id, 'write');
   const previous = await jobById(store.db, input.id, store.owner);
@@ -117,6 +118,8 @@ export async function createJob(
           provider: model.provider,
           model_id: model.model_id,
           prompt_version: 3,
+          execution_version: 1,
+          mission_task: missionTask,
           page_refs: input.page_refs,
           output_format: input.output_format,
           output_schema: input.output_schema,
@@ -278,6 +281,21 @@ export async function executeJob(
   job.attempt += 1;
   let calling = false;
   try {
+    // Old queued records cannot prove their parent execution is still active.
+    // Preserve them for inspection and require an explicit new request.
+    if (job.model_snapshot?.execution_version !== 1) {
+      await finishJob(
+        env,
+        job,
+        'failed',
+        null,
+        '此任务由旧版创建，需要重新确认。本次没有发起模型调用，预留预算已释放；请检查任务后手动重试。',
+        0,
+        0,
+        false,
+      );
+      return;
+    }
     const store = new ResearchStore(env.DB, job.owner_id);
     await store.project(job.project_id, 'write');
     const model = await store.model(job.model_id);
@@ -293,13 +311,37 @@ export async function executeJob(
       job.project_id,
       job.model_snapshot.page_refs,
     );
+    await store.project(job.project_id, 'write');
+    const parent = job.model_snapshot.mission_task;
+    // Check the durable parent at the paid-call boundary. A queue redelivery
+    // must not turn a paused, cancelled or superseded task into a paid call.
     const checkpoint = await env.DB.prepare(
-      "UPDATE research_jobs SET stage='calling' WHERE id=? AND status='running' AND stage='preparing' AND attempt=?",
+      "UPDATE research_jobs SET stage='calling' WHERE id=? AND status='running' AND stage='preparing' AND attempt=? AND (? IS NULL OR EXISTS(SELECT 1 FROM mission_tasks t JOIN missions m ON m.id=t.mission_id WHERE t.id=? AND t.attempt=? AND t.project_id=research_jobs.project_id AND m.created_by=research_jobs.owner_id AND m.status='active' AND t.status='running' AND t.lease_until>?))",
     )
-      .bind(id, job.attempt)
+      .bind(
+        id,
+        job.attempt,
+        parent?.id || null,
+        parent?.id || null,
+        parent?.attempt || null,
+        new Date().toISOString(),
+      )
       .run();
-    // A recovery may have claimed a newer attempt while this worker was preparing.
-    if (!checkpoint.meta.changes) return;
+    if (!checkpoint.meta.changes) {
+      // Settlement is attempt-fenced, so an obsolete worker cannot release a
+      // newer worker's reservation when it loses this checkpoint.
+      await finishJob(
+        env,
+        job,
+        'failed',
+        null,
+        '研究步骤已暂停、取消或执行轮次已改变。本次没有发起模型调用，预留预算已释放。',
+        0,
+        0,
+        false,
+      );
+      return;
+    }
     calling = true;
     const response = await modelInvoke({
       provider: model.provider,
@@ -367,12 +409,18 @@ export async function recoverAndDispatch(env: JobsEnv) {
   ).results;
   for (const row of running) {
     const job = await jobById(env.DB, row.id);
-    if (!job) continue;
+    if (
+      !job ||
+      job.status !== 'running' ||
+      !job.started_at ||
+      job.started_at >= stale
+    )
+      continue;
     if (job.stage === 'preparing')
       await env.DB.prepare(
-        "UPDATE research_jobs SET status='queued',stage='queued',dispatched_at=NULL WHERE id=? AND status='running' AND stage='preparing'",
+        "UPDATE research_jobs SET status='queued',stage='queued',dispatched_at=NULL WHERE id=? AND status='running' AND stage='preparing' AND attempt=? AND started_at<?",
       )
-        .bind(job.id)
+        .bind(job.id, job.attempt, stale)
         .run();
     else
       await finishJob(
