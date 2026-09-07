@@ -11,6 +11,7 @@ import {
   Check,
 } from 'lucide-react';
 import ResearchBrief from './research-brief';
+import ResearchPath from './research-path';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/lib/i18n/provider';
 import type { Evidence, Note, Source } from '@/lib/types';
@@ -185,49 +186,16 @@ export default function ProjectOverview({
             </div>
           )}
         </section>
-        <section className="overview-section research-prompts">
-          <header>
-            <h3>{L('一张书桌上的研究过程', 'Your research, connected')}</h3>
-          </header>
-          {[
-            {
-              number: '01',
-              title: L('阅读与校订', 'Read and annotate'),
-              text: L(
-                '对照原件，保留难辨认与不确定之处。',
-                'Keep the original in view and mark what remains uncertain.',
-              ),
-              tab: 'sources',
-            },
-            {
-              number: '02',
-              title: L('摘录与比较', 'Excerpt and compare'),
-              text: L(
-                '让支持、质疑与不同解释各有依据。',
-                'Keep evidence for supporting and competing interpretations.',
-              ),
-              tab: 'evidence',
-            },
-            {
-              number: '03',
-              title: L('组织与写作', 'Organize and write'),
-              text: L(
-                '把阅读所得连成自己的研究论述。',
-                'Develop your reading into your own argument.',
-              ),
-              tab: 'notes',
-            },
-          ].map((item) => (
-            <button key={item.number} onClick={() => onNavigate(item.tab)}>
-              <span>{item.number}</span>
-              <div>
-                <h4>{item.title}</h4>
-                <p>{item.text}</p>
-              </div>
-              <ArrowRight size={15} />
-            </button>
-          ))}
-        </section>
+        <ResearchPath
+          onNavigate={onNavigate}
+          counts={
+            counts || {
+              sources: sources.length,
+              evidence: evidence.length,
+              notes: notes.length,
+            }
+          }
+        />
       </div>
     </div>
   );

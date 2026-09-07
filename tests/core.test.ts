@@ -17,7 +17,7 @@ import {
   importCloudText,
   type ConnectionEnv,
 } from '../lib/platform/connections';
-import { builtin } from '../lib/platform/execute';
+import { builtin, recoverMissions } from '../lib/platform/execute';
 import { ResearchStore, validatePages } from '../lib/store';
 import { encrypt, decrypt } from '../lib/crypto';
 import {
@@ -5739,4 +5739,137 @@ void test('explicit follow-up pages replace inherited sources and exclude previo
     },
   );
   assert.equal((await f.store.task(next.task_id)).status, 'succeeded');
+});
+
+void test('background recovery bypasses thirty review-gated plans and isolates failed queue sends', async () => {
+  const owner = await user();
+  const sample = await source(owner);
+  const store = new MissionStore(db, owner.owner);
+  const waiting: string[] = [];
+  for (let i = 0; i < 31; i++) {
+    const review = crypto.randomUUID();
+    const mission = await store.create(sample.project.id, {
+      title: `Waiting for review ${i}`,
+      question: 'Review the interpretation',
+      scope: 'One source',
+      acceptance: 'Human judgment',
+      tasks: [
+        {
+          id: review,
+          title: 'Review',
+          kind: 'manual',
+          executor: 'human',
+          input: {},
+          dependencies: [],
+        },
+        {
+          id: crypto.randomUUID(),
+          title: 'After review',
+          kind: 'search',
+          executor: 'builtin',
+          input: { query: '港口' },
+          dependencies: [review],
+        },
+      ],
+    });
+    await store.control(mission, 'start');
+    waiting.push(mission);
+  }
+  const first = crypto.randomUUID(),
+    second = crypto.randomUUID(),
+    gate = crypto.randomUUID();
+  const active = await store.create(sample.project.id, {
+    title: 'Can continue unattended',
+    question: 'Find the port',
+    scope: 'One source',
+    acceptance: 'Return original page',
+    tasks: [
+      ...[first, second].map((id) => ({
+        id,
+        title: 'Find source',
+        kind: 'search',
+        executor: 'builtin',
+        input: { query: '港口', version_ids: [sample.versionId] },
+        dependencies: [],
+      })),
+      {
+        id: gate,
+        title: 'Review the source context',
+        kind: 'manual',
+        executor: 'human',
+        input: {},
+        dependencies: [first, second],
+      },
+    ],
+  });
+  await store.control(active, 'start');
+  await db
+    .prepare(
+      "UPDATE missions SET updated_at='2000-01-01' WHERE project_id=? AND id<>?",
+    )
+    .bind(sample.project.id, active)
+    .run();
+  const sent: string[] = [];
+  let fail = true;
+  const queue = {
+    send: async (body: { id: string }) => {
+      if (body.id === first && fail) throw new Error('queue unavailable');
+      sent.push(body.id);
+    },
+  } as unknown as NonNullable<JobsEnv['JOB_QUEUE']>;
+  const env = { DB: db, JOB_QUEUE: queue };
+  await assert.rejects(recoverMissions(env), /Background maintenance failed/);
+  assert.ok(
+    sent.includes(second),
+    'one failed send must not block an independent sibling',
+  );
+  assert.equal((await store.task(first)).status, 'queued');
+  assert.equal(
+    (await store.view(waiting[0])).tasks.find((t) => t.executor === 'human')
+      ?.status,
+    'ready',
+  );
+  assert.ok(
+    !(await store.view(waiting[0])).tasks.some((t) => t.status === 'queued'),
+  );
+  fail = false;
+  await db
+    .prepare("UPDATE mission_tasks SET updated_at='2000-01-01' WHERE id=?")
+    .bind(first)
+    .run();
+  await recoverMissions(env);
+  assert.ok(sent.includes(first), 'a lost queue handoff must be recovered');
+  await store.control(active, 'pause');
+  await db
+    .prepare(
+      "UPDATE mission_tasks SET updated_at='2000-01-01' WHERE mission_id=?",
+    )
+    .bind(active)
+    .run();
+  const before = sent.length;
+  await recoverMissions(env);
+  assert.equal(
+    sent.length,
+    before,
+    'paused queued work must not be redispatched',
+  );
+  await store.control(active, 'resume');
+  await executeMissionTask(env, first);
+  await executeMissionTask(env, second);
+  await executeMissionTask(env, first);
+  assert.equal(
+    (await store.task(first)).attempt,
+    1,
+    'duplicate queue delivery must not repeat completed work',
+  );
+  assert.equal(
+    (await store.task(first)).result?.citations[0]?.version_id,
+    sample.versionId,
+  );
+  assert.equal(
+    (await store.task(gate)).status,
+    'ready',
+    'unattended work must stop at the human checkpoint',
+  );
+  assert.equal((await store.mission(active)).status, 'active');
 });

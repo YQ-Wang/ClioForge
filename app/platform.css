@@ -1698,3 +1698,150 @@
   font-size: 0.875rem;
   line-height: 1.65;
 }
+
+.research-path > header p,
+.research-path-detail p,
+.mission-progress p,
+.feature-purpose p {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1.75;
+}
+.research-path ol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 18px 0;
+}
+.research-path li {
+  min-width: 0;
+}
+.research-path li button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-align: left;
+  background: var(--card);
+  cursor: pointer;
+}
+.research-path li button:hover,
+.research-path li button[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--primary);
+}
+.research-path li button > span {
+  flex: 1;
+  min-width: 0;
+}
+.research-path li button svg {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+.research-path li strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.research-path li small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
+}
+.research-path-detail {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.research-path-detail h4 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+.research-path-detail button {
+  margin-top: 8px;
+  white-space: normal;
+  height: auto;
+  min-height: 44px;
+}
+.feature-purpose {
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.feature-purpose summary,
+.mission-progress summary {
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 14px;
+}
+.feature-purpose p {
+  max-width: 80ch;
+  margin: 12px 0 4px;
+}
+.mission-progress {
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+}
+.mission-progress-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.mission-progress-heading h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+.mission-progress-heading > span {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.mission-progress-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+.mission-progress-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+.mission-progress-actions button {
+  max-width: 100%;
+}
+.mission-progress-actions button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mission-progress details {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 600px) {
+  .research-path ol {
+    grid-template-columns: 1fr;
+  }
+  .mission-progress {
+    padding: 16px;
+  }
+  .mission-progress-heading > span {
+    margin-left: 0;
+    width: 100%;
+  }
+}

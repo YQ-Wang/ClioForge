@@ -8,6 +8,7 @@ import { processAccountDeletions } from '../lib/account-deletion';
 import { executeJob, recoverAndDispatch, type JobsEnv } from '../lib/jobs';
 import { executeMissionTask, recoverMissions } from '../lib/platform/execute';
 import { checkWatches } from '../lib/watches';
+import { runMaintenanceSteps } from '../lib/background-maintenance';
 export default {
   fetch() {
     return new Response('Not found', { status: 404 });
@@ -38,15 +39,29 @@ export default {
     }
   },
   async scheduled(_event: ScheduledController, env: JobsEnv) {
-    if (env.FILES) {
-      await processAccountDeletions(env.DB, env.FILES);
-      await cleanRestoreFiles(env.DB, env.FILES);
-      await retryObjectCleanup(env.DB, env.FILES);
-    }
-    await recoverAndDispatch(env);
-    await checkWatches(env);
-    await recoverMissions(env);
-    await recoverPreparations(env);
+    const files = env.FILES;
+    await runMaintenanceSteps([
+      ...(files
+        ? [
+            {
+              name: 'account_deletions',
+              run: () => processAccountDeletions(env.DB, files),
+            },
+            {
+              name: 'restore_cleanup',
+              run: () => cleanRestoreFiles(env.DB, files),
+            },
+            {
+              name: 'object_cleanup',
+              run: () => retryObjectCleanup(env.DB, files),
+            },
+          ]
+        : []),
+      { name: 'research_jobs', run: () => recoverAndDispatch(env) },
+      { name: 'research_plans', run: () => recoverMissions(env) },
+      { name: 'material_preparation', run: () => recoverPreparations(env) },
+      { name: 'source_watches', run: () => checkWatches(env) },
+    ]);
   },
 } satisfies ExportedHandler<
   JobsEnv,

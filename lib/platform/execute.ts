@@ -1,4 +1,5 @@
 import { assertConversationContext } from '../task-conversation';
+import { runMaintenanceSteps } from '../background-maintenance';
 import { discoverSources } from './discovery';
 import { MissionStore, decodeTask } from './missions';
 import { indexVersion, normalize, searchPages, sha256 } from './search';
@@ -223,7 +224,8 @@ export async function builtin(
   throw new Error('Unsupported builtin task');
 }
 export async function dispatchMission(env: JobsEnv, missionId: string) {
-  if (!env.JOB_QUEUE) return;
+  const queue = env.JOB_QUEUE;
+  if (!queue) return;
   const rows = (
     await env.DB.prepare(
       "SELECT id FROM mission_tasks WHERE mission_id=? AND status='ready' AND executor IN ('builtin','model') AND EXISTS(SELECT 1 FROM missions m WHERE m.id=mission_id AND m.status='active') LIMIT 20",
@@ -231,15 +233,20 @@ export async function dispatchMission(env: JobsEnv, missionId: string) {
       .bind(missionId)
       .all<{ id: string }>()
   ).results;
-  for (const row of rows) {
-    const changed = await env.DB.prepare(
-      "UPDATE mission_tasks SET status='queued',revision=revision+1,updated_at=? WHERE id=? AND status='ready'",
-    )
-      .bind(now(), row.id)
-      .run();
-    if (changed.meta.changes)
-      await env.JOB_QUEUE.send({ id: row.id, kind: 'mission' });
-  }
+  await runMaintenanceSteps(
+    rows.map((row) => ({
+      name: `dispatch_task:${row.id}`,
+      run: async () => {
+        const changed = await env.DB.prepare(
+          "UPDATE mission_tasks SET status='queued',revision=revision+1,updated_at=? WHERE id=? AND status='ready'",
+        )
+          .bind(now(), row.id)
+          .run();
+        if (changed.meta.changes)
+          await queue.send({ id: row.id, kind: 'mission' });
+      },
+    })),
+  );
 }
 export async function executeMissionTask(
   env: JobsEnv,
@@ -419,20 +426,35 @@ export async function recoverMissions(env: JobsEnv) {
     .run();
   const queued = (
     await env.DB.prepare(
-      "SELECT id FROM mission_tasks WHERE status='queued' AND updated_at<? LIMIT 30",
+      "SELECT t.id FROM mission_tasks t JOIN missions m ON m.id=t.mission_id WHERE t.status='queued' AND t.updated_at<? AND m.status='active' ORDER BY t.updated_at,t.id LIMIT 30",
     )
       .bind(new Date(Date.now() - 60_000).toISOString())
       .all<{ id: string }>()
   ).results;
-  for (const task of queued)
-    await env.JOB_QUEUE?.send({ id: task.id, kind: 'mission' });
   const missions = (
     await env.DB.prepare(
-      "SELECT id,created_by FROM missions WHERE status='active' ORDER BY updated_at LIMIT 30",
+      `SELECT m.id,m.created_by FROM missions m WHERE m.status='active' AND (
+        EXISTS(SELECT 1 FROM mission_tasks t WHERE t.mission_id=m.id AND (
+          (t.status='ready' AND t.executor IN ('builtin','model')) OR
+          (t.status='blocked' AND NOT EXISTS(SELECT 1 FROM task_dependencies d JOIN mission_tasks p ON p.id=d.depends_on WHERE d.task_id=t.id AND p.status NOT IN ('succeeded','accepted'))) OR
+          (t.status IN ('ready','queued','running','review','succeeded','accepted') AND EXISTS(SELECT 1 FROM task_dependencies d JOIN mission_tasks p ON p.id=d.depends_on WHERE d.task_id=t.id AND p.status IN ('stale','rejected')))
+        )) OR NOT EXISTS(SELECT 1 FROM mission_tasks t WHERE t.mission_id=m.id AND t.status NOT IN ('succeeded','accepted'))
+      ) ORDER BY m.updated_at,m.id LIMIT 30`,
     ).all<{ id: string; created_by: string }>()
   ).results;
-  for (const mission of missions) {
-    await new MissionStore(env.DB, mission.created_by).advance(mission.id);
-    await dispatchMission(env, mission.id);
-  }
+  await runMaintenanceSteps([
+    ...queued.map((task) => ({
+      name: `queued_task:${task.id}`,
+      run: async () => {
+        await env.JOB_QUEUE?.send({ id: task.id, kind: 'mission' });
+      },
+    })),
+    ...missions.map((mission) => ({
+      name: `research_plan:${mission.id}`,
+      run: async () => {
+        await new MissionStore(env.DB, mission.created_by).advance(mission.id);
+        await dispatchMission(env, mission.id);
+      },
+    })),
+  ]);
 }

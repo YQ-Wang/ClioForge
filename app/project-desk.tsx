@@ -76,6 +76,7 @@ import EvidenceLibrary from './evidence-library';
 import BatchTranscription from './batch-transcription';
 import { useLocalDraft } from '@/hooks/use-local-draft';
 import ProjectOverview from './project-overview';
+import FeaturePurpose from './feature-purpose';
 import ProjectSettings from './project-settings';
 import SourceSearch from './source-search';
 import IiifImport from './iiif-import';
@@ -810,6 +811,7 @@ export default function ProjectDesk({
           </p>
         </DialogContent>
       </Dialog>
+      <FeaturePurpose tab={tab} onNavigate={navigate} />
       <ProjectPanel active={tab} value="overview">
         {!loading && sources.length > 0 && (
           <SourceSearch

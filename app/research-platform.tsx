@@ -1,4 +1,5 @@
 'use client';
+import MissionProgress from './mission-progress';
 import ResearchRepair from './research-repair';
 import ResearchLibrary from './research-library';
 import { canRepairProse } from '@/lib/review-citations';
@@ -709,6 +710,7 @@ export default function ResearchPlatform({
                     </Button>
                   </div>
                 </div>
+                <MissionProgress view={view} onTask={selectTask} />
                 <details className="mission-brief">
                   <summary>
                     {L('研究范围与要求', 'Research scope & requirements')}
