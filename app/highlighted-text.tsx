@@ -3,7 +3,7 @@
 /* oxlint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- The focusable source region captures native text selection, including keyboard selection. It does not emulate an editable field. */
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- Inline annotation spans retain native text selection across their boundaries; buttons interrupt that selection. They implement button focus and keyboard activation. */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   textHighlightSegments,
   type TextHighlight,
@@ -31,15 +31,6 @@ export default function HighlightedText({
     () => textHighlightSegments(text, highlights),
     [text, highlights],
   );
-  const activeStart = segments.find(
-    (segment) => activeId && segment.highlightIds.includes(activeId),
-  )?.start;
-  useEffect(() => {
-    if (activeStart != null)
-      root.current
-        ?.querySelector('[data-active="true"]')
-        ?.scrollIntoView({ block: 'nearest' });
-  }, [activeId, activeStart]);
   const selection = (): TextSelection | null => {
     const element = root.current;
     const selected = window.getSelection();
