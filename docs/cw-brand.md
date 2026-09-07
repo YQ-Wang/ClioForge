@@ -1,14 +1,14 @@
 # Canwoo — folded paper identity
 
-The current identity pairs an original gold-paper fan with lowercase Newsreader lettering and Qiji Chinese lettering. The fan takes the restraint and folded construction of a Ming-style fan as its starting point, without tracing a historical object or another company's logo.
+The current identity pairs an original gold-paper fan with lowercase Google Sans Flex lettering and Qiji Chinese lettering. The fan takes the restraint and folded construction of a Ming-style fan as its starting point, without tracing a historical object or another company's logo.
 
 ## Mark and lettering
 
 The display mark has eleven paper folds and ten internal ribs, excluding the two guard sticks. Each crown has a small angular rise, each fold has two flat planes, and a curved inner hem leaves the lower ribs exposed. Two guard sticks converge at a compact pivot. The fan's own structure carries the suggested W; there is no separately superimposed letter. The header and login signature use the same ten-rib structure with larger openings and stronger ribs. Only the tiny browser icon retains a nine-fold, eight-rib optical variant.
 
-The lowercase `canwoo` wordmark uses actual Newsreader glyph outlines at weight 450 and optical size 48. HarfBuzz applies the font's native kerning. The complete shaped word is scaled uniformly, preserving letter proportions and spacing, with visible ink spanning y=3 to y=29 in a 32-unit-high viewBox to align with the Qiji lettering. The fixed SVG geometry avoids font requests and differences in browser shaping. The surrounding bilingual brand has an accessible name; the internal artwork is decorative to assistive technology.
+The lowercase `canwoo` wordmark uses Google Sans Flex glyph outlines with `wght=460`, `opsz=48`, `ROND=20`, `wdth=100`, `GRAD=0`, and `slnt=0`. The moderately light weight and subtly softened terminals give the sans-serif lettering a restrained appearance. HarfBuzz applies the font's native kerning. The complete shaped word is scaled uniformly, preserving letter proportions and spacing, with visible ink spanning y=3 to y=29 in a 32-unit-high viewBox to align with the Qiji lettering. The fixed SVG geometry avoids runtime font requests and differences in browser shaping. The surrounding bilingual brand has an accessible name; the internal artwork is decorative to assistive technology.
 
-The Latin source is `ofl/newsreader/Newsreader[opsz,wght].ttf` from [google/fonts revision 8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5](https://github.com/google/fonts/tree/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/newsreader). Its SHA-256 is `8a08d13f8a6c0d51be379a60af84f945f65369a67e509ee3c3bdcc421254d7c1`. Copyright 2020 The Newsreader Project Authors (http://github.com/productiontype/Newsreader); the SIL OFL 1.1 notice is retained in `public/brand/Newsreader-OFL.txt`.
+The Latin source is the full variable TTF from this [official versioned Google Sans Flex asset](https://fonts.gstatic.com/s/googlesansflex/v22/t5t7IQcYNIWbFgDgAAzZ34auoVyXipusfhcat2c.ttf). Its SHA-256 is `c6d53424121196b81de816b8daccf200e285dd506df43766db3d7e8cdf06ee30`. Copyright 2015 Google LLC. All Rights Reserved; the SIL OFL 1.1 notice is retained in `public/brand/GoogleSans-OFL.txt`. The earlier Newsreader artwork's notice remains in `public/brand/Newsreader-OFL.txt`.
 
 The Chinese brand label displays 參伍 using glyph outlines from the open-source Qiji font. Each outline is uniformly scaled and optically positioned as fixed SVG artwork beside the Latin lettering. The traditional display spelling was selected after reviewing the Qiji preview. No full Chinese font is loaded. Interface text continues to use Geist and system Chinese sans-serif fallbacks. Historical source-reading typography is unchanged.
 
@@ -34,7 +34,7 @@ These references inform the design approach. Their logos and proprietary letter 
 
 - `scripts/build-brand.mjs` generates fan path data and public fan SVG assets. Run it from the repository root, then format `lib/brand-art.ts`; it does not generate either wordmark.
 - `lib/brand-art.ts` is the generated fan geometry; `components/canwoo-brand.tsx` renders the shared accessible lockup.
-- `scripts/build-latin-wordmark.py` takes the local upstream Newsreader TTF, verifies its SHA-256, and uses fontTools and uharfbuzz to generate `lib/brand-latin.json` and `public/brand/canwoo-wordmark.svg`.
+- `scripts/build-latin-wordmark.py` takes the local full Google Sans Flex variable TTF, verifies its SHA-256, and uses fontTools and uharfbuzz to generate `lib/brand-latin.json` and `public/brand/canwoo-wordmark.svg`.
 - `scripts/build-han-wordmark.py` takes the local upstream Qiji `qiji.ttf` release asset, verifies its SHA-256, and uses fontTools to generate `lib/brand-han.json` and `public/brand/canwoo-han-wordmark.svg`.
 - `app/brand.css` controls lockup sizing; `app/auth.css` scopes the login composition and controls.
 - `public/brand/canwoo-mark.svg` and `canwoo-wordmark.svg` are reusable transparent SVGs.
@@ -44,7 +44,7 @@ An isolated, logged-out Chrome validated desktop/mobile Chinese and English, lig
 
 Production verification passed after deployment `7d622cc4-a3a0-4d05-9789-0ef869a7844a`: Google sign-in is visible, all four main controls measure 48px, the 390px view has no horizontal overflow, and favicon revision `atelier4` is present. TypeScript, lint and the Cloudflare build passed. This pass verified the authentication UI without submitting a login or reset request.
 
-An earlier alignment pass adjusted the original monoline Latin and Chinese artwork. Those wordmarks have since been replaced with the Newsreader and Qiji outlines described above. The validation records in this section concern those earlier wordmark and fan revisions, not the current typeface-derived lettering.
+An earlier alignment pass adjusted the original monoline Latin and Chinese artwork. Those wordmarks have since been replaced with the Google Sans Flex and Qiji outlines described above. The validation records in this section concern those earlier wordmark and fan revisions, not the current typeface-derived lettering.
 
 The ten-rib follow-up was compared against the previous eight-rib compact mark at 36, 30 and 26px in light and dark. It preserves the outer silhouette, palette, pivot, strokes and lettering. The 16px favicon keeps eight ribs for clearer small-size rendering. Local comparison: `work/fan-ten/comparison.png`.
 

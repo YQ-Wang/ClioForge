@@ -1,6 +1,6 @@
-"""Build the fixed Latin wordmark from the pinned OFL Newsreader font.
+"""Build the fixed Latin wordmark from the pinned OFL Google Sans Flex font.
 
-Usage: python scripts/build-latin-wordmark.py /path/to/Newsreader.ttf
+Usage: python scripts/build-latin-wordmark.py /path/to/GoogleSansFlex.ttf
 Requires fontTools and uharfbuzz, only when regenerating the artwork.
 See public/brand/README.md for the source revision and license.
 """
@@ -21,11 +21,13 @@ from fontTools.varLib.instancer import instantiateVariableFont
 
 root = Path(__file__).resolve().parent.parent
 font_path = Path(sys.argv[1])
-expected_sha256 = "8a08d13f8a6c0d51be379a60af84f945f65369a67e509ee3c3bdcc421254d7c1"
+expected_sha256 = "c6d53424121196b81de816b8daccf200e285dd506df43766db3d7e8cdf06ee30"
 if hashlib.sha256(font_path.read_bytes()).hexdigest() != expected_sha256:
-    raise ValueError("Use the pinned Newsreader font documented in public/brand/README.md")
+    raise ValueError("Use the pinned Google Sans Flex font documented in public/brand/README.md")
 
-font = instantiateVariableFont(TTFont(font_path), {"wght": 450, "opsz": 48})
+font = instantiateVariableFont(TTFont(font_path), {
+    "wght": 460, "opsz": 48, "ROND": 20, "wdth": 100, "GRAD": 0, "slnt": 0,
+})
 stream = io.BytesIO()
 font.save(stream)
 shaping_font = hb.Font(hb.Face(stream.getvalue()))
@@ -55,7 +57,7 @@ x_max = max(letter[3][2] for letter in letters)
 y_max = max(letter[3][3] for letter in letters)
 
 # Match the Han artwork's visible ink height. Scale the complete shaped word
-# uniformly, retaining native kerning, serif details and round-letter overshoot.
+# uniformly, retaining native kerning, softened terminals and round-letter overshoot.
 scale = 26 / (y_max - y_min)
 width = round((x_max - x_min) * scale + 4, 3)
 paths = []
@@ -72,6 +74,6 @@ body = "".join(f'<path d="{path}"/>' for path in paths)
 (root / "public/brand/canwoo-wordmark.svg").write_text(
     f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{art["viewBox"]}" '
     'role="img" aria-label="canwoo">'
-    '<!-- Newsreader, SIL OFL 1.1. See Newsreader-OFL.txt. -->'
+    '<!-- Google Sans Flex, SIL OFL 1.1. See GoogleSans-OFL.txt. -->'
     f'<g fill="currentColor">{body}</g></svg>\n'
 )
