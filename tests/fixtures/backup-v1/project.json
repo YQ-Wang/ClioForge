@@ -1,0 +1,262 @@
+{
+  "format": "canwoo-research-package",
+  "version": 1,
+  "exported_at": "2026-09-08T05:04:26.937Z",
+  "project": {
+    "id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+    "owner_id": "3114c17d-bac7-4df7-94e0-f74c7071b3f7",
+    "title": "History backup",
+    "description": "A reading question",
+    "created_at": "2026-09-08T05:04:26.098Z",
+    "role": "owner"
+  },
+  "records": {
+    "sources": [
+      {
+        "id": "ff06ab98-aeb7-4653-a44a-c0ebc66092cd",
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "title": "Archive text",
+        "object_path": "3114c17d-bac7-4df7-94e0-f74c7071b3f7/8e8f91cf-6d50-4310-8b94-f6aef35783fd/ff06ab98-aeb7-4653-a44a-c0ebc66092cd/original.txt",
+        "media_type": "text/plain",
+        "created_at": "2026-09-08T05:04:26.122Z"
+      }
+    ],
+    "source_versions": [
+      {
+        "id": "ac742da9-b5f7-436f-96cb-89e22ec81229",
+        "source_id": "ff06ab98-aeb7-4653-a44a-c0ebc66092cd",
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "revision": 1,
+        "pages": "[{\"page\":1,\"text\":\"An original text about archives.\"}]",
+        "method": "import",
+        "created_at": "2026-09-08T05:04:26.127Z"
+      }
+    ],
+    "source_pages": [],
+    "notes": [
+      {
+        "id": "ac1d26be-f197-4902-a4af-aaff5fe4f571",
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "parent_id": null,
+        "revision": 1,
+        "title": "Reading note",
+        "body": "[source](/?project=8e8f91cf-6d50-4310-8b94-f6aef35783fd&tab=sources&version=ac742da9-b5f7-436f-96cb-89e22ec81229&page=1&evidence=e087a2d0-7931-4468-98c7-f76a3840ee0e)",
+        "created_at": "2026-09-08T05:04:26.196Z",
+        "document": null
+      },
+      {
+        "id": "070a6eec-a223-45ee-9aab-51cec5eb276e",
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "parent_id": "ac1d26be-f197-4902-a4af-aaff5fe4f571",
+        "revision": 2,
+        "title": "Reading note revised",
+        "body": "[source](/?project=8e8f91cf-6d50-4310-8b94-f6aef35783fd&tab=sources&version=ac742da9-b5f7-436f-96cb-89e22ec81229&page=1&evidence=e087a2d0-7931-4468-98c7-f76a3840ee0e)",
+        "created_at": "2026-09-08T05:04:26.202Z",
+        "document": null
+      }
+    ],
+    "note_state": [
+      {
+        "note_id": "070a6eec-a223-45ee-9aab-51cec5eb276e",
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "pinned": 1,
+        "archived": 0
+      }
+    ],
+    "evidence": [
+      {
+        "id": "e087a2d0-7931-4468-98c7-f76a3840ee0e",
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "source_id": "ff06ab98-aeb7-4653-a44a-c0ebc66092cd",
+        "version_id": "ac742da9-b5f7-436f-96cb-89e22ec81229",
+        "page": 1,
+        "quote": "An original text about archives.",
+        "question": "Who wrote it?",
+        "interpretation": "Pending review",
+        "relation": "context",
+        "created_at": "2026-09-08T05:04:26.186Z",
+        "quote_start": 0,
+        "quote_end": 32,
+        "region": null
+      }
+    ],
+    "bibliography_entries": [],
+    "research_questions": [],
+    "claims": [],
+    "claim_evidence": [],
+    "source_relations": [],
+    "search_logs": [],
+    "evidence_reviews": [],
+    "research_runs": [],
+    "direct_run_costs": [],
+    "research_jobs": [],
+    "project_budgets": [
+      {
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "limit_units": 100000,
+        "committed_units": 1200
+      }
+    ],
+    "research_watches": [
+      {
+        "id": "c1e9a5fe-1763-4f64-89d8-6ddbe7a9d142",
+        "owner_id": "3114c17d-bac7-4df7-94e0-f74c7071b3f7",
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "query": "archives",
+        "interval_days": 1,
+        "enabled": 1,
+        "next_run": "2026-09-08T05:04:26.212Z",
+        "checked_at": null,
+        "error": null,
+        "created_at": "2026-09-08T05:04:26.212Z"
+      }
+    ],
+    "research_inbox": [],
+    "missions": [
+      {
+        "id": "b01874ab-7f1b-4715-aad2-dbcc7dc3ed3b",
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "title": "Shared reading arrangement",
+        "question": "Which reading should come first?",
+        "scope": "Fixed source",
+        "acceptance": "Human review",
+        "status": "active",
+        "created_by": "3114c17d-bac7-4df7-94e0-f74c7071b3f7",
+        "revision": 2,
+        "created_at": "2026-09-08T05:04:26.251Z",
+        "updated_at": "2026-09-08T05:04:26.326Z"
+      }
+    ],
+    "mission_tasks": [
+      {
+        "id": "62b266ad-a817-49ff-b156-de495ff4cdb2",
+        "mission_id": "b01874ab-7f1b-4715-aad2-dbcc7dc3ed3b",
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "title": "Reading 1",
+        "kind": "manual",
+        "executor": "human",
+        "assignee": "",
+        "status": "ready",
+        "input": "{\"version_ids\":[\"ac742da9-b5f7-436f-96cb-89e22ec81229\"],\"query\":\"\",\"prompt\":\"\",\"locale\":\"zh-CN\",\"input_rate\":0,\"output_rate\":0,\"max_output\":2048,\"parameters\":{}}",
+        "result": null,
+        "error": null,
+        "attempt": 0,
+        "lease_until": null,
+        "claimed_by": null,
+        "cost_units": 0,
+        "revision": 2,
+        "created_at": "2026-09-08T05:04:26.251Z",
+        "updated_at": "2026-09-08T05:04:26.365Z"
+      },
+      {
+        "id": "9aa7cb08-d36a-4926-9d3c-38214c69bbbb",
+        "mission_id": "b01874ab-7f1b-4715-aad2-dbcc7dc3ed3b",
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "title": "Reading 2",
+        "kind": "manual",
+        "executor": "human",
+        "assignee": "",
+        "status": "ready",
+        "input": "{\"version_ids\":[\"ac742da9-b5f7-436f-96cb-89e22ec81229\"],\"query\":\"\",\"prompt\":\"\",\"locale\":\"zh-CN\",\"input_rate\":0,\"output_rate\":0,\"max_output\":2048,\"parameters\":{}}",
+        "result": null,
+        "error": null,
+        "attempt": 0,
+        "lease_until": null,
+        "claimed_by": null,
+        "cost_units": 0,
+        "revision": 2,
+        "created_at": "2026-09-08T05:04:26.251Z",
+        "updated_at": "2026-09-08T05:04:26.365Z"
+      }
+    ],
+    "research_methods": [],
+    "task_corrections": [],
+    "claim_assessments": [],
+    "project_comments": [],
+    "project_members": [],
+    "search_aliases": [],
+    "artifacts": [],
+    "project_snapshots": [],
+    "research_branches": [],
+    "entities": [],
+    "entity_relations": [],
+    "evaluation_runs": [],
+    "ingestion_items": [
+      {
+        "id": "ff06ab98-aeb7-4653-a44a-c0ebc66092cd",
+        "project_id": "8e8f91cf-6d50-4310-8b94-f6aef35783fd",
+        "owner_id": "3114c17d-bac7-4df7-94e0-f74c7071b3f7",
+        "provider": "google",
+        "external_id": "external-source",
+        "revision": "r1",
+        "title": "Archive text",
+        "status": "succeeded",
+        "source_id": "ff06ab98-aeb7-4653-a44a-c0ebc66092cd",
+        "error": null,
+        "created_at": "2026-09-08T05:04:26.148Z",
+        "updated_at": "2026-09-08T05:04:26.148Z"
+      }
+    ],
+    "mission_boards": [
+      {
+        "mission_id": "b01874ab-7f1b-4715-aad2-dbcc7dc3ed3b",
+        "revision": 1,
+        "body": "{\"order\":[\"9aa7cb08-d36a-4926-9d3c-38214c69bbbb\",\"62b266ad-a817-49ff-b156-de495ff4cdb2\"],\"stages\":{\"62b266ad-a817-49ff-b156-de495ff4cdb2\":{\"stage\":\"active\",\"revision\":2}}}"
+      }
+    ],
+    "artifact_lineage": [],
+    "source_origins": [],
+    "bibliography_history": [],
+    "task_dependencies": [],
+    "task_inputs": [
+      {
+        "task_id": "62b266ad-a817-49ff-b156-de495ff4cdb2",
+        "version_id": "ac742da9-b5f7-436f-96cb-89e22ec81229"
+      },
+      {
+        "task_id": "9aa7cb08-d36a-4926-9d3c-38214c69bbbb",
+        "version_id": "ac742da9-b5f7-436f-96cb-89e22ec81229"
+      }
+    ],
+    "task_events": [
+      {
+        "id": 1,
+        "task_id": null,
+        "mission_id": "b01874ab-7f1b-4715-aad2-dbcc7dc3ed3b",
+        "actor": "3114c17d-bac7-4df7-94e0-f74c7071b3f7",
+        "kind": "created",
+        "detail": "Shared reading arrangement",
+        "created_at": "2026-09-08T05:04:26.298Z"
+      },
+      {
+        "id": 2,
+        "task_id": null,
+        "mission_id": "b01874ab-7f1b-4715-aad2-dbcc7dc3ed3b",
+        "actor": "3114c17d-bac7-4df7-94e0-f74c7071b3f7",
+        "kind": "start",
+        "detail": "active",
+        "created_at": "2026-09-08T05:04:26.336Z"
+      },
+      {
+        "id": 3,
+        "task_id": "62b266ad-a817-49ff-b156-de495ff4cdb2",
+        "mission_id": "b01874ab-7f1b-4715-aad2-dbcc7dc3ed3b",
+        "actor": "3114c17d-bac7-4df7-94e0-f74c7071b3f7",
+        "kind": "board_moved",
+        "detail": "{\"title\":\"Reading 1\",\"from\":\"review\",\"to\":\"active\",\"before\":null}",
+        "created_at": "2026-09-08T05:04:26.523Z"
+      }
+    ],
+    "task_reviews": [],
+    "task_attempts": [],
+    "artifact_reviews": [],
+    "artifact_dependencies": [],
+    "branch_reviews": []
+  },
+  "people": [
+    {
+      "id": "3114c17d-bac7-4df7-94e0-f74c7071b3f7",
+      "name": "Researcher"
+    }
+  ]
+}

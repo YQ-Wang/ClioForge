@@ -1,0 +1,19 @@
+{
+  "format": "canwoo-research-package",
+  "version": 1,
+  "files": [
+    {
+      "path": "project.json",
+      "bytes": 9048,
+      "sha256": "da7106338bb06122917504951c5719ece0d20568167208733feff1ac3536f44f"
+    },
+    {
+      "path": "originals/ff06ab98-aeb7-4653-a44a-c0ebc66092cd.txt",
+      "bytes": 32,
+      "sha256": "cf0775293f2c6be8f5460d06a60687b8eb6b171c8aa85abde8406d487bba6642",
+      "source_id": "ff06ab98-aeb7-4653-a44a-c0ebc66092cd",
+      "title": "Archive text"
+    }
+  ],
+  "notes": "Read-only export. Original IDs and historical records are preserved; credentials are excluded. Restore creates an independent private project; access grants, credentials, active execution and spending allowances are not reactivated."
+}

@@ -23,6 +23,8 @@
     "check:jobs": "node scripts/cloudflare.mjs check-jobs",
     "format:check": "oxfmt --check",
     "check:comments": "node scripts/check-comments.mjs",
+    "check:migrations": "node scripts/check-migrations.mjs",
+    "audit:dependencies": "npm audit --audit-level=moderate",
     "check": "npm run check:comments && npm run typecheck && npm run lint"
   },
   "dependencies": {

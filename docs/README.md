@@ -5,6 +5,7 @@
 - [Project overview and local setup](../README.md)
 - [中文说明](../README.zh-CN.md)
 - [Development and architecture](development.md)
+- [Maintenance, compatibility and release checks](maintenance.md)
 - [Prepare a source-linked dossier in the background](background-dossier.md)
 - [From reviewed research to a manuscript draft](manuscript-workflow.md)
 - [Deploying your own Cloudflare installation](deployment.md)

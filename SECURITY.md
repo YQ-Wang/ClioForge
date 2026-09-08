@@ -8,6 +8,8 @@ Include the affected revision, a minimal reproduction using synthetic data, the 
 
 Deployment operators must keep their dependencies current, protect their Cloudflare account and secrets, back up the encryption key and research data, and configure their own verified email and OAuth origins. Never share a production encryption key with a development installation.
 
+The Dependency audit workflow checks the committed npm lockfile on dependency changes and weekly for newly disclosed advisories, without installing packages or running their scripts. Moderate and higher advisories fail the check. Reproduce with `npm run audit:dependencies`; see [maintenance guidance](docs/maintenance.md) for triage. CI also scans repository history with Gitleaks. These checks supplement code review and do not establish the absence of vulnerabilities.
+
 ## Dependency advisory mitigation (2026-09-06)
 
 The initial alpha reported four moderate entries in the `drizzle-kit` → `@esbuild-kit/esm-loader` → `@esbuild-kit/core-utils` → old `esbuild` chain, concerning [GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99). Better Auth's optional Drizzle Kit peer also made these entries appear in the production npm installation graph.

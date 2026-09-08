@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Reject malformed collection pages and invalid continuation cursors before they can loop or expose a partial collection as complete.
+- Run a frozen, synthetic v1 backup compatibility test by default, without a private account export.
+- Enforce append-only database migrations in CI, including unique migration numbering and unchanged existing SQL.
+- Audit the dependency lockfile on dependency changes and weekly; document release checks and vulnerability triage.
+
 ## 0.1.0-alpha.2
 
 - Restore the original Latin wordmark from `8338c9b`, retaining the Qiji Chinese lettering and fan; use a colon in both browser-tab titles.

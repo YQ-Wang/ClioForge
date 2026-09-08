@@ -22,7 +22,9 @@ The Vite Cloudflare plugin runs the application and research worker together loc
 
 `npm run check` runs the English-comment check, TypeScript and lint. `npm run format:check` enforces formatting. `npm test` includes local Worker integration tests; the emulator needs permission to open local ports. Tests use synthetic records and public fixtures, not live model services or production secrets.
 
-An optional archive regression accepts `CANWOO_BACKUP_TEST_FILE=/absolute/path/to/backup.zip`. Without it, that one test is skipped; it is not required for contributors. Never commit such an account export.
+The default suite restores a [frozen synthetic v1 backup](../tests/fixtures/README.md) as well as testing current export/import round trips. This compatibility regression runs in CI without private files. Setting `CANWOO_BACKUP_TEST_FILE=/absolute/path/to/backup.zip` adds a separate operator-provided archive check; never commit such an account export.
+
+`npm run check:migrations -- origin/main` protects existing SQL from edits, removal or reordering and checks newly added migration numbers. Fetch the target branch first. `npm run audit:dependencies` queries npm's current advisory registry for production and development dependencies; it fails on moderate or higher advisories. See [maintenance](maintenance.md) for handling findings and releases.
 
 Run `npm run build:cloudflare` and `npm run check:jobs` to validate both bundles. These commands do not deploy. Production deployments are manual and require explicit private configurations described in the deployment guide.
 

@@ -62,6 +62,49 @@ void test('HTML gateway failures produce a useful error without retrying a write
   );
   assert.equal(calls, 1);
 });
+void test('malformed collection pages stop immediately instead of looping or returning partial data', async (t) => {
+  let response: unknown;
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    return Response.json(response);
+  });
+  for (const value of [
+    null,
+    {},
+    { rows: null, next: null },
+    { rows: [], next: undefined },
+    ...['oops', '', '0', '-1', '1e3', '01', '9007199254740992', 42].map(
+      (next) => ({ rows: [{ id: 'partial' }], next }),
+    ),
+  ]) {
+    response = value;
+    calls = 0;
+    await assert.rejects(
+      projectRows('project', 'notes'),
+      (e: unknown) => e instanceof ApiError && e.status === 502,
+    );
+    assert.equal(calls, 1);
+  }
+  calls = 0;
+  await assert.rejects(projectRows('project', 'notes', undefined, 'invalid'));
+  assert.equal(calls, 0);
+});
+
+void test('a malformed continuation never publishes the first page as a complete collection', async (t) => {
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    assert.ok(calls <= 2, 'Invalid pagination must not keep requesting pages');
+    return Response.json(
+      calls === 1
+        ? { rows: [{ id: 'first' }], next: '42' }
+        : { rows: [{ id: 'second' }], next: 'invalid' },
+    );
+  });
+  await assert.rejects(projectRows('project', 'notes'), /分页/);
+  assert.equal(calls, 2);
+});
 void test('long note histories retain root state without repeated ancestry scans', () => {
   const notes: Note[] = Array.from({ length: 20000 }, (_, i) => ({
     id: String(i),

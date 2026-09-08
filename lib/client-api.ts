@@ -130,6 +130,12 @@ export async function projectRows<T>(
   signal?: AbortSignal,
   before: string | null = null,
 ): Promise<T[]> {
+  const validCursor = (value: unknown): value is string =>
+    typeof value === 'string' &&
+    /^[1-9]\d{0,15}$/.test(value) &&
+    Number.isSafeInteger(Number(value));
+  if (before !== null && !validCursor(before))
+    throw new ApiError('分页位置无效，请刷新重试。', 502);
   const rows: T[] = [];
   let next: string | null = before;
   do {
@@ -141,7 +147,15 @@ export async function projectRows<T>(
       'GET',
       signal,
     );
-    if (page.next && next && Number(page.next) >= Number(next))
+    // Types cannot validate an HTTP response. Reject malformed pages before
+    // publishing rows or following a cursor that could loop indefinitely.
+    if (
+      !page ||
+      !Array.isArray(page.rows) ||
+      (page.next !== null &&
+        (!validCursor(page.next) ||
+          (next !== null && Number(page.next) >= Number(next))))
+    )
       throw new ApiError('分页位置无效，请刷新重试。', 502);
     rows.push(...page.rows);
     next = page.next;

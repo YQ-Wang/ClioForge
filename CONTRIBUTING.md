@@ -14,6 +14,8 @@ Start with a real research task: describe the material, the researcher's next ac
 
 Do not commit credentials, local deployment files, account exports or private screenshots. Do not rewrite existing migrations already used by deployments; add a new migration. Keep old document and citation formats readable or provide an explicit migration.
 
+For database changes, fetch the target branch and run `npm run check:migrations -- origin/main`. This compares existing SQL with the target and checks uncommitted new files as well. New migrations must have a unique four-digit number higher than all existing migrations. CI checks against the pull request's target revision or the previous main revision. See [maintenance and release checks](docs/maintenance.md) for compatibility and dependency requirements.
+
 AI-assisted contributions are welcome. Contributors remain responsible for understanding the change, checking licenses and validating behavior. Do not submit generated research claims as verified source material.
 
 By submitting a contribution, you agree that your contribution is distributed under this project's AGPL-3.0-only license, unless an existing file explicitly uses a different license. Retain upstream notices and obtain permission for any material you contribute.

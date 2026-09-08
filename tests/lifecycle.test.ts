@@ -585,18 +585,51 @@ void test('deleting an origin preserves a collaborator artifact and detached lin
   );
 });
 
-void test(
-  'a real exported archive restores every original and research record',
-  { skip: !process.env.CANWOO_BACKUP_TEST_FILE },
-  async () => {
-    const bytes = await fs.readFile(process.env.CANWOO_BACKUP_TEST_FILE!);
+// Keep this fixture frozen: generating an export with today's code would not
+// catch a change that breaks both the exporter and importer in the same way.
+async function compatibilityArchive() {
+  const root = new URL('./fixtures/backup-v1/', import.meta.url);
+  const names = [
+    'project.json',
+    'manifest.json',
+    ...(await fs.readdir(new URL('originals/', root))).map(
+      (name) => `originals/${name}`,
+    ),
+  ];
+  const entries = await Promise.all(
+    names.map(
+      async (name) =>
+        [name, new Uint8Array(await fs.readFile(new URL(name, root)))] as const,
+    ),
+  );
+  return zipSync(Object.fromEntries(entries));
+}
+
+for (const scenario of [
+  {
+    title:
+      'frozen v1 synthetic archive restores originals and research records',
+    bytes: compatibilityArchive,
+  },
+  ...(process.env.CANWOO_BACKUP_TEST_FILE
+    ? [
+        {
+          title:
+            'an operator-provided archive restores originals and research records',
+          bytes: () => fs.readFile(process.env.CANWOO_BACKUP_TEST_FILE!),
+        },
+      ]
+    : []),
+]) {
+  void test(scenario.title, async () => {
+    const bytes = await scenario.bytes();
     const backup = await readBackup(new File([bytes], 'research.zip'));
     const user = await researcher(),
       engine = new ProjectRestore(user.store, files);
     const started = await engine.start(
       JSON.parse(backup.metadataText),
       backup.manifest,
-      'Verified real backup',
+      'Verified compatible backup',
     );
     for (const file of started.files) {
       const entry = backup.manifest.files.find(
@@ -640,10 +673,46 @@ void test(
     }
     assert.equal(
       (await user.store.project(started.project_id)).title,
-      'Verified real backup',
+      'Verified compatible backup',
     );
-  },
-);
+    assert.equal(
+      (
+        await db
+          .prepare(
+            'SELECT COUNT(*) AS n FROM research_watches WHERE project_id=? AND enabled<>0',
+          )
+          .bind(started.project_id)
+          .first<{ n: number }>()
+      )?.n,
+      0,
+      'A restored backup must not resume scheduled work',
+    );
+    assert.equal(
+      (
+        await db
+          .prepare(
+            'SELECT COUNT(*) AS n FROM project_budgets WHERE project_id=? AND limit_units<>0',
+          )
+          .bind(started.project_id)
+          .first<{ n: number }>()
+      )?.n,
+      0,
+      'A restored backup must not authorize model spending',
+    );
+    assert.equal(
+      (
+        await db
+          .prepare(
+            "SELECT COUNT(*) AS n FROM missions WHERE project_id=? AND status='active'",
+          )
+          .bind(started.project_id)
+          .first<{ n: number }>()
+      )?.n,
+      0,
+      'Restored missions wait for the researcher to resume them',
+    );
+  });
+}
 
 void test('cancelling during an original upload removes the late file and queued cleanup retries safely', async () => {
   const f = await fixture(),
