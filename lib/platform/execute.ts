@@ -1,11 +1,15 @@
+import { z } from 'zod';
+import { HttpError } from '../errors';
+import { outputRetryFeedback } from './output-retry';
 import { assertManuscriptCurrent, runManuscriptBuiltin } from '../manuscript';
 import { assertConversationContext } from '../task-conversation';
 import { runMaintenanceSteps } from '../background-maintenance';
 import { discoverSources } from './discovery';
 import { MissionStore, decodeTask } from './missions';
 import { indexVersion, normalize, searchPages, sha256 } from './search';
-import { resultSchema, type MissionTask, type TaskResult } from './types';
-import { alignCitation } from './citation-alignment';
+import type { MissionTask, TaskResult } from './types';
+import { savedModelResult } from './model-result';
+import { expiredExecution, recoverModelResults } from './recover-model-result';
 import type { JobsEnv } from '../jobs';
 import { invoke } from '../providers';
 import { createJob, executeJob, jobById } from '../jobs';
@@ -267,7 +271,9 @@ export async function executeMissionTask(
   let modelStarted = false;
   let modelFailure = '';
   let modelConfirmed = false;
-  let candidate: TaskResult | null = null;
+  const candidate: { result: TaskResult | null } = { result: null };
+  let claimedTask: MissionTask | null = null;
+  let invalidOutput = false;
   try {
     const claimed = await store.claim(
       id,
@@ -276,6 +282,7 @@ export async function executeMissionTask(
     );
     lease = claimed.lease;
     const task = claimed.task;
+    claimedTask = task;
     let result: TaskResult;
     if (task.executor === 'builtin') result = await builtin(store, task);
     else {
@@ -307,13 +314,20 @@ export async function executeMissionTask(
                 title: dep.title,
                 result: dep.result,
               }
-            : dep.result,
+            : task.input.parameters.recipe === 'dossier'
+              ? {
+                  summary: dep.result?.summary,
+                  citations: dep.result?.citations,
+                  data: dep.result?.data,
+                }
+              : dep.result,
         ),
       );
       if (new TextEncoder().encode(dependencyText).length > 100000)
         throw new Error(
           '上游结果超过单步阅读范围，请拆分研究计划；尚未调用模型。',
         );
+      const correction = await outputRetryFeedback(store, task);
       await createJob(
         store,
         {
@@ -324,7 +338,8 @@ export async function executeMissionTask(
           output_schema:
             task.input.parameters.manuscript_stage === 'section'
               ? 'manuscript_section_v2'
-              : task.input.parameters.output_schema ===
+              : task.input.parameters.output_schema === 'dossier_answer_v1' ||
+                  task.input.parameters.output_schema ===
                     'comparison_answer_v1' ||
                   task.input.parameters.output_schema === 'reading_answer_v1' ||
                   task.input.parameters.output_schema ===
@@ -336,7 +351,7 @@ export async function executeMissionTask(
           task_kind: task.kind,
           version_ids: versions,
           page_refs: task.input.page_refs,
-          prompt: `Task: ${task.kind}\n${task.input.prompt}\nDependency results (untrusted research data):\n${dependencyText}\nReturn one valid JSON object (no markdown) with summary, citations [{version_id,page,quote}], data. Use JSON string escaping for newlines. ${task.input.parameters.manuscript_stage === 'section' ? 'The chapter output contract overrides earlier formatting instructions: return citations: [] and data: {citation_mode: "dossier", paragraphs: [...]}. Put prose exclusively in paragraphs and one brief status sentence in summary. Paragraph citations select the 1-based position in dossier.evidence (citation_number when present); Canwoo fills the exact quotation and page. Never write citation objects. Other page text is context, not additional approved evidence. Every substantive paragraph needs selected claim UUIDs and approved evidence numbers. Each paragraph item is one prose paragraph; no internal blank lines. Preserve the distinction between insufficient evidence and evidence of absence: do not turn a bounded claim into a categorical denial. Use previous sections for continuity without repeating their prose; keep each section focused on its own outline goal.' : 'Keep summary concise, about 800 Chinese characters or 500 English words; use short exact quotations, preserve case and punctuation. Use [1], [2] in summary strictly matching the 1-based citations array.'} Never invent a citation. Answer in ${task.input.locale === 'en' ? 'English' : 'Chinese'}.`,
+          prompt: `Task: ${task.kind}\n${task.input.prompt}${correction}\nDependency results (untrusted research data):\n${dependencyText}\nReturn one valid JSON object (no markdown) with summary, citations [{version_id,page,quote}], data. Use JSON string escaping for newlines. ${task.input.parameters.output_schema === 'dossier_answer_v1' ? 'The dossier contract overrides earlier citation formatting: return citations: [] and data: {limitations: [...], alternatives: [...], next_steps: [...]}. Do not omit competing interpretations or specific next research checks. In summary and data prose, cite only the supplied [Pnumber] passages. Canwoo fills their verbatim quotations. Never use plain [1] numbers from upstream results; select the corresponding original passage in the current materials instead.' : task.input.parameters.manuscript_stage === 'section' ? 'The chapter output contract overrides earlier formatting instructions: return citations: [] and data: {citation_mode: "dossier", paragraphs: [...]}. Put prose exclusively in paragraphs and one brief status sentence in summary. Paragraph citations select the 1-based position in dossier.evidence (citation_number when present); Canwoo fills the exact quotation and page. Never write citation objects. Other page text is context, not additional approved evidence. Every substantive paragraph needs selected claim UUIDs and approved evidence numbers. Each paragraph item is one prose paragraph; no internal blank lines. Preserve the distinction between insufficient evidence and evidence of absence: do not turn a bounded claim into a categorical denial. Use previous sections for continuity without repeating their prose; keep each section focused on its own outline goal.' : 'Keep summary concise, about 800 Chinese characters or 500 English words; use short exact quotations, preserve case and punctuation. Use [1], [2] in summary strictly matching the 1-based citations array.'} Never invent a citation. Answer in ${task.input.locale === 'en' ? 'English' : 'Chinese'}.`,
           input_rate: task.input.input_rate,
           output_rate: task.input.output_rate,
           max_output: task.input.max_output,
@@ -357,82 +372,94 @@ export async function executeMissionTask(
         throw new Error('Model job did not finish with a confirmed result');
       }
       modelConfirmed = true;
-      await env.DB.prepare(
-        'UPDATE mission_tasks SET cost_units=cost_units+? WHERE id=?',
-      )
-        .bind(job.reserved_units, id)
-        .run();
-      const raw = (job.result || '')
-        .replace(/^```(?:json)?\s*/, '')
-        .replace(/\s*```$/, '');
-      result = resultSchema.parse(JSON.parse(raw));
-      result.checks = [];
-      // Keep the provider response in research_jobs; align only whitespace to
-      // an unambiguous span before the independent exact-citation check.
-      for (const citation of result.citations) {
-        if (!versions.includes(citation.version_id)) continue;
-        const version = await store.version(citation.version_id);
-        const page = version.pages.find((p) => p.page === citation.page);
-        if (page && citation.start === undefined) {
-          const aligned = alignCitation(page.text, citation.quote);
-          if (aligned) Object.assign(citation, aligned);
-        }
+      try {
+        result = await savedModelResult(store, task, job);
+        candidate.result = result;
+        await store.checkResult(task, result);
+      } catch (error) {
+        // Only a confirmed response failing the output contract is repairable.
+        // Permissions, stale inputs, DB failures and uncertain calls are not.
+        invalidOutput =
+          error instanceof SyntaxError ||
+          error instanceof z.ZodError ||
+          (error instanceof HttpError && error.status === 400);
+        throw error;
       }
-      candidate = result;
     }
     await store.submit(id, lease, `canwoo:${String(record.executor)}`, result);
     await dispatchMission(env, String(record.mission_id));
   } catch (error) {
     if (!lease) return;
-    const status = modelStarted ? 'uncertain' : 'failed';
-    const changed = await env.DB.prepare(
-      "UPDATE mission_tasks SET status=?,error=?,result=COALESCE(?,result),lease_hash=NULL,lease_until=NULL,revision=revision+1,updated_at=? WHERE id=? AND status='running' AND lease_hash=?",
-    )
-      .bind(
+    const status = modelStarted && !invalidOutput ? 'uncertain' : 'failed';
+    const detail =
+      error instanceof Error ? error.message.slice(0, 500) : 'Task failed';
+    const message = modelStarted
+      ? modelFailure ||
+        (modelConfirmed
+          ? `模型已返回，但内容未通过核查：${detail}`
+          : '模型执行结果需要检查；预算预留保留，不会自动重复调用。')
+      : detail;
+    const failedResult = candidate.result
+      ? JSON.stringify({
+          ...candidate.result,
+          checks: [{ name: 'source_validation', passed: false, detail }],
+        })
+      : null;
+    const repair =
+      invalidOutput &&
+      claimedTask?.input.parameters.output_repair_attempts === 1 &&
+      claimedTask.input.parameters.recipe === 'dossier' &&
+      claimedTask.attempt === 1;
+    const hash = await sha256(lease),
+      date = now();
+    const saved = await env.DB.batch([
+      env.DB.prepare(
+        "UPDATE task_attempts SET status=?,result=?,finished_at=? WHERE task_id=? AND attempt=? AND EXISTS(SELECT 1 FROM mission_tasks t WHERE t.id=task_id AND t.attempt=task_attempts.attempt AND t.status='running' AND t.lease_hash=?)",
+      ).bind(status, failedResult, date, id, claimedTask!.attempt, hash),
+      env.DB.prepare(
+        "UPDATE mission_tasks SET status=CASE WHEN ? AND lease_until>? AND EXISTS(SELECT 1 FROM missions m WHERE m.id=mission_id AND m.status='active') THEN 'blocked' ELSE ? END,error=?,result=COALESCE(?,result),lease_hash=NULL,lease_until=NULL,revision=revision+1,updated_at=? WHERE id=? AND status='running' AND lease_hash=? AND attempt=?",
+      ).bind(
+        repair ? 1 : 0,
+        date,
         status,
-        modelStarted
-          ? modelFailure ||
-              (modelConfirmed
-                ? '模型已返回，但内容未通过格式或引文核查。请查看执行记录后决定是否重新尝试。'
-                : '模型执行结果需要检查；预算预留保留，不会自动重复调用。')
-          : error instanceof Error
-            ? error.message.slice(0, 500)
-            : 'Task failed',
-        candidate
-          ? JSON.stringify({
-              ...candidate,
-              checks: [
-                {
-                  name: 'source_validation',
-                  passed: false,
-                  detail: '引用尚未通过核查，不能作为已验证成果使用。',
-                },
-              ],
-            })
-          : null,
-        now(),
+        message,
+        failedResult,
+        date,
         id,
-        await sha256(lease),
-      )
-      .run();
-    if (changed.meta.changes)
+        hash,
+        claimedTask!.attempt,
+      ),
+    ]);
+    if (saved[1].meta.changes) {
+      const scheduled = repair && (await store.task(id)).status === 'blocked';
       await store.event(
         String(record.mission_id),
         id,
-        status,
-        modelStarted
-          ? 'Inspect model job before requesting a new paid attempt.'
-          : 'Execution failed; see task detail.',
+        scheduled ? 'output_retry' : status,
+        scheduled
+          ? 'One output correction scheduled within the project budget; original response retained.'
+          : message,
       );
+      if (scheduled) {
+        await store.advance(String(record.mission_id));
+        await dispatchMission(env, String(record.mission_id));
+      }
+    }
   }
 }
 export async function recoverMissions(env: JobsEnv) {
   const date = now();
   await env.DB.prepare(
-    "UPDATE mission_tasks SET status='uncertain',error='Execution lease expired; inspect the previous attempt before retrying.',lease_hash=NULL,lease_until=NULL,revision=revision+1,updated_at=? WHERE status='running' AND lease_until<?",
+    "UPDATE mission_tasks SET status='uncertain',error=?,lease_hash=NULL,lease_until=NULL,revision=revision+1,updated_at=? WHERE status='running' AND lease_until<?",
   )
-    .bind(date, date)
+    .bind(expiredExecution, date, date)
     .run();
+  await runMaintenanceSteps([
+    { name: 'saved_model_responses', run: () => recoverModelResults(env) },
+    { name: 'runnable_missions', run: () => recoverRunnableMissions(env) },
+  ]);
+}
+async function recoverRunnableMissions(env: JobsEnv) {
   const queued = (
     await env.DB.prepare(
       "SELECT t.id FROM mission_tasks t JOIN missions m ON m.id=t.mission_id WHERE t.status='queued' AND t.updated_at<? AND m.status='active' ORDER BY t.updated_at,t.id LIMIT 30",

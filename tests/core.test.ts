@@ -5873,3 +5873,374 @@ void test('background recovery bypasses thirty review-gated plans and isolates f
   );
   assert.equal((await store.mission(active)).status, 'active');
 });
+
+async function interruptedModelHandoff() {
+  const f = await jobSetup(),
+    store = new MissionStore(db, f.owner.owner);
+  const draft = researchTemplate({
+    title: 'Recover saved research',
+    question: 'What does the source say?',
+    scope: 'One page',
+    acceptance: 'Review the source',
+    query: '',
+    version_ids: [f.a.versionId],
+    locale: 'en',
+    model_id: f.input.model_id,
+    input_rate: 1,
+    output_rate: 2,
+  });
+  const mission = await store.create(f.a.project.id, draft);
+  await store.control(mission, 'start');
+  const claimed = await store.claim(draft.tasks[0].id, 'canwoo:model', 'model');
+  const job = await createJob(
+    store,
+    { ...f.input, id: crypto.randomUUID(), output_format: 'json' },
+    { id: claimed.task.id, attempt: claimed.task.attempt },
+  );
+  const page = (await store.version(f.a.versionId)).pages[0];
+  await executeJob(
+    { DB: db, FOLIOTRACE_ENCRYPTION_KEY: f.secret },
+    job.id,
+    async () => ({
+      text: JSON.stringify({
+        summary: 'The source states this [1].',
+        citations: [
+          { version_id: f.a.versionId, page: page.page, quote: page.text },
+        ],
+        data: { limitations: ['One selected source only.'] },
+      }),
+      inputTokens: 100,
+      outputTokens: 50,
+    }),
+  );
+  await db
+    .prepare(
+      "UPDATE mission_tasks SET lease_until='2000-01-01',cost_units=200 WHERE id=?",
+    )
+    .bind(claimed.task.id)
+    .run();
+  return { ...f, store, mission, claimed, job, draft };
+}
+void test('a saved paid response survives a worker handoff crash without another model call or duplicate cost', async () => {
+  const f = await interruptedModelHandoff();
+  const budget = await db
+    .prepare('SELECT committed_units FROM project_budgets WHERE project_id=?')
+    .bind(f.a.project.id)
+    .first();
+  await Promise.all([recoverMissions({ DB: db }), recoverMissions({ DB: db })]);
+  const task = await f.store.task(f.claimed.task.id);
+  assert.equal(task.status, 'succeeded', task.error || '');
+  assert.equal(task.attempt, 1);
+  assert.equal(task.cost_units, 200);
+  assert.equal((await f.store.task(f.draft.tasks[1].id)).status, 'ready');
+  assert.equal((await f.store.task(f.draft.tasks[2].id)).status, 'blocked');
+  assert.deepEqual(
+    await db
+      .prepare('SELECT committed_units FROM project_budgets WHERE project_id=?')
+      .bind(f.a.project.id)
+      .first(),
+    budget,
+  );
+  assert.equal(
+    (
+      await db
+        .prepare('SELECT COUNT(*) n FROM research_jobs WHERE project_id=?')
+        .bind(f.a.project.id)
+        .first<{ n: number }>()
+    )?.n,
+    1,
+  );
+  await assert.rejects(
+    f.store.submit(task.id, f.claimed.lease, 'canwoo:model', task.result),
+  );
+  await recoverMissions({ DB: db });
+  assert.equal((await f.store.task(task.id)).cost_units, 200);
+});
+void test('saved response recovery respects pause, source changes and validation failure', async () => {
+  const f = await interruptedModelHandoff();
+  await f.store.control(f.mission, 'pause');
+  await recoverMissions({ DB: db });
+  assert.equal((await f.store.task(f.claimed.task.id)).status, 'uncertain');
+  await f.store.control(f.mission, 'resume');
+  await recoverMissions({ DB: db });
+  assert.equal((await f.store.task(f.claimed.task.id)).status, 'succeeded');
+  const changed = await interruptedModelHandoff();
+  await changed.store.control(changed.mission, 'pause');
+  await recoverMissions({ DB: db });
+  const original = await changed.store.version(changed.a.versionId);
+  await changed.owner.reviseSource({
+    p_source: original.source_id,
+    p_expected: 1,
+    p_method: 'manual',
+    p_pages: [{ page: 1, text: 'New transcription' }],
+  });
+  await changed.store.control(changed.mission, 'resume');
+  await recoverMissions({ DB: db });
+  assert.equal(
+    (await changed.store.task(changed.claimed.task.id)).status,
+    'stale',
+  );
+  const invalid = await interruptedModelHandoff();
+  await db
+    .prepare('UPDATE research_jobs SET result=? WHERE id=?')
+    .bind('{"summary":"Invented","citations":[],"data":{}}', invalid.job.id)
+    .run();
+  await recoverMissions({ DB: db });
+  assert.equal(
+    (await invalid.store.task(invalid.claimed.task.id)).status,
+    'failed',
+  );
+  assert.equal(
+    (await invalid.store.task(invalid.draft.tasks[1].id)).status,
+    'blocked',
+  );
+});
+void test('background dossier reads every selected source and reaches human review without intermediate approval', async () => {
+  const f = await jobSetup(),
+    store = new MissionStore(db, f.owner.owner);
+  // The second source must be part of the same project.
+  const second = crypto.randomUUID(),
+    path = `${f.owner.owner}/${f.a.project.id}/${second}/original.txt`;
+  await store.recordUpload(second, f.a.project.id, path, 'text/plain');
+  const version = await store.importSource({
+    p_id: second,
+    p_project: f.a.project.id,
+    p_title: 'Second testimony',
+    p_path: path,
+    p_type: 'text/plain',
+    p_pages: [
+      { page: 1, text: 'Another account requires separate interpretation.' },
+    ],
+  });
+  const draft = agentRecipe({
+    method: {
+      kind: 'dossier',
+      title: 'Background dossier',
+      instructions: 'Compare scope and uncertainty.',
+      fields: ['Observation'],
+    },
+    pages: [
+      { version_id: f.a.versionId, page: 1 },
+      { version_id: version, page: 1 },
+    ],
+    model_id: f.input.model_id,
+    input_rate: 1,
+    output_rate: 2,
+    locale: 'en',
+  });
+  const id = await store.create(f.a.project.id, draft);
+  await store.control(id, 'start');
+  let calls = 0;
+  const model: typeof invoke = async (request) => {
+    calls++;
+    assert.match(request.prompt, /\[P1\]/);
+    return {
+      text: JSON.stringify({
+        summary: 'A bounded observation [P1].',
+        citations: [],
+        data: {
+          limitations: ['More material is needed.'],
+          alternatives: ['The statement [P1] may reflect only one witness.'],
+          next_steps: [
+            'Consult an independent account to compare the observation.',
+          ],
+        },
+      }),
+      inputTokens: 100,
+      outputTokens: 50,
+    };
+  };
+  for (let i = 0; i < 10; i++) {
+    const next = (await store.view(id)).tasks.find(
+      (t) => t.status === 'ready' && t.executor !== 'human',
+    );
+    if (!next) break;
+    await executeMissionTask(
+      { DB: db, FOLIOTRACE_ENCRYPTION_KEY: f.secret },
+      next.id,
+      model,
+    );
+    assert.equal((await store.task(next.id)).status, 'succeeded');
+  }
+  const view = await store.view(id);
+  assert.equal(calls, 4);
+  assert.equal(view.tasks.find((t) => t.executor === 'human')?.status, 'ready');
+  assert.equal(view.tasks.find((t) => t.kind === 'publish')?.status, 'blocked');
+  assert.equal(
+    view.tasks.filter((t) => t.input.parameters.dossier_stage === 'reading')
+      .length,
+    2,
+  );
+  assert.ok(!view.tasks.some((t) => t.status === 'accepted'));
+});
+
+async function dossierFixture() {
+  const f = await jobSetup(),
+    store = new MissionStore(db, f.owner.owner);
+  const draft = agentRecipe({
+    method: {
+      kind: 'dossier',
+      title: 'Bounded correction',
+      instructions: 'Read the source.',
+      fields: ['Observation'],
+    },
+    pages: [{ version_id: f.a.versionId, page: 1 }],
+    model_id: f.input.model_id,
+    input_rate: 1,
+    output_rate: 2,
+    locale: 'en',
+  });
+  const mission = await store.create(f.a.project.id, draft);
+  await store.control(mission, 'start');
+  const task = draft.tasks[0].id;
+  const output = (valid: boolean) => ({
+    text: JSON.stringify({
+      summary: valid
+        ? 'A bounded observation [P1].'
+        : 'A reference that does not exist [P99999].',
+      citations: [],
+      data: {
+        limitations: ['One page.'],
+        alternatives: ['The observation [P1] may be incomplete.'],
+        next_steps: ['Consult a second account.'],
+      },
+    }),
+    inputTokens: 100,
+    outputTokens: 50,
+  });
+  const env = { DB: db, FOLIOTRACE_ENCRYPTION_KEY: f.secret };
+  return { ...f, store, mission, task, output, env };
+}
+void test('dossier output correction uses validation feedback and preserves both paid attempts', async () => {
+  const f = await dossierFixture();
+  await executeMissionTask(f.env, f.task, async () => f.output(false));
+  let task = await f.store.task(f.task);
+  assert.equal(task.status, 'ready');
+  assert.equal(task.attempt, 1);
+  const prior = await db
+    .prepare(
+      'SELECT status,result FROM task_attempts WHERE task_id=? AND attempt=1',
+    )
+    .bind(f.task)
+    .first<{ status: string; result: string }>();
+  assert.equal(prior?.status, 'failed');
+  assert.equal(
+    prior!.result,
+    null,
+    'An invalid passage reference is not a resolved research result',
+  );
+  let calls = 0;
+  await executeMissionTask(f.env, f.task, async (input) => {
+    calls++;
+    assert.match(input.prompt, /Previous output and validation findings/);
+    assert.match(input.prompt, /原文片段/);
+    return f.output(true);
+  });
+  task = await f.store.task(f.task);
+  assert.equal(calls, 1);
+  assert.equal(task.status, 'succeeded', task.error || '');
+  assert.equal(task.attempt, 2);
+  assert.equal(task.cost_units, 400);
+  assert.equal(
+    (
+      await db
+        .prepare('SELECT COUNT(*) n FROM research_jobs WHERE project_id=?')
+        .bind(f.a.project.id)
+        .first<{ n: number }>()
+    )?.n,
+    2,
+  );
+  assert.match(
+    (await db
+      .prepare(
+        "SELECT result FROM research_jobs WHERE json_extract(model_snapshot,'$.mission_task.id')=? AND json_extract(model_snapshot,'$.mission_task.attempt')=1",
+      )
+      .bind(f.task)
+      .first<{ result: string }>())!.result,
+    /\[P99999\]/,
+  );
+});
+void test('dossier correction is bounded and never replays uncertain calls or exceeds budget', async () => {
+  const invalid = await dossierFixture();
+  for (let i = 0; i < 3; i++)
+    await executeMissionTask(invalid.env, invalid.task, async () =>
+      invalid.output(false),
+    );
+  assert.equal((await invalid.store.task(invalid.task)).status, 'failed');
+  assert.equal((await invalid.store.task(invalid.task)).attempt, 2);
+  assert.equal((await invalid.store.task(invalid.task)).cost_units, 400);
+  assert.ok(
+    (await invalid.store.view(invalid.mission)).tasks
+      .filter((t) => t.id !== invalid.task)
+      .every((t) => t.status === 'blocked'),
+  );
+  const uncertain = await dossierFixture();
+  await executeMissionTask(uncertain.env, uncertain.task, async () => {
+    throw new Error('Provider request timed out');
+  });
+  await recoverMissions(uncertain.env);
+  assert.equal(
+    (await uncertain.store.task(uncertain.task)).status,
+    'uncertain',
+  );
+  assert.equal((await uncertain.store.task(uncertain.task)).attempt, 1);
+  const paused = await dossierFixture();
+  await executeMissionTask(paused.env, paused.task, async () => {
+    await paused.store.control(paused.mission, 'pause');
+    return paused.output(false);
+  });
+  assert.equal((await paused.store.task(paused.task)).status, 'failed');
+  assert.equal((await paused.store.task(paused.task)).attempt, 1);
+  const budget = await dossierFixture();
+  await executeMissionTask(budget.env, budget.task, async () =>
+    budget.output(false),
+  );
+  await db
+    .prepare(
+      'UPDATE project_budgets SET limit_units=committed_units WHERE project_id=?',
+    )
+    .bind(budget.a.project.id)
+    .run();
+  let calls = 0;
+  await executeMissionTask(budget.env, budget.task, async () => {
+    calls++;
+    return budget.output(true);
+  });
+  assert.equal(calls, 0);
+  assert.equal((await budget.store.task(budget.task)).status, 'failed');
+});
+
+void test('saved response recovery refuses obsolete attempts and edited execution inputs', async () => {
+  const obsolete = await interruptedModelHandoff();
+  await db
+    .prepare(
+      "UPDATE research_jobs SET model_snapshot=json_set(model_snapshot,'$.mission_task.attempt',99) WHERE id=?",
+    )
+    .bind(obsolete.job.id)
+    .run();
+  await recoverMissions({ DB: db });
+  assert.equal(
+    (await obsolete.store.task(obsolete.claimed.task.id)).status,
+    'uncertain',
+  );
+  assert.equal(
+    (await obsolete.store.task(obsolete.claimed.task.id)).attempt,
+    1,
+  );
+  const edited = await interruptedModelHandoff();
+  await db
+    .prepare(
+      "UPDATE mission_tasks SET input=json_set(input,'$.prompt','A different question') WHERE id=?",
+    )
+    .bind(edited.claimed.task.id)
+    .run();
+  await recoverMissions({ DB: db });
+  assert.equal(
+    (await edited.store.task(edited.claimed.task.id)).status,
+    'failed',
+  );
+  assert.match(
+    (await edited.store.task(edited.claimed.task.id)).error!,
+    /inputs or upstream results changed/,
+  );
+});

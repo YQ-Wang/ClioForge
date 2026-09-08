@@ -7,6 +7,7 @@ import {
 } from './types';
 
 export const recipeKinds = [
+  'dossier',
   'extract',
   'audit',
   'discover',
@@ -16,6 +17,10 @@ export const recipeKinds = [
 ] as const;
 export type RecipeKind = (typeof recipeKinds)[number];
 export const recipeLabels: Record<RecipeKind, [string, string]> = {
+  dossier: [
+    '后台研究准备：逐份阅读、质疑与汇总',
+    'Background research: read, challenge and synthesize',
+  ],
   seminar: [
     '研究研讨：解释、质疑与回应',
     'Research discussion: interpretation, critique and response',
@@ -295,6 +300,97 @@ export function agentRecipe(options: {
         { batch: offset / 20 + 1 },
       );
     }
+  } else if (method.kind === 'dossier') {
+    const groups = [...new Set(pages.map((p) => p.version_id))].map((id) =>
+      pages.filter((p) => p.version_id === id),
+    );
+    if (groups.length > 10)
+      throw new Error(
+        L('每轮最多选择 10 份资料。', 'Choose at most 10 sources per round.'),
+      );
+    const contract =
+      ' Return citations: [] and data={limitations:[up to three specific limitations],alternatives:[one to three substantive competing readings or overstatements, each tied to a passage and a way to distinguish them],next_steps:[one to three prioritized new sources and the precise question each could resolve]}. Keep the whole output brief: summary at most 200 Chinese characters or 150 English words; 1-2 alternatives at most 100 Chinese characters each; 1-2 next steps at most 80 Chinese characters each; 1-2 limitations at most 60 Chinese characters each. Do not repeat the overall question, whole letters or earlier summaries. Cite 2 to 12 supplied passage numbers directly in prose, such as [P3] or [P17]; Canwoo fills exact quotations. Do not use plain [1] markers or write quotation objects. Paraphrase, and label any translation. Distinguish source text, interpretation and missing evidence. Do not treat another assistant as an independent source.';
+    const readings = groups.map((refs, i) => {
+      const id = add(
+        L(`逐份阅读 ${i + 1}`, `Read source ${i + 1}`),
+        'model',
+        'compare',
+        refs,
+        [],
+        instruction +
+          " Read only this source's selected pages. The overall question names other sources that are assigned to separate readers; do not invent citation numbers for them or treat their absence in your assignment as a project-wide evidence gap. Identify the speaker, date and preparation/editorial boundaries, relevant observations, plausible readings and what these pages cannot answer. If irrelevant, explicitly say so; do not manufacture support." +
+          contract,
+        {
+          require_citations: true,
+          output_schema: 'dossier_answer_v1',
+          dossier_stage: 'reading',
+          output_repair_attempts: 1,
+        },
+      );
+      tasks.find((t) => t.id === id)!.input.effort = 'low';
+      return id;
+    });
+    const critic = add(
+      L(
+        '交叉质疑：差异、反证与材料依赖',
+        'Cross-check differences, counterevidence and source dependence',
+      ),
+      'model',
+      'counter',
+      pages,
+      readings,
+      instruction +
+        ' Compare the source readings against the original pages. Identify the strongest competing interpretations, overstatements, apparent contradictions and source dependence. Explain when differences reflect distinct speakers, dates or scope. Specify what new evidence would distinguish the alternatives. Agreement and quotation matching do not establish truth.' +
+        contract,
+      {
+        require_citations: true,
+        output_schema: 'dossier_answer_v1',
+        dossier_stage: 'critique',
+        output_repair_attempts: 1,
+      },
+    );
+    const synthesis = add(
+      L(
+        '整理待审读报告与下一步材料',
+        'Prepare a review dossier and next evidence to seek',
+      ),
+      'model',
+      'compare',
+      pages,
+      [...readings, critic],
+      instruction +
+        ' Prepare a concise research dossier with: the bounded answer; source-by-source coverage; competing explanations and response to the critique; unresolved questions; and a prioritized next-reading plan explaining what each new source could resolve. Clearly mark this as unreviewed research assistance. Never claim proposed searches were performed or unselected sources were read. Preserve genuine disagreement rather than forcing consensus.' +
+        contract,
+      {
+        require_citations: true,
+        output_schema: 'dossier_answer_v1',
+        dossier_stage: 'synthesis',
+        output_repair_attempts: 1,
+      },
+    );
+    const verify = add(
+      L('核对报告出处', 'Check dossier quotations'),
+      'builtin',
+      'verify',
+      pages,
+      [synthesis],
+    );
+    const review = add(
+      L('审读后台研究报告', 'Review the background research dossier'),
+      'human',
+      'review',
+      pages,
+      [synthesis, verify],
+      '',
+      { dossier_stage: 'review' },
+    );
+    add(
+      L('保存已审读研究报告', 'Save the reviewed research dossier'),
+      'builtin',
+      'publish',
+      pages,
+      [synthesis, review],
+    );
   } else if (method.kind === 'seminar') {
     const shared =
       instruction +

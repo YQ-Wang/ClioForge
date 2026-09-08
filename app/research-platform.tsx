@@ -912,6 +912,14 @@ export default function ResearchPlatform({
                             start: L('开始研究', 'Research started'),
                             claimed: L('开始处理', 'Work started'),
                             retry: L('重新尝试', 'Retried'),
+                            response_recovered: L(
+                              '已恢复保存的回答',
+                              'Saved response recovered',
+                            ),
+                            output_retry: L(
+                              '自动纠正输出',
+                              'Output correction scheduled',
+                            ),
                             board_moved: L(
                               '调整看板安排',
                               'Board arrangement updated',
@@ -929,7 +937,17 @@ export default function ResearchPlatform({
                                 return event.detail;
                               }
                             })()
-                          : event.detail}
+                          : event.kind === 'response_recovered'
+                            ? L(
+                                '复用已保存的模型回答继续处理，没有新增模型请求。',
+                                'Continued with the saved model response; no new model request.',
+                              )
+                            : event.kind === 'output_retry'
+                              ? L(
+                                  '在项目预算内自动纠正一次格式或引文问题，原始回答保留在记录中。',
+                                  'One output correction within the project budget; the original response is retained.',
+                                )
+                              : event.detail}
                       </span>
                       <small>
                         {overview.members.find(
@@ -1684,8 +1702,8 @@ function MissionForm({
             </strong>
             <small>
               {L(
-                '选任务 → 试读材料 → 你来纠正 → 继续处理',
-                'Choose a task → read a sample → correct → continue',
+                '确认问题与范围 → 助手准备 → 你来审读',
+                'Confirm question and scope → assistant preparation → your review',
               )}
             </small>
           </span>
@@ -1809,15 +1827,20 @@ function MissionForm({
                 </label>
               )}
               <div className="recipe-preview">
-                {recipe === 'extract'
+                {recipe === 'dossier'
                   ? L(
-                      '试读样本 → 纠正标准 → 独立样本核查 → 后续摘录 → 审读与导出',
-                      'Sample → correct rules → held-out review → remaining pages → review and export',
+                      '逐份阅读 → 交叉质疑 → 待审读报告 → 核对出处 → 你来审读。确认计划与预算后可离开页面；助手只读本轮选定的页，格式或引文问题可在预算内自动纠正一次；超时、预算不足或依据变化会停止相关步骤。',
+                      'Read each source → challenge interpretations → prepare a dossier → check quotations → your review. After confirming the plan and budget, you can leave the page. Only selected pages are read. Output problems allow one correction within budget; timeouts, budget limits or changed evidence stop affected steps.',
                     )
-                  : L(
-                      '助手执行 → 核查出处 → 你来审读 → 保存研究意见',
-                      'Assistant work → source checks → your review → save findings',
-                    )}
+                  : recipe === 'extract'
+                    ? L(
+                        '试读样本 → 纠正标准 → 独立样本核查 → 后续摘录 → 审读与导出',
+                        'Sample → correct rules → held-out review → remaining pages → review and export',
+                      )
+                    : L(
+                        '助手执行 → 核查出处 → 你来审读 → 保存研究意见',
+                        'Assistant work → source checks → your review → save findings',
+                      )}
               </div>
             </>
           )}

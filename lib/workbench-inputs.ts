@@ -208,6 +208,7 @@ export const jobInput = z.object({
   output_format: z.literal('json').optional(),
   output_schema: z
     .enum([
+      'dossier_answer_v1',
       'comparison_answer_v1',
       'reading_answer_v1',
       'research_discussion_v1',

@@ -5,6 +5,7 @@
 - [Project overview and local setup](../README.md)
 - [中文说明](../README.zh-CN.md)
 - [Development and architecture](development.md)
+- [Prepare a source-linked dossier in the background](background-dossier.md)
 - [From reviewed research to a manuscript draft](manuscript-workflow.md)
 - [Deploying your own Cloudflare installation](deployment.md)
 - [Google sign-in and Drive setup](cloud-drive-setup.md)
@@ -23,3 +24,5 @@ Latest practical evaluation: [three historical-source pilots, September 6, 2026]
 Follow-up: [implemented recovery fixes and live verification](pilot-recovery-2026-09-06.md).
 
 Latest workflow pass: [Adams case, sidebar ordering and live manuscript validation, September 7, 2026](workflow-e2e-2026-09-07.md), including permission fixes, provider failures and browser checks still pending.
+
+Background preparation: [Adams dossier, saved-response recovery and bounded output correction](background-dossier-validation-2026-09-07.md).

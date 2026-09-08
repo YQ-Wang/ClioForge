@@ -56,6 +56,7 @@ export function canRepairProse(task: MissionTask) {
       typeof task.input.parameters.conversation_root_id === 'string' ||
       typeof task.input.parameters.output_schema === 'string') &&
     [
+      'dossier_answer_v1',
       'comparison_answer_v1',
       'reading_answer_v1',
       'research_discussion_v1',

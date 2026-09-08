@@ -93,6 +93,7 @@ export type Job = {
     page_refs?: { version_id: string; page: number }[];
     output_format?: 'json';
     output_schema?:
+      | 'dossier_answer_v1'
       | 'comparison_answer_v1'
       | 'reading_answer_v1'
       | 'research_discussion_v1'

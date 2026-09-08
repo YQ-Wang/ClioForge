@@ -413,13 +413,16 @@ export class MissionStore extends ResearchStore {
       );
     if (
       task.executor === 'model' &&
-      (task.input.parameters.output_schema === 'comparison_answer_v1' ||
+      (task.input.parameters.output_schema === 'dossier_answer_v1' ||
+        task.input.parameters.output_schema === 'comparison_answer_v1' ||
         task.input.parameters.output_schema === 'reading_answer_v1' ||
         task.input.parameters.output_schema === 'research_discussion_v1')
     )
       checkReadingOutput(
         result,
-        task.input.parameters.output_schema === 'comparison_answer_v1',
+        ['comparison_answer_v1', 'dossier_answer_v1'].includes(
+          String(task.input.parameters.output_schema),
+        ),
       );
     const allowed = new Set(task.input.version_ids);
     const dependencies = (

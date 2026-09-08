@@ -17,6 +17,7 @@ Bring together archival documents, reading notes, evidence and research tasks. C
 - Turn reviewed claims and evidence into a [bounded manuscript draft](docs/manuscript-workflow.md), with chapter progress, source references, coverage checks and a final human review.
 - Organize research questions, competing interpretations and evidence. Build research plans with a draggable task board and reviewable assistant results.
 - Run bounded extraction, comparison and research workflows using your own model API keys. Track execution, dependencies and estimated spending.
+- Prepare a [background research dossier](docs/background-dossier.md): per-source reading, cross-critique and source-linked synthesis, ending at human review.
 - Collaborate through project invitations, roles and task discussions. Export and restore project backups including originals.
 - Work in English or Chinese, with light and dark themes.
 

@@ -1,3 +1,4 @@
+import { DOSSIER_OUTPUT_SCHEMA, dossierPassages } from './dossier-output';
 import { z } from 'zod';
 import { ResearchStore } from './store';
 import { jobInput } from './workbench-inputs';
@@ -43,6 +44,7 @@ export async function jobMaterials(
   ids: string[],
   projectId: string,
   refs?: { version_id: string; page: number }[],
+  outputSchema?: string,
 ) {
   const versions = await Promise.all(
     [...new Set(ids)].map((id) => store.version(id)),
@@ -62,19 +64,29 @@ export async function jobMaterials(
       ))
   )
     throw new HttpError(400, '所选页不在固定资料版本中。');
-  const text = versions
-    .map(
-      (v) =>
-        `[固定版本ID ${v.id} / 版本 ${v.revision}; citations.version_id must use this fixed version ID]\n${v.pages
-          .filter(
-            (p) =>
-              !refs ||
-              refs.some((r) => r.version_id === v.id && r.page === p.page),
+  const text =
+    outputSchema === DOSSIER_OUTPUT_SCHEMA
+      ? dossierPassages(versions, refs)
+          .map(
+            (p, i) =>
+              `[P${i + 1}] (fixed version ${p.version_id}, page ${p.page})\n${p.quote}`,
           )
-          .map((p) => `[页 ${p.page}]\n${p.text}`)
-          .join('\n')}`,
-    )
-    .join('\n\n');
+          .join('\n\n')
+      : versions
+          .map(
+            (v) =>
+              `[固定版本ID ${v.id} / 版本 ${v.revision}; citations.version_id must use this fixed version ID]\n${v.pages
+                .filter(
+                  (p) =>
+                    !refs ||
+                    refs.some(
+                      (r) => r.version_id === v.id && r.page === p.page,
+                    ),
+                )
+                .map((p) => `[页 ${p.page}]\n${p.text}`)
+                .join('\n')}`,
+          )
+          .join('\n\n');
   if (text.length > 100000)
     throw new HttpError(400, '材料超过 10 万字，请减少所选资料。');
   return text;
@@ -93,6 +105,7 @@ export async function createJob(
       input.version_ids,
       input.project_id,
       input.page_refs,
+      input.output_schema,
     );
   const inputBound =
     new TextEncoder().encode(materials + input.prompt + researchSystem).length +
@@ -330,6 +343,7 @@ export async function executeJob(
       job.version_ids,
       job.project_id,
       job.model_snapshot.page_refs,
+      job.model_snapshot.output_schema,
     );
     await store.project(job.project_id, 'write');
     const parent = job.model_snapshot.mission_task;
@@ -369,11 +383,13 @@ export async function executeJob(
       key,
       system:
         researchSystemForLocale(job.locale) +
-        (job.model_snapshot.output_schema === 'manuscript_section_v2'
-          ? ' 稿件章节正文放在 data.paragraphs，引用选择已确认摘录的 citation_number；顶层 citations 必须为空，由应用补齐。summary 仅为简短进度说明。'
-          : job.prompt.startsWith('Task:')
-            ? ' 本任务的引用格式覆盖默认格式：summary 中只用 [1]、[2] 对应 citations 数组的序号，不使用材料ID标记；只返回 JSON。不要在 summary 添加未列入 citations 的直接引语。'
-            : ''),
+        (job.model_snapshot.output_schema === DOSSIER_OUTPUT_SCHEMA
+          ? ' 本任务的引用格式覆盖默认格式：summary 中只用 [P编号] 选择所给原文片段，citations 必须返回空数组，由 Canwoo 填写准确原文。不要抄写或拼接引文。'
+          : job.model_snapshot.output_schema === 'manuscript_section_v2'
+            ? ' 稿件章节正文放在 data.paragraphs，引用选择已确认摘录的 citation_number；顶层 citations 必须为空，由应用补齐。summary 仅为简短进度说明。'
+            : job.prompt.startsWith('Task:')
+              ? ' 本任务的引用格式覆盖默认格式：summary 中只用 [1]、[2] 对应 citations 数组的序号，不使用材料ID标记；只返回 JSON。不要在 summary 添加未列入 citations 的直接引语。'
+              : ''),
       prompt: `${job.prompt}\n\n<materials>\n${materials}\n</materials>`,
       maxOutput: job.max_output,
       outputFormat: job.model_snapshot.output_format,

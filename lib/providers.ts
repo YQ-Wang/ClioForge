@@ -1,3 +1,7 @@
+import {
+  DOSSIER_OUTPUT_SCHEMA,
+  dossierOutputJsonSchema,
+} from './dossier-output';
 import { boundedBytes } from './files';
 import {
   MANUSCRIPT_OUTPUT_SCHEMA,
@@ -53,6 +57,7 @@ export type ModelRequest = {
   outputFormat?: 'json';
   sourceVersionIds?: string[];
   outputSchema?:
+    | typeof DOSSIER_OUTPUT_SCHEMA
     | typeof COMPARISON_OUTPUT_SCHEMA
     | typeof READING_OUTPUT_SCHEMA
     | typeof DISCUSSION_OUTPUT_SCHEMA
@@ -64,6 +69,8 @@ export type ModelRequest = {
   priceCeiling?: { input: number; output: number };
 };
 function constrainedSchema(input: ModelRequest) {
+  if (input.outputSchema === DOSSIER_OUTPUT_SCHEMA)
+    return dossierOutputJsonSchema;
   if (input.outputSchema === MANUSCRIPT_OUTPUT_SCHEMA)
     return manuscriptOutputJsonSchema;
   if (input.outputSchema === 'manuscript_section_v1')
@@ -133,6 +140,7 @@ export function providerRequest(input: ModelRequest): {
         ...(input.outputFormat === 'json'
           ? {
               response_format:
+                input.outputSchema === DOSSIER_OUTPUT_SCHEMA ||
                 input.outputSchema === COMPARISON_OUTPUT_SCHEMA ||
                 input.outputSchema === READING_OUTPUT_SCHEMA ||
                 input.outputSchema === DISCUSSION_OUTPUT_SCHEMA ||
