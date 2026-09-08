@@ -142,6 +142,13 @@ export const workbenchInput = z.discriminatedUnion('action', [
     relation: z.enum(['supports', 'challenges', 'context']),
   }),
   z.object({
+    action: z.literal('unlink_evidence'),
+    project_id: id,
+    claim_id: id,
+    evidence_id: id,
+    expected: z.number().int().positive(),
+  }),
+  z.object({
     action: z.literal('source_relation'),
     project_id: id,
     from_source: id,

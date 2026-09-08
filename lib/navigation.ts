@@ -84,6 +84,19 @@ export function projectPath(projectId: string, tab = 'overview') {
 export function sourcePath(projectId: string, versionId: string, page: number) {
   return `${projectPath(projectId, 'sources')}&version=${encodeURIComponent(versionId)}&page=${page}`;
 }
+export function argumentPath(
+  projectId: string,
+  questionId: string,
+  claimId?: string,
+) {
+  const params = new URLSearchParams({
+    project: projectId,
+    tab: 'arguments',
+    question: questionId,
+  });
+  if (claimId) params.set('claim', claimId);
+  return `/?${params}`;
+}
 // OAuth returns only to the workspace, never to a supplied host or arbitrary route.
 export function safeWorkspaceReturn(value: string) {
   if (!URL.canParse(value, 'https://canwoo.invalid')) return '/';

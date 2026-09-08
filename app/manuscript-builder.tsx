@@ -1,7 +1,14 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, FilePenLine, Plus, X } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  CircleAlert,
+  FilePenLine,
+  Plus,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,13 +22,15 @@ import {
 import { useI18n } from '@/lib/i18n/provider';
 import { api, projectRows } from '@/lib/client-api';
 import { noteHeads } from '@/lib/notes';
-import { projectPath, sourcePath } from '@/lib/navigation';
+import { argumentPath, projectPath, sourcePath } from '@/lib/navigation';
+import type { DraftClaim, DraftIssue } from '@/lib/manuscript-readiness';
 import { DEFAULT_RESEARCH_MODEL, GLM_PRICE_CEILING } from '@/lib/model-routing';
 import type { Model, Note } from '@/lib/types';
 import type { ManuscriptBundle, manuscriptRuns } from '@/lib/manuscript';
 type Overview = {
   questions: { id: string; title: string }[];
   claims: { id: string; question_id: string; body: string; kind: string }[];
+  readiness: { claims: DraftClaim[]; truncated: boolean };
   budget: { limit_units: number; committed_units: number } | null;
   runs: Awaited<ReturnType<typeof manuscriptRuns>>;
 };
@@ -95,14 +104,19 @@ export default function ManuscriptBuilder({
   }
   async function refresh() {
     try {
-      receive(await api<Overview>(`/api/manuscripts?project_id=${projectId}`));
+      const result = await api<Overview>(
+        `/api/manuscripts?project_id=${projectId}`,
+      );
+      receive(result);
       setLoadError('');
+      return result;
     } catch (e) {
       setLoadError(
         e instanceof Error
           ? e.message
           : L('无法读取论文进度。', 'Could not load manuscript progress.'),
       );
+      return false;
     }
   }
   useEffect(() => {
@@ -183,7 +197,23 @@ export default function ManuscriptBuilder({
       },
     ]);
     try {
-      await refresh();
+      const current = await refresh();
+      if (!current)
+        throw new Error(
+          L(
+            '起草准备信息未能更新，请重试。',
+            'Could not refresh drafting readiness. Please try again.',
+          ),
+        );
+      const requested = new URLSearchParams(window.location.search).get(
+        'question',
+      );
+      const initialQuestion = current.questions.find((q) => q.id === requested);
+      if (initialQuestion) {
+        setQuestion(initialQuestion.id);
+        setTitle(initialQuestion.title.slice(0, 160));
+        setSelected([]);
+      }
       const result = await api<{ models: Model[] }>('/api/workspace?models=1');
       setModels(result.models);
       const chosen =
@@ -283,6 +313,35 @@ export default function ManuscriptBuilder({
     audience.trim() &&
     sections.length >= 2 &&
     sections.every((s) => s.title.trim() && s.goal.trim());
+  const questionClaims =
+    data?.readiness.claims.filter((claim) => claim.question_id === question) ||
+    [];
+  const available = questionClaims.filter((claim) => !claim.issues.length);
+  const issueLabel = (issue: DraftIssue) =>
+    ({
+      needs_review: L('等待研究者审读', 'Awaiting researcher review'),
+      missing_evidence: L('尚未关联证据', 'No evidence linked'),
+      invalid_source: L(
+        '关联原文不可用，请重新核查',
+        'Linked source unavailable; check the evidence',
+      ),
+      stale_source: L(
+        '原文已有新版，请重新核对摘录',
+        'A newer source version needs checking',
+      ),
+      quote_mismatch: L(
+        '摘录与固定原文不符',
+        'Excerpt does not match its fixed source',
+      ),
+      too_many_evidence: L(
+        '超过 30 条证据，请缩小本轮论点范围',
+        'Over 30 excerpts; narrow the claim',
+      ),
+      too_many_sources: L(
+        '超过 10 份材料，请缩小本轮论点范围',
+        'Over 10 sources; narrow the claim',
+      ),
+    })[issue];
   return (
     <section
       className="manuscript-panel"
@@ -441,6 +500,7 @@ export default function ManuscriptBuilder({
                   'Which question will the article answer?',
                 )}
                 <select
+                  disabled={busy}
                   value={question}
                   onChange={(e) => {
                     setQuestion(e.target.value);
@@ -468,10 +528,87 @@ export default function ManuscriptBuilder({
                   'Choose reviewed claims and alternatives. Their linked supporting and contrary evidence will both be included.',
                 )}
               </p>
+              {busy ? (
+                <output>
+                  {L(
+                    '正在检查论点与材料版本…',
+                    'Checking claims and source versions…',
+                  )}
+                </output>
+              ) : (
+                !!question && (
+                  <section
+                    className="manuscript-readiness"
+                    aria-label={L('起草准备清单', 'Drafting readiness')}
+                  >
+                    <header>
+                      <h3>{L('起草准备清单', 'Drafting readiness')}</h3>
+                      <span>
+                        {L(
+                          `${available.length} / ${questionClaims.length} 条可继续`,
+                          `${available.length} / ${questionClaims.length} ready to continue`,
+                        )}
+                      </span>
+                    </header>
+                    <p>
+                      {L(
+                        '这些检查说明能否进入起草，不代表论点已经成立。先处理缺口，再决定采用哪些论点。',
+                        'These checks indicate drafting prerequisites, not whether a claim is true. Resolve gaps, then choose what to use.',
+                      )}
+                    </p>
+                    {questionClaims
+                      .filter((c) => c.issues.length)
+                      .map((c) => (
+                        <article key={c.id}>
+                          <CircleAlert size={18} aria-hidden="true" />
+                          <div>
+                            <p>{c.body}</p>
+                            <ul>
+                              {c.issues.map((issue) => (
+                                <li key={issue}>{issueLabel(issue)}</li>
+                              ))}
+                            </ul>
+                            <Link
+                              href={argumentPath(projectId, question, c.id)}
+                              onClick={() => setOpen(false)}
+                            >
+                              {L(
+                                '定位并处理这条论点',
+                                'Open this claim to resolve',
+                              )}{' '}
+                              <ArrowRight size={14} />
+                            </Link>
+                          </div>
+                        </article>
+                      ))}
+                    {!questionClaims.length && (
+                      <p>
+                        {L(
+                          '这个问题还没有研究判断或竞争解释。',
+                          'This question has no claims or alternative interpretations yet.',
+                        )}{' '}
+                        <Link
+                          href={argumentPath(projectId, question)}
+                          onClick={() => setOpen(false)}
+                        >
+                          {L('添加论点', 'Add a claim')}
+                        </Link>
+                      </p>
+                    )}
+                    {data?.readiness.truncated && (
+                      <p>
+                        {L(
+                          '当前仅显示部分论点，请在问题与论证中查看完整项目。',
+                          'Only part of the claim list is shown. View the full project in Questions & arguments.',
+                        )}
+                      </p>
+                    )}
+                  </section>
+                )
+              )}
               <div className="manuscript-selection">
-                {data?.claims
-                  .filter((c) => c.question_id === question)
-                  .map((c) => (
+                {!busy &&
+                  available.map((c) => (
                     <label key={c.id}>
                       <input
                         type="checkbox"
@@ -486,6 +623,13 @@ export default function ManuscriptBuilder({
                       />
                       <span>
                         {c.body}
+                        <small>
+                          <CheckCircle2 size={14} aria-hidden="true" />{' '}
+                          {L(
+                            `已审读 · ${c.evidence_count} 条证据 · ${c.source_count} 份材料`,
+                            `Reviewed · ${c.evidence_count} excerpt${c.evidence_count === 1 ? '' : 's'} · ${c.source_count} source${c.source_count === 1 ? '' : 's'}`,
+                          )}
+                        </small>
                         {c.kind === 'alternative' && (
                           <small>
                             {L('竞争解释', 'Alternative interpretation')}
@@ -495,12 +639,11 @@ export default function ManuscriptBuilder({
                     </label>
                   ))}
               </div>
-              {(!question ||
-                !data?.claims.some((c) => c.question_id === question)) && (
+              {!busy && !question && (
                 <p>
                   {L(
-                    '还没有可用的已审读论点？先在「问题与论证」关联证据并完成审读。',
-                    'No reviewed claims yet? Link evidence and review claims in Questions & arguments.',
+                    '先选择研究问题，查看每条论点的准备情况。',
+                    'Choose a question to see what each claim still needs.',
                   )}{' '}
                   <Link href={projectPath(projectId, 'arguments')}>
                     {L('前往问题与论证', 'Open questions & arguments')}
@@ -509,7 +652,14 @@ export default function ManuscriptBuilder({
               )}
               <Button
                 disabled={
-                  busy || !question || !selected.length || selected.length > 20
+                  busy ||
+                  !!loadError ||
+                  !question ||
+                  !selected.length ||
+                  selected.length > 20 ||
+                  selected.some(
+                    (id) => !available.some((claim) => claim.id === id),
+                  )
                 }
                 onClick={() => void inspect()}
               >

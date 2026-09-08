@@ -2624,6 +2624,109 @@
   display: block;
   color: var(--muted-foreground);
 }
+.manuscript-selection small svg {
+  display: inline;
+  vertical-align: -2px;
+}
+.manuscript-readiness {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  background: var(--muted);
+  min-width: 0;
+}
+.manuscript-readiness > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.manuscript-readiness h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+.manuscript-readiness > header span,
+.manuscript-readiness > p {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.manuscript-readiness article {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.manuscript-readiness article > svg {
+  flex: none;
+  margin-top: 4px;
+  color: var(--muted-foreground);
+}
+.manuscript-readiness article > div {
+  min-width: 0;
+}
+.manuscript-readiness article p {
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+.manuscript-readiness ul {
+  padding-left: 18px;
+  margin: 8px 0;
+  color: var(--muted-foreground);
+}
+.manuscript-readiness a,
+.claim-draft-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  color: var(--primary);
+  font-weight: 500;
+}
+.claim-draft-link {
+  padding: 4px 10px;
+  font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.question-board > .section-toolbar {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.question-board > .section-toolbar > div:first-child {
+  flex: 1 1 340px;
+  min-width: 0;
+}
+.question-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.claim-draft-link:hover,
+.manuscript-readiness a:hover {
+  text-decoration: underline;
+}
+.question-board,
+.claim-card {
+  scroll-margin-top: 96px;
+}
+.claim-card[data-located='true'] {
+  border-color: var(--primary);
+}
+.claim-evidence-row {
+  border-top: 1px solid var(--border);
+  padding: 6px 0;
+}
+.claim-evidence-row > button.linked-evidence {
+  width: 100%;
+}
+.claim-evidence-row > button:last-child {
+  margin-left: auto;
+  display: flex;
+}
 .manuscript-counts {
   display: flex;
   flex-wrap: wrap;
@@ -2699,4 +2802,26 @@
 }
 .manuscript-result-link:hover {
   background: var(--accent);
+}
+.claim-evidence-preview {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.claim-evidence-preview blockquote {
+  border-left: 3px solid var(--primary);
+  margin: 0;
+  padding-left: 12px;
+  line-height: 1.65;
+}
+.claim-evidence-preview p {
+  color: var(--muted-foreground);
+}
+.claim-evidence-preview > button {
+  justify-self: start;
 }

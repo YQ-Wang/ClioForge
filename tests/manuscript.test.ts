@@ -20,6 +20,7 @@ import type { invoke } from '../lib/providers';
 import type { Note } from '../lib/types';
 import { providerRequest } from '../lib/providers';
 import { WorkbenchStore } from '../lib/workbench-store';
+import { manuscriptReadiness } from '../lib/manuscript-readiness';
 let mf: Miniflare, db: D1Database;
 before(async () => {
   mf = new Miniflare(
@@ -200,6 +201,193 @@ async function fixture() {
     response,
   };
 }
+void test('drafting preflight identifies review, linkage, source-version and quotation blockers without approving claims', async () => {
+  const f = await fixture();
+  const initial = await manuscriptReadiness(f.store, f.project.id);
+  assert.equal(initial.truncated, false);
+  assert.deepEqual(
+    initial.claims.map((c) => ({
+      id: c.id,
+      issues: c.issues,
+      count: c.evidence_count,
+    })),
+    [{ id: f.claim, issues: [], count: 1 }],
+  );
+  const draft = crypto.randomUUID();
+  await db
+    .prepare("INSERT INTO claims VALUES(?,?,?,?, 'alternative','draft',1,?)")
+    .bind(
+      draft,
+      f.project.id,
+      f.question,
+      'A competing interpretation still needs evidence.',
+      new Date().toISOString(),
+    )
+    .run();
+  assert.deepEqual(
+    (await manuscriptReadiness(f.store, f.project.id)).claims.find(
+      (c) => c.id === draft,
+    )?.issues,
+    ['needs_review', 'missing_evidence'],
+  );
+  await db
+    .prepare('INSERT INTO source_versions VALUES(?,?,?,?,?,?,?)')
+    .bind(
+      crypto.randomUUID(),
+      f.source,
+      f.project.id,
+      2,
+      JSON.stringify([{ page: 1, text: 'Revised transcription' }]),
+      'manual',
+      new Date().toISOString(),
+    )
+    .run();
+  assert.deepEqual(
+    (await manuscriptReadiness(f.store, f.project.id)).claims.find(
+      (c) => c.id === f.claim,
+    )?.issues,
+    ['stale_source'],
+  );
+  const damagedExcerpt = crypto.randomUUID();
+  await db
+    .prepare(
+      'INSERT INTO evidence(id,project_id,source_id,version_id,page,quote,question,interpretation,relation,created_at) SELECT ?,project_id,source_id,version_id,page,?,question,interpretation,relation,created_at FROM evidence WHERE id=?',
+    )
+    .bind(damagedExcerpt, 'Not in the fixed original', f.evidence)
+    .run();
+  await db
+    .prepare("INSERT INTO claim_evidence VALUES(?,?,?,?, 'context',?)")
+    .bind(
+      crypto.randomUUID(),
+      f.project.id,
+      f.claim,
+      damagedExcerpt,
+      new Date().toISOString(),
+    )
+    .run();
+  assert.deepEqual(
+    (await manuscriptReadiness(f.store, f.project.id)).claims.find(
+      (c) => c.id === f.claim,
+    )?.issues,
+    ['stale_source', 'quote_mismatch'],
+  );
+  const outsider = await fixture();
+  await assert.rejects(manuscriptReadiness(outsider.store, f.project.id));
+  assert.ok(
+    !(
+      await manuscriptReadiness(outsider.store, outsider.project.id)
+    ).claims.some((c) => c.id === f.claim),
+  );
+  assert.equal(
+    (
+      await db
+        .prepare('SELECT status FROM claims WHERE id=?')
+        .bind(f.claim)
+        .first()
+    )?.status,
+    'reviewed',
+  );
+});
+
+void test('changing or removing evidence invalidates claim review atomically and stale removals preserve the association', async () => {
+  const f = await fixture(),
+    work = new WorkbenchStore(db, f.store.owner);
+  await createManuscript(f.store, f.project.id, f.input);
+  const link = {
+    action: 'link_evidence' as const,
+    project_id: f.project.id,
+    claim_id: f.claim,
+    evidence_id: f.evidence,
+    relation: 'supports' as const,
+  };
+  await work.mutate(link);
+  assert.equal((await manuscriptRuns(f.store, f.project.id))[0].changed, false);
+  assert.deepEqual(
+    await db
+      .prepare('SELECT status,revision FROM claims WHERE id=?')
+      .bind(f.claim)
+      .first(),
+    { status: 'reviewed', revision: 1 },
+  );
+  await work.mutate({ ...link, relation: 'context' });
+  assert.equal((await manuscriptRuns(f.store, f.project.id))[0].changed, true);
+  assert.deepEqual(
+    await db
+      .prepare('SELECT status,revision FROM claims WHERE id=?')
+      .bind(f.claim)
+      .first(),
+    { status: 'draft', revision: 2 },
+  );
+  await assert.rejects(
+    manuscriptBundle(f.store, f.project.id, f.question, [f.claim]),
+  );
+  await work.mutate({
+    action: 'claim',
+    project_id: f.project.id,
+    id: f.claim,
+    expected: 2,
+    question_id: f.question,
+    body: f.bundle.claims[0].body,
+    kind: 'claim',
+    status: 'reviewed',
+  });
+  assert.equal((await manuscriptRuns(f.store, f.project.id))[0].changed, true);
+  const remove = {
+    action: 'unlink_evidence' as const,
+    project_id: f.project.id,
+    claim_id: f.claim,
+    evidence_id: f.evidence,
+    expected: 2,
+  };
+  await assert.rejects(work.mutate(remove), /更新/);
+  assert.deepEqual(
+    await db
+      .prepare('SELECT status,revision FROM claims WHERE id=?')
+      .bind(f.claim)
+      .first(),
+    { status: 'reviewed', revision: 3 },
+  );
+  assert.ok(
+    await db
+      .prepare('SELECT id FROM claim_evidence WHERE claim_id=?')
+      .bind(f.claim)
+      .first(),
+  );
+  const outsider = await fixture();
+  await assert.rejects(
+    new WorkbenchStore(db, outsider.store.owner).mutate({
+      ...remove,
+      expected: 3,
+    }),
+  );
+  await work.mutate({ ...remove, expected: 3 });
+  assert.deepEqual(
+    await db
+      .prepare('SELECT status,revision FROM claims WHERE id=?')
+      .bind(f.claim)
+      .first(),
+    { status: 'draft', revision: 4 },
+  );
+  assert.equal(
+    await db
+      .prepare('SELECT id FROM claim_evidence WHERE claim_id=?')
+      .bind(f.claim)
+      .first(),
+    null,
+  );
+  assert.ok(
+    await db
+      .prepare('SELECT id FROM evidence WHERE id=?')
+      .bind(f.evidence)
+      .first(),
+  );
+  await work.mutate(link);
+  assert.deepEqual(
+    (await manuscriptReadiness(f.store, f.project.id)).claims[0].issues,
+    ['needs_review'],
+  );
+});
+
 void test('manuscript workflow freezes research, drafts sequentially, saves once, preserves edits and exports source footnotes', async () => {
   const f = await fixture();
   const [mission, repeated] = await Promise.all([

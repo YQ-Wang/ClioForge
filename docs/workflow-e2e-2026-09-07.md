@@ -87,3 +87,23 @@ The browser exercise exposed four application issues, corrected in this follow-u
 4. Drawing-only notes appeared to have no body in the library. Cards now include drawing captions, with a focused regression for this case.
 
 Eight focused note and rich-export tests passed. This follow-up made no model request. It does not extend the evidence for OCR accuracy, scheduled discovery, completed Drive import or autonomous scholarly reasoning.
+
+## Drafting readiness and evidence-maintenance follow-up
+
+Continued Chrome use of the Adams case exposed a gap between argument review and drafting: a question with an unreviewed claim showed a generic instruction, without identifying the claim or offering a direct route to resolve it. The drafting dialog now lists each claim's review, evidence, quotation and source-version blockers. Links focus the relevant claim; returning to drafting retains the research question. These checks are prerequisites, not a credibility score, and the existing preview and execution checks remain authoritative.
+
+Evidence associations also needed maintenance controls. Researchers can now remove an association while retaining the original excerpt and its discussion. Adding evidence, changing its relationship or removing it returns the claim to draft in the same database transaction. Repeating an unchanged association preserves review. A stale removal fails without deleting the association. Existing manuscript snapshots remain marked as changed even after a subsequent review; their original notes are preserved.
+
+The association dialog now shows the full excerpt, source, file page and saved interpretation, with a route back to the original page. Reading-question labels distinguish repeated excerpts used for different questions.
+
+Actual browser acceptance on the isolated local copy:
+
+1. Opened the formal question's preparation checklist and followed its blocker to the precise claim.
+2. Removed the functional test claim's association. The four original excerpts remained, the claim became unreviewed, and drafting showed both missing evidence and pending review.
+3. Used the association preview to open the May 7 source at the selected excerpt and inspect the surrounding passage, then returned and re-associated it. The claim still required review.
+4. Confirmed the bounded functional claim after checking that passage. The checklist changed to one eligible claim; the next step showed one excerpt, its fixed version and page, one candidate person, and the attached bibliography. Continued to outline and budget without initiating a new model call.
+5. Inspected the new checklist, focused claim, action layout and excerpt preview in English and dark appearance, including a 390 × 844 viewport. Scrolling exposed the complete mobile checklist and its action. The production project's formal claim remained unreviewed.
+
+The default full suite passed 234 tests with one optional archive test skipped. Supplying the existing final Adams backup passed all nine lifecycle tests, including that archive test. Nine manuscript tests cover the new blockers, project isolation, atomic review invalidation, idempotent associations, stale removal and snapshot invalidation, alongside existing drafting and citation behavior. Type checking, lint, comment-policy and formatting checks passed.
+
+This pass improves the repeatable handoff from evidence maintenance to reviewed inputs and drafting. It does not measure research time saved or establish unattended scholarly validity. It adds no model calls, database migration, Cloudflare resource or fixed subscription.

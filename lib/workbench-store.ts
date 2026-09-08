@@ -242,20 +242,53 @@ export class WorkbenchStore extends ResearchStore {
       case 'link_evidence': {
         await this.ownedRow('claims', input.claim_id, projectId);
         await this.ownedRow('evidence', input.evidence_id, projectId);
-        await this.db
-          .prepare(
-            'INSERT INTO claim_evidence VALUES(?,?,?,?,?,?) ON CONFLICT(claim_id,evidence_id) DO UPDATE SET relation=excluded.relation',
-          )
-          .bind(
-            id,
-            projectId,
-            input.claim_id,
-            input.evidence_id,
-            input.relation,
-            date,
-          )
-          .run();
+        await this.db.batch([
+          this.db
+            .prepare(
+              'INSERT INTO claim_evidence VALUES(?,?,?,?,?,?) ON CONFLICT(claim_id,evidence_id) DO UPDATE SET relation=excluded.relation WHERE claim_evidence.relation<>excluded.relation',
+            )
+            .bind(
+              id,
+              projectId,
+              input.claim_id,
+              input.evidence_id,
+              input.relation,
+              date,
+            ),
+          // Invalidate review in the same transaction, only when the edge changed.
+          this.db
+            .prepare(
+              "UPDATE claims SET status='draft',revision=revision+1 WHERE id=? AND project_id=? AND changes()>0",
+            )
+            .bind(input.claim_id, projectId),
+        ]);
         return id;
+      }
+      case 'unlink_evidence': {
+        await this.ownedRow('claims', input.claim_id, projectId);
+        await this.ownedRow('evidence', input.evidence_id, projectId);
+        const results = await this.db.batch([
+          this.db
+            .prepare(
+              'DELETE FROM claim_evidence WHERE claim_id=? AND evidence_id=? AND project_id=? AND EXISTS (SELECT 1 FROM claims WHERE id=? AND project_id=? AND revision=?)',
+            )
+            .bind(
+              input.claim_id,
+              input.evidence_id,
+              projectId,
+              input.claim_id,
+              projectId,
+              input.expected,
+            ),
+          this.db
+            .prepare(
+              "UPDATE claims SET status='draft',revision=revision+1 WHERE id=? AND project_id=? AND changes()>0",
+            )
+            .bind(input.claim_id, projectId),
+        ]);
+        if (!results[0].meta.changes)
+          throw new HttpError(409, '论点或证据关联已更新，请刷新后再试。');
+        return input.claim_id;
       }
       case 'source_relation': {
         const a = await this.source(input.from_source),

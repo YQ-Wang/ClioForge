@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { authenticate, failure, jsonBody, HttpError } from '@/lib/server';
 import { MissionStore } from '@/lib/platform/missions';
 import { dispatchMission } from '@/lib/platform/execute';
+import { manuscriptReadiness } from '@/lib/manuscript-readiness';
 import {
   manuscriptBundle,
   bundleHash,
@@ -24,14 +25,10 @@ export async function GET(request: Request) {
         .bind(project)
         .all()
     ).results;
-    const claims = (
-      await store.db
-        .prepare(
-          "SELECT id,question_id,body,kind FROM claims WHERE project_id=? AND status='reviewed' AND kind<>'next_step' ORDER BY created_at DESC LIMIT 500",
-        )
-        .bind(project)
-        .all()
-    ).results;
+    const readiness = await manuscriptReadiness(store, project);
+    const claims = readiness.claims.filter(
+      (claim) => claim.status === 'reviewed',
+    );
     const budget = await store.db
       .prepare(
         'SELECT limit_units,committed_units FROM project_budgets WHERE project_id=?',
@@ -39,7 +36,13 @@ export async function GET(request: Request) {
       .bind(project)
       .first();
     return Response.json(
-      { questions, claims, budget, runs: await manuscriptRuns(store, project) },
+      {
+        questions,
+        claims,
+        readiness,
+        budget,
+        runs: await manuscriptRuns(store, project),
+      },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (e) {

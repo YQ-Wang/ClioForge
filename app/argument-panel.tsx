@@ -1,7 +1,10 @@
 'use client';
 import { useI18n } from '@/lib/i18n/provider';
-import { useState } from 'react';
-import { Plus, GitBranch, Quote } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { ArrowRight, Plus, GitBranch, Quote } from 'lucide-react';
+import { useWorkspaceSearch } from '@/hooks/use-workspace-route';
+import { projectPath } from '@/lib/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,13 +44,46 @@ export default function ArgumentPanel({
   onOpenEvidence: (evidence: Evidence) => void;
 }) {
   const { t, locale } = useI18n();
+  const search = useWorkspaceSearch();
+  const params = new URLSearchParams(search);
+  const requestedClaim = data.claims.find((c) => c.id === params.get('claim'));
+  const requestedQuestion = data.questions.find(
+    (q) => q.id === params.get('question'),
+  );
+  const focusId = requestedClaim
+    ? `claim-${requestedClaim.id}`
+    : requestedQuestion
+      ? `question-${requestedQuestion.id}`
+      : '';
+  const focused = useRef('');
+  useEffect(() => {
+    const route = new URLSearchParams(search);
+    if (
+      route.get('tab') !== 'arguments' ||
+      route.get('project') !== projectId
+    ) {
+      focused.current = '';
+      return;
+    }
+    if (!focusId || focused.current === focusId) return;
+    const element = document.getElementById(focusId);
+    if (!element) return;
+    const frame = requestAnimationFrame(() => {
+      element.focus({ preventScroll: true });
+      element.scrollIntoView({ block: 'start' });
+      focused.current = focusId;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [search, focusId, projectId]);
   const [question, setQuestion] = useState<Question | null | undefined>(
       undefined,
     ),
     [claim, setClaim] = useState<Partial<Claim> | null>(null),
     [link, setLink] = useState<Claim | null>(null),
+    [selectedEvidenceId, setSelectedEvidenceId] = useState(''),
     [message, setMessage] = useState(''),
     [busy, setBusy] = useState(false);
+  const selectedEvidence = evidence.find((e) => e.id === selectedEvidenceId);
   async function submit(
     event: React.SyntheticEvent<HTMLFormElement>,
     kind: 'question' | 'claim' | 'link_evidence',
@@ -95,6 +131,33 @@ export default function ArgumentPanel({
       setBusy(false);
     }
   }
+  async function unlinkEvidence(c: Claim, evidenceId: string) {
+    setBusy(true);
+    setMessage('');
+    try {
+      await api('/api/workbench', {
+        action: 'unlink_evidence',
+        project_id: projectId,
+        claim_id: c.id,
+        evidence_id: evidenceId,
+        expected: c.revision,
+      });
+      await onSaved();
+      setMessage(
+        locale === 'en'
+          ? 'Association removed. The excerpt is retained and can be linked again. Review the claim with its remaining evidence.'
+          : '已移除关联，原始摘录仍保留，可重新关联。请根据剩余依据重新审读论点。',
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Could not update the evidence association.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <>
       <div className="section-toolbar">
@@ -116,13 +179,25 @@ export default function ArgumentPanel({
         </section>
       )}
       {data.questions.map((q) => (
-        <section className="question-board" key={q.id}>
+        <section
+          className="question-board"
+          key={q.id}
+          id={`question-${q.id}`}
+          tabIndex={-1}
+        >
           <div className="section-toolbar">
             <div>
               <h2>{q.title}</h2>
               <p>{q.detail}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="question-actions">
+              <Link
+                className="claim-draft-link"
+                href={`${projectPath(projectId, 'notes')}&question=${encodeURIComponent(q.id)}`}
+              >
+                {locale === 'en' ? 'Prepare a draft' : '查看起草准备'}
+                <ArrowRight size={14} />
+              </Link>
               <Button
                 variant="ghost"
                 disabled={!canWrite}
@@ -158,7 +233,15 @@ export default function ArgumentPanel({
                 {data.claims
                   .filter((c) => c.question_id === q.id && c.kind === kind)
                   .map((c) => (
-                    <article className="claim-card" key={c.id}>
+                    <article
+                      className="claim-card"
+                      key={c.id}
+                      id={`claim-${c.id}`}
+                      tabIndex={-1}
+                      data-located={
+                        focusId === `claim-${c.id}` ? 'true' : undefined
+                      }
+                    >
                       <span
                         className="status-tag"
                         data-state={c.status === 'reviewed' ? 'saved' : 'dirty'}
@@ -175,28 +258,48 @@ export default function ArgumentPanel({
                             (e) => e.id === edge.evidence_id,
                           );
                           return item ? (
-                            <button
-                              key={edge.id}
-                              className="linked-evidence"
-                              onClick={() => onOpenEvidence(item)}
-                            >
-                              <span
-                                className="status-tag"
-                                data-relation={edge.relation}
+                            <div className="claim-evidence-row" key={edge.id}>
+                              <button
+                                className="linked-evidence"
+                                onClick={() => onOpenEvidence(item)}
                               >
-                                {t(relationName[edge.relation])}
-                              </span>
-                              <Quote size={13} />
-                              <span>{item.quote.slice(0, 140)}</span>
-                              <small>
-                                {
-                                  sources.find((s) => s.id === item.source_id)
-                                    ?.title
-                                }{' '}
-                                {' · '}
-                                {t('文件第 {0} 页', { 0: item.page })}
-                              </small>
-                            </button>
+                                <span
+                                  className="status-tag"
+                                  data-relation={edge.relation}
+                                >
+                                  {t(relationName[edge.relation])}
+                                </span>
+                                <Quote size={13} />
+                                <span>{item.quote.slice(0, 140)}</span>
+                                <small>
+                                  {
+                                    sources.find((s) => s.id === item.source_id)
+                                      ?.title
+                                  }{' '}
+                                  {' · '}
+                                  {t('文件第 {0} 页', { 0: item.page })}
+                                </small>
+                              </button>
+                              {canWrite && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={busy}
+                                  aria-label={
+                                    locale === 'en'
+                                      ? `Remove association: ${item.quote.slice(0, 80)}`
+                                      : `移除关联：${item.quote.slice(0, 80)}`
+                                  }
+                                  onClick={() =>
+                                    void unlinkEvidence(c, item.id)
+                                  }
+                                >
+                                  {locale === 'en'
+                                    ? 'Remove association'
+                                    : '移除关联'}
+                                </Button>
+                              )}
+                            </div>
                           ) : null;
                         })}
                       <div className="flex gap-2 mt-3">
@@ -212,7 +315,11 @@ export default function ArgumentPanel({
                           variant="ghost"
                           size="sm"
                           disabled={!canWrite}
-                          onClick={() => setLink(c)}
+                          onClick={() => {
+                            setSelectedEvidenceId(evidence[0]?.id || '');
+                            setMessage('');
+                            setLink(c);
+                          }}
                         >
                           {t('关联证据')}
                         </Button>
@@ -367,15 +474,55 @@ export default function ArgumentPanel({
             onSubmit={(event) => void submit(event, 'link_evidence')}
             className="space-y-4"
           >
+            <p className="muted">
+              {locale === 'en'
+                ? 'Changing evidence returns this claim to review. Original excerpts are retained.'
+                : '调整依据后，这条论点会回到待核查；原始摘录始终保留。'}
+            </p>
             <Field label={t('证据')}>
-              <NativeSelect name="evidence_id" required className="w-full">
+              <NativeSelect
+                name="evidence_id"
+                required
+                className="w-full"
+                value={selectedEvidenceId}
+                onChange={(event) => setSelectedEvidenceId(event.target.value)}
+              >
                 {evidence.map((item) => (
                   <NativeSelectOption value={item.id} key={item.id}>
                     {item.quote.slice(0, 90)}
+                    {item.question ? ` · ${item.question}` : ''}
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
             </Field>
+            {selectedEvidence && (
+              <div className="claim-evidence-preview">
+                <strong>
+                  {
+                    sources.find((s) => s.id === selectedEvidence.source_id)
+                      ?.title
+                  }
+                  {' · '}
+                  {t('文件第 {0} 页', { 0: selectedEvidence.page })}
+                </strong>
+                <blockquote>{selectedEvidence.quote}</blockquote>
+                {selectedEvidence.interpretation && (
+                  <p>{selectedEvidence.interpretation}</p>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setLink(null);
+                    onOpenEvidence(selectedEvidence);
+                  }}
+                >
+                  {locale === 'en' ? 'Check in source' : '回到原文核对'}
+                  <ArrowRight size={14} />
+                </Button>
+              </div>
+            )}
             <Field label={t('对这条论证的关系')}>
               <NativeSelect name="relation">
                 {Object.entries(relationName).map(([value, label]) => (
