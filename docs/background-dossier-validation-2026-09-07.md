@@ -38,3 +38,15 @@ Regression coverage includes the full dossier through the final review gate; exa
 The final full regression suite passed **247 tests with zero failures or skips**, including the existing Adams backup restoration. TypeScript, lint, comment checks, formatting, the Cloudflare app build, the research-worker deployment dry run and a redacted staged-change secret scan passed.
 
 The Mac remained locked during this pass. The authenticated application API, queue execution, production build and automated checks were exercised; new browser click/visual acceptance is not claimed. Existing desktop acceptance is documented separately in `background-research.md`.
+
+## Desktop follow-up after unlocking
+
+The same completed local Adams dossier was opened in authenticated Chrome. No new model request was needed for this pass, and its human review was left pending.
+
+The review screen exposed two usability gaps: the synthesis was initially collapsed below its machine verification, and numbered next-reading suggestions appeared as plain paragraphs. The dossier's synthesis now appears first and opens automatically; verification records remain available below it. Numbered suggestions retain semantic ordered lists and their original numbers, including across separate paragraphs.
+
+Inline citation numbers now offer labeled source controls. Clicking citation 4 in the synthesis opened the April 27 letter at its fixed version and page 1. The reading screen's return control restored the same human-review task. Unknown citation numbers remain plain text rather than linking to an invented source. The report renderer still escapes source HTML and restricts Markdown links to the existing safe URL forms.
+
+Browser checks covered the waiting-for-review status, eight-step workflow diagram, review entry, default report expansion, manual collapse and expansion, inline source navigation, return to the original task, and the new-plan form's background-research option and budget/correction/scope explanation. English and Chinese interface labels and dark and light report presentation were checked; the desktop layout had no horizontal overflow. Historical task titles and quotations retained their original language when the interface changed.
+
+Three renderer regressions cover ordered numbering, resolved versus unknown citation controls (including bold text), and safe source rendering. This follow-up validates the dossier review path; it does not claim a new full-platform browser audit, mobile acceptance, or autonomous acceptance of historical conclusions.

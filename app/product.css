@@ -2042,7 +2042,8 @@
   overflow-wrap: anywhere;
 }
 .research-prose p,
-.research-prose ul {
+.research-prose ul,
+.research-prose ol {
   margin-block: 14px;
   white-space: pre-wrap;
 }
@@ -2057,9 +2058,15 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.research-prose ul {
+.research-prose ul,
+.research-prose ol {
   padding-left: 20px;
+}
+.research-prose ul {
   list-style: disc;
+}
+.research-prose ol {
+  list-style: decimal;
 }
 .research-prose blockquote {
   border-left: 3px solid light-dark(#c8d7ee, hsl(216 32% 28%));
@@ -2824,4 +2831,27 @@
 }
 .claim-evidence-preview > button {
   justify-self: start;
+}
+
+.report-inline-citation {
+  display: inline;
+  padding: 2px 3px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-family: var(--font-sans);
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.report-inline-citation:hover {
+  background: var(--secondary);
+  text-decoration: underline;
+}
+.report-inline-citation:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }

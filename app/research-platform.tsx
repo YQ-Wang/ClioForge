@@ -2713,8 +2713,20 @@ function TaskDetail({
                   (e) => e.task_id === task.id && e.depends_on === p.id,
                 ),
             )
+            .sort((a, b) =>
+              task.input.parameters.dossier_stage === 'review'
+                ? Number(b.input.parameters.dossier_stage === 'synthesis') -
+                  Number(a.input.parameters.dossier_stage === 'synthesis')
+                : 0,
+            )
             .map((p) => (
-              <details key={p.id}>
+              <details
+                key={p.id}
+                open={
+                  task.input.parameters.dossier_stage === 'review' &&
+                  p.input.parameters.dossier_stage === 'synthesis'
+                }
+              >
                 <summary>{p.title}</summary>
                 <Button variant="ghost" onClick={() => onSelectTask(p.id)}>
                   {L(

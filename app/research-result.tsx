@@ -30,7 +30,21 @@ export default function ResearchResult({
   const data = parsed.success ? parsed.data : {};
   return (
     <div className="research-report">
-      <ResearchText text={result.summary} />
+      <ResearchText
+        text={result.summary}
+        citationLink={(number) => {
+          const citation = result.citations[number - 1];
+          return citation
+            ? {
+                label: L(
+                  `查看引文 ${number} 原文：${sourceLabel(citation.version_id)}，第 ${citation.page} 页`,
+                  `Open citation ${number}: ${sourceLabel(citation.version_id)}, page ${citation.page}`,
+                ),
+                onOpen: () => onSource(citation.version_id, citation.page),
+              }
+            : undefined;
+        }}
+      />
       {manuscript.success && (
         <Link
           className="manuscript-result-link"
