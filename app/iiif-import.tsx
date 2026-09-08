@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FilePicker } from '@/components/ui/file-picker';
 import { useI18n } from '@/lib/i18n/provider';
 import { parseIiif, publicHttps } from '@/lib/iiif';
 import { boundedBytes } from '@/lib/files';
@@ -47,57 +48,56 @@ export default function IiifImport({
         onChange={(e) => setUrl(e.target.value)}
         placeholder="https://…/manifest.json"
       />
-      <Button
-        type="button"
-        variant="outline"
-        disabled={busy || !url}
-        onClick={async () => {
-          setBusy(true);
-          setError('');
-          try {
-            const r = await fetch(publicHttps(url), {
-              credentials: 'omit',
-              redirect: 'follow',
-              signal: AbortSignal.timeout(20000),
-            });
-            if (!r.ok) throw new Error('Manifest unavailable');
-            publicHttps(r.url);
-            read(
-              JSON.parse(
-                new TextDecoder().decode(await boundedBytes(r, 1_500_000)),
-              ),
-            );
-          } catch {
-            setError(
-              L(
-                '无法直接读取。档案馆可能不允许跨站读取，请下载清单后选择文件。',
-                'Cannot read directly. The archive may block cross-site reads; download the manifest and choose the file.',
-              ),
-            );
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        {L('读取清单', 'Read manifest')}
-      </Button>
-      <Input
-        aria-label={L('选择清单文件', 'Choose manifest file')}
-        type="file"
-        accept=".json,application/json"
-        disabled={busy}
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          try {
-            if (file.size > 1_500_000) throw new Error('Manifest too large');
-            read(JSON.parse(await file.text()));
+      <div className="iiif-import-actions">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy || !url}
+          onClick={async () => {
+            setBusy(true);
             setError('');
-          } catch (e) {
-            setError(e instanceof Error ? e.message : 'Invalid manifest');
-          }
-        }}
-      />
+            try {
+              const r = await fetch(publicHttps(url), {
+                credentials: 'omit',
+                redirect: 'follow',
+                signal: AbortSignal.timeout(20000),
+              });
+              if (!r.ok) throw new Error('Manifest unavailable');
+              publicHttps(r.url);
+              read(
+                JSON.parse(
+                  new TextDecoder().decode(await boundedBytes(r, 1_500_000)),
+                ),
+              );
+            } catch {
+              setError(
+                L(
+                  '无法直接读取。档案馆可能不允许跨站读取，请下载清单后选择文件。',
+                  'Cannot read directly. The archive may block cross-site reads; download the manifest and choose the file.',
+                ),
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {L('读取清单', 'Read manifest')}
+        </Button>
+        <FilePicker
+          label={L('选择清单文件', 'Choose manifest file')}
+          accept=".json,application/json"
+          disabled={busy}
+          onSelect={async (file) => {
+            try {
+              if (file.size > 1_500_000) throw new Error('Manifest too large');
+              read(JSON.parse(await file.text()));
+              setError('');
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Invalid manifest');
+            }
+          }}
+        />
+      </div>
       {error && <p role="alert">{error}</p>}
       {manifest && (
         <>

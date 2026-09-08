@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArchiveRestore, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FilePicker } from '@/components/ui/file-picker';
 import {
   Dialog,
   DialogContent,
@@ -212,14 +213,12 @@ export default function RestoreProject({
             </Button>
           </div>
         )}
-        <Field label={L('Canwoo 备份 ZIP', 'Canwoo backup ZIP')}>
-          <Input
-            type="file"
-            accept=".zip"
-            disabled={busy}
-            onChange={(e) => void select(e.target.files?.[0])}
-          />
-        </Field>
+        <FilePicker
+          label={L('选择参伍备份（ZIP）', 'Choose Canwoo backup (ZIP)')}
+          accept=".zip"
+          disabled={busy}
+          onSelect={select}
+        />
         <p className="settings-hint">
           {L(
             '最多 512 MB、500 份原件；单份原件 20 MB、研究记录 8 MB。请保持页面打开，关闭后可继续。',

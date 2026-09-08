@@ -2,6 +2,7 @@
 import ResearchText from './research-text';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { FilePicker } from '@/components/ui/file-picker';
 import {
   Dialog,
   DialogContent,
@@ -179,39 +180,34 @@ export function ResearchTrace({
               </Button>
             </>
           )}
-          <label>
-            {L(
+          <FilePicker
+            label={L('选择回放文件', 'Choose replay file')}
+            description={L(
               '在本地检查已有回放文件（不上传）',
               'Check an existing replay file locally (not uploaded)',
             )}
-            <input
-              type="file"
-              accept="application/json,.json"
-              disabled={busy}
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                event.target.value = '';
-                if (!file) return;
-                setError('');
-                setBusy(true);
-                setTrace(null);
-                setChecks(null);
-                try {
-                  if (file.size > 8 * 1024 * 1024)
-                    throw new Error(
-                      L('回放文件超过 8 MB。', 'Replay file exceeds 8 MB.'),
-                    );
-                  await show(JSON.parse(await file.text()));
-                } catch (e) {
-                  setError(
-                    e instanceof Error ? e.message : 'Invalid replay file',
+            accept="application/json,.json"
+            disabled={busy}
+            onSelect={async (file) => {
+              setError('');
+              setBusy(true);
+              setTrace(null);
+              setChecks(null);
+              try {
+                if (file.size > 8 * 1024 * 1024)
+                  throw new Error(
+                    L('回放文件超过 8 MB。', 'Replay file exceeds 8 MB.'),
                   );
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            />
-          </label>
+                await show(JSON.parse(await file.text()));
+              } catch (e) {
+                setError(
+                  e instanceof Error ? e.message : 'Invalid replay file',
+                );
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
         </DialogContent>
       </Dialog>
     </>

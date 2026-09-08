@@ -1123,6 +1123,15 @@
 .iiif-import input {
   margin: 8px 0;
 }
+.iiif-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 10px;
+}
+.iiif-import-actions > .file-picker {
+  flex: 1 1 180px;
+}
 .iiif-pages {
   max-height: 280px;
   overflow: auto;

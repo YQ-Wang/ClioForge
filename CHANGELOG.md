@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Simplify document import with localized file-selection buttons shared by writing, replay, archive manifests and backup restore; improve import errors, keyboard disclosures and narrow-screen editor controls.
 - Preserve researcher-edited citation bindings when assembling findings; remap each contribution's references before combining reports.
 - Remove unused draft citations from explicitly cited human reviews, retain legacy uncited context, and clarify the final acceptance and save-to-findings step.
 - Resolve bare repeated passage labels only when the model already selected that exact passage explicitly; reject ambiguous or unselected labels.

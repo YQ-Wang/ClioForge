@@ -144,6 +144,7 @@
 }
 .writing-status {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   justify-content: space-between;
@@ -185,25 +186,36 @@
     padding: 18px 16px;
   }
   .writing-status {
-    align-items: start;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px 8px;
+    padding: 8px;
+  }
+  .writing-status > button {
+    min-width: 0;
+    min-height: 36px;
+    height: auto;
+    padding: 8px;
+    white-space: normal;
+  }
+  .writing-status > button:last-child {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .writing-status > span {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    padding: 0 8px;
   }
   .writing-toolbar select {
     max-width: 110px;
   }
 }
 .writing-import {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 14px;
-  font-size: 11px;
+  padding: 8px 14px;
+  font-size: 13px;
   color: var(--muted-foreground);
   border-top: 1px solid var(--border);
-}
-.writing-import input {
-  max-width: 230px;
-  font-size: 11px;
 }
 
 .writing-toolbar button {
@@ -282,14 +294,38 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  font-size: 12px;
-  padding: 8px 0;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 36px;
+  border-radius: 8px;
+  font-size: 13px;
+  padding: 8px 34px 8px 8px;
+  list-style: none;
   color: var(--muted-foreground);
 }
-.writing-import label {
-  display: block;
-  padding: 8px 0;
-  font-size: 12px;
+.writing-import summary::-webkit-details-marker {
+  display: none;
+}
+.writing-import summary:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+.writing-import summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.writing-import-content {
+  padding: 8px 8px 12px;
+}
+.writing-error {
+  margin: 12px 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in oklch, var(--destructive) 25%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--destructive) 5%, var(--card));
+  color: var(--destructive);
+  font-size: 13px;
+  line-height: 1.6;
 }
 .entity-form fieldset {
   border: 0;

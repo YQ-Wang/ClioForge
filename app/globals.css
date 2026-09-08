@@ -2082,3 +2082,35 @@ html[lang='en'] .workspace-nav span {
     padding: 5px 10px;
   }
 }
+/* Localized file selection shared by research and writing tools. */
+.file-picker {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.file-picker > p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.file-picker-selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  min-width: 0;
+}
+.file-picker-selection > button {
+  max-width: 100%;
+  white-space: normal;
+  height: auto;
+  min-height: 40px;
+  padding-block: 8px;
+}
+.file-picker-selection > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}

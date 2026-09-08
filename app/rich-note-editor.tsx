@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FilePicker } from '@/components/ui/file-picker';
 import { useI18n } from '@/lib/i18n/provider';
 import { parseRichDocument, richMarkdown } from '@/lib/rich-document';
 import 'katex/dist/katex.min.css';
@@ -693,25 +694,27 @@ export default function RichNoteEditor({
         </div>
       )}
       <EditorContent editor={editor} />
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert" className="writing-error">
+          {error}
+        </p>
+      )}
       {!readOnly && (
         <details className="writing-import">
           <summary>
-            <Upload size={14} />
+            <Upload size={14} aria-hidden="true" />
             {L('导入参伍文稿', 'Import a Canwoo document')}
           </summary>
-          <label>
-            {L(
-              '导入完整文稿（替换当前草稿，可撤销）',
-              'Import a complete document (replaces this draft; undo available)',
-            )}
-            <input
-              type="file"
+          <div className="writing-import-content">
+            <FilePicker
+              label={L('选择文稿', 'Choose document')}
+              description={L(
+                '选择从参伍导出的 .canwoo.json 文件。将替换当前正文，可撤销；保存到项目后才会同步。',
+                'Choose a .canwoo.json file exported from Canwoo. It replaces the current text and can be undone. Save to the project to sync it.',
+              )}
               accept=".json,application/json"
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                event.target.value = '';
-                if (!file) return;
+              onSelect={async (file) => {
+                setError('');
                 try {
                   if (file.size > 750000) throw new Error();
                   const value = JSON.parse(await file.text());
@@ -734,7 +737,7 @@ export default function RichNoteEditor({
                 }
               }}
             />
-          </label>
+          </div>
         </details>
       )}
       <div className="writing-status">
