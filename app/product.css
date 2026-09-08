@@ -2855,3 +2855,67 @@
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+
+.report-checks {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--foreground);
+}
+.report-checks-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.report-checks-summary[data-failed='true'] {
+  color: var(--destructive);
+}
+.report-checks .report-checks-boundary {
+  margin: 8px 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.report-checks details {
+  margin-top: 8px;
+  font-size: 12px;
+}
+.report-checks summary {
+  cursor: pointer;
+  color: var(--primary);
+}
+.report-checks ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.report-checks li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+  overflow-wrap: anywhere;
+}
+.report-checks li > span:last-child {
+  flex-shrink: 0;
+}
+.report-check-failure {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--destructive) 6%, var(--card));
+  font-size: 13px;
+}
+.report-check-failure p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 4px 0 0;
+}
+
+.report-checks li small {
+  display: block;
+  color: var(--muted-foreground);
+  white-space: pre-wrap;
+}

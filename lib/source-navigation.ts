@@ -1,4 +1,5 @@
 import type { SourceVersion } from './types';
+import { validCitationSpan } from './citation-location';
 
 export type SourceRoute =
   | { kind: 'inactive' | 'default' | 'unavailable' }
@@ -8,6 +9,8 @@ export type SourceRoute =
       versionId: string;
       page: number;
       annotationId?: string;
+      start?: number;
+      end?: number;
     };
 
 export function sourceRoute(
@@ -37,6 +40,13 @@ export function sourceRoute(
     page,
     annotationId:
       params.get('annotation') || params.get('evidence') || undefined,
+    ...(params.has('start') && params.has('end')
+      ? validCitationSpan(
+          version.pages.find((item) => item.page === page)!.text,
+          Number(params.get('start')),
+          Number(params.get('end')),
+        ) || {}
+      : {}),
   };
 }
 

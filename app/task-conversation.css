@@ -267,3 +267,35 @@
   margin-top: 2px;
   accent-color: var(--primary);
 }
+
+.task-next-checks {
+  padding: 16px;
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--muted);
+}
+.task-next-checks h5 {
+  margin: 0;
+  font-size: 14px;
+}
+.task-next-checks > p,
+.task-next-checks small {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+}
+.task-next-checks ol {
+  padding-left: 20px;
+  margin: 12px 0 0;
+}
+.task-next-checks li {
+  padding: 10px 0;
+}
+.task-next-checks li + li {
+  border-top: 1px solid var(--border);
+}
+.task-next-checks .research-prose {
+  font-size: 13px;
+  margin-bottom: 8px;
+}

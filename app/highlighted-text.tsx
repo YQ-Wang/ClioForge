@@ -3,11 +3,13 @@
 /* oxlint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- The focusable source region captures native text selection, including keyboard selection. It does not emulate an editable field. */
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- Inline annotation spans retain native text selection across their boundaries; buttons interrupt that selection. They implement button focus and keyboard activation. */
 
-import { useMemo, useRef } from 'react';
+import { Fragment, useEffect, useMemo, useRef } from 'react';
 import {
   textHighlightSegments,
   type TextHighlight,
 } from '@/lib/text-highlights';
+
+const citationFocusId = 'canwoo:temporary-citation-focus';
 
 export type TextSelection = { start: number; end: number; quote: string };
 
@@ -15,6 +17,8 @@ export default function HighlightedText({
   text,
   highlights,
   activeId,
+  focus,
+  focusKey,
   onSelect,
   onSelection,
   label,
@@ -22,15 +26,37 @@ export default function HighlightedText({
   text: string;
   highlights: TextHighlight[];
   activeId?: string;
+  focus?: TextSelection;
+  focusKey?: string;
   onSelect: (id: string) => void;
   onSelection: (selection: TextSelection | null) => void;
   label: string;
 }) {
   const root = useRef<HTMLElement>(null);
+  const lastFocused = useRef('');
   const segments = useMemo(
-    () => textHighlightSegments(text, highlights),
-    [text, highlights],
+    () =>
+      textHighlightSegments(
+        text,
+        focus ? [...highlights, { ...focus, id: citationFocusId }] : highlights,
+      ),
+    [text, highlights, focus],
   );
+  useEffect(() => {
+    const key = JSON.stringify([
+      focusKey,
+      focus?.start,
+      focus?.end,
+      focus?.quote,
+    ]);
+    const mark = root.current?.querySelector('[data-citation-focus]');
+    // Reader state reconciliation can briefly hide the source. Do not pull the
+    // reader back to the quotation after an annotation click or a polling update.
+    if (!mark || !mark.getClientRects().length || lastFocused.current === key)
+      return;
+    mark.scrollIntoView({ block: 'center' });
+    lastFocused.current = key;
+  }, [text, focus?.start, focus?.end, focus?.quote, focusKey]);
   const selection = (): TextSelection | null => {
     const element = root.current;
     const selected = window.getSelection();
@@ -70,30 +96,26 @@ export default function HighlightedText({
       onPointerUp={() => onSelection(selection())}
       onKeyUp={() => onSelection(selection())}
     >
-      {segments.map((segment) =>
-        segment.highlightIds.length ? (
+      {segments.map((segment) => {
+        const ids = segment.highlightIds.filter((id) => id !== citationFocusId);
+        const content = ids.length ? (
           <span
             key={segment.start}
             className="text-highlight"
             role="button"
             tabIndex={0}
-            data-active={
-              activeId ? segment.highlightIds.includes(activeId) : false
-            }
-            data-overlap={segment.highlightIds.length > 1}
-            aria-pressed={
-              activeId ? segment.highlightIds.includes(activeId) : false
-            }
+            data-active={activeId ? ids.includes(activeId) : false}
+            data-overlap={ids.length > 1}
+            aria-pressed={activeId ? ids.includes(activeId) : false}
             aria-label={`${label}: ${segment.text}`}
             onClick={() => {
               // A drag ending on a highlight should remain a text selection.
-              if (window.getSelection()?.isCollapsed !== false)
-                activate(segment.highlightIds);
+              if (window.getSelection()?.isCollapsed !== false) activate(ids);
             }}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                activate(segment.highlightIds);
+                activate(ids);
               }
             }}
           >
@@ -101,8 +123,19 @@ export default function HighlightedText({
           </span>
         ) : (
           segment.text
-        ),
-      )}
+        );
+        return segment.highlightIds.includes(citationFocusId) ? (
+          <mark
+            key={segment.start}
+            className="citation-focus"
+            data-citation-focus
+          >
+            {content}
+          </mark>
+        ) : (
+          <Fragment key={segment.start}>{content}</Fragment>
+        );
+      })}
     </section>
   );
 }

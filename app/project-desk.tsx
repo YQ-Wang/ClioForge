@@ -1,8 +1,9 @@
 'use client';
+import { citationSpan, validCitationSpan } from '@/lib/citation-location';
 import { useI18n } from '@/lib/i18n/provider';
 import { importSampleBatches, type SampleBatch } from '@/lib/sample-import';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookOpen,
   Download,
@@ -331,6 +332,8 @@ export default function ProjectDesk({
         versionId: incoming.versionId,
         page: incoming.page,
         annotationId: incoming.annotationId,
+        start: incoming.start,
+        end: incoming.end,
         nonce: crypto.randomUUID(),
       });
     }
@@ -909,7 +912,12 @@ export default function ProjectDesk({
           versions={versions}
           onRefresh={refresh}
           onImport={() => setImportOpen(true)}
-          onOpenSource={(sourceId, versionId, page) => {
+          onOpenSource={(sourceId, versionId, page, citation) => {
+            const text =
+              versions
+                .find((v) => v.id === versionId)
+                ?.pages.find((p) => p.page === page)?.text || '';
+            const span = citation ? citationSpan(text, citation) : null;
             const current = researchRoute(window.location.search, project.id);
             if (current.mission)
               setResearchReturn(
@@ -925,6 +933,7 @@ export default function ProjectDesk({
               sourceId,
               versionId,
               page,
+              ...span,
               nonce: crypto.randomUUID(),
             });
             setTab('sources');
@@ -1451,7 +1460,25 @@ function SourceReader({
   const [versionId, setVersionId] = useState(location?.versionId || current.id);
   const version = sorted.find((v) => v.id === versionId)!;
   const [page, setPage] = useState(location?.page || 1);
-  const pageText = version.pages[page - 1]?.text || '';
+  const pageText = version.pages.find((p) => p.page === page)?.text || '';
+  const citationFocus = useMemo(
+    () =>
+      location?.versionId === version.id &&
+      location.page === page &&
+      location.start != null &&
+      location.end != null
+        ? validCitationSpan(pageText, location.start, location.end)
+        : null,
+    [
+      location?.versionId,
+      location?.page,
+      location?.start,
+      location?.end,
+      version.id,
+      page,
+      pageText,
+    ],
+  );
   const localDraft = useLocalDraft(
     `${draftPrefix(userId, projectId)}source:${source.id}:${version.id}:${page}`,
     {
@@ -1571,12 +1598,20 @@ function SourceReader({
   useEffect(() => {
     if (active)
       onLocationChange(
-        sourcePath(projectId, version.id, page) +
+        sourcePath(projectId, version.id, page, citationFocus) +
           (annotationId
             ? `&annotation=${encodeURIComponent(annotationId)}`
             : ''),
       );
-  }, [active, projectId, version.id, page, annotationId, onLocationChange]);
+  }, [
+    active,
+    projectId,
+    version.id,
+    page,
+    annotationId,
+    citationFocus,
+    onLocationChange,
+  ]);
   const [quote, setQuote] = useState<string | null>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -1984,6 +2019,18 @@ function SourceReader({
           ) : pageText ? (
             <HighlightedText
               text={pageText}
+              focusKey={location?.nonce}
+              focus={
+                active && citationFocus
+                  ? {
+                      ...citationFocus,
+                      quote: pageText.slice(
+                        citationFocus.start,
+                        citationFocus.end,
+                      ),
+                    }
+                  : undefined
+              }
               highlights={textHighlights}
               activeId={annotationId}
               onSelect={selectAnnotation}

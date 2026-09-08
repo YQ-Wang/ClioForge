@@ -70,6 +70,7 @@ import {
   type MissionView,
   type MissionTask,
   type MissionDraft,
+  type TaskResult,
 } from '@/lib/platform/types';
 import StudyRecords from './study-records';
 import SeminarTranscript from './seminar-transcript';
@@ -95,6 +96,7 @@ import ClaimAssessments from './claim-assessments';
 import TaskViews from './task-views';
 import { taskStatusLabels, taskProgressLabels } from '@/lib/task-presentation';
 import TaskConversation from './task-conversation';
+import { researchNextSteps } from '@/lib/research-next-steps';
 import ResearchResult from './research-result';
 import { reportMarkdown } from '@/lib/research-report';
 import { sourcePath } from '@/lib/navigation';
@@ -213,7 +215,12 @@ export default function ResearchPlatform({
   project: Project;
   sources: Source[];
   versions: SourceVersion[];
-  onOpenSource: (sourceId: string, versionId: string, page: number) => void;
+  onOpenSource: (
+    sourceId: string,
+    versionId: string,
+    page: number,
+    citation?: TaskResult['citations'][number],
+  ) => void;
   onRefresh: () => Promise<unknown>;
   onImport: () => void;
   models: Model[];
@@ -286,9 +293,13 @@ export default function ResearchPlatform({
       L('原始资料', 'Original source')
     );
   }
-  function openVersion(versionId: string, page: number) {
+  function openVersion(
+    versionId: string,
+    page: number,
+    citation?: TaskResult['citations'][number],
+  ) {
     const version = versions.find((v) => v.id === versionId);
-    if (version) onOpenSource(version.source_id, versionId, page);
+    if (version) onOpenSource(version.source_id, versionId, page, citation);
     else
       setMessage(
         L(
@@ -1454,9 +1465,9 @@ export default function ResearchPlatform({
               <ResearchResult
                 result={report.body}
                 sourceLabel={sourceLabel}
-                onSource={(id, page) => {
+                onSource={(id, page, citation) => {
                   setReport(null);
-                  openVersion(id, page);
+                  openVersion(id, page, citation);
                 }}
               />
               <Button
@@ -2402,7 +2413,12 @@ function TaskDetail({
   onClose: () => void;
   onSelectTask: (id: string) => void;
   onAction: (action: string, value?: unknown) => Promise<unknown>;
-  onOpenSource: (source: string, version: string, page: number) => void;
+  onOpenSource: (
+    source: string,
+    version: string,
+    page: number,
+    citation?: TaskResult['citations'][number],
+  ) => void;
 }) {
   const { L } = useWords();
   const reviewDraft = useReviewDraft(
@@ -2652,9 +2668,9 @@ function TaskDetail({
                 L('原始资料', 'Original source')
               );
             }}
-            onSource={(id, page) => {
+            onSource={(id, page, citation) => {
               const version = versions.find((v) => v.id === id);
-              if (version) onOpenSource(version.source_id, id, page);
+              if (version) onOpenSource(version.source_id, id, page, citation);
             }}
           />
         </>
@@ -2738,20 +2754,13 @@ function TaskDetail({
                   (e) => e.task_id === task.id && e.depends_on === p.id,
                 ),
             )
-            .sort((a, b) =>
-              task.input.parameters.dossier_stage === 'review'
-                ? Number(b.input.parameters.dossier_stage === 'synthesis') -
-                  Number(a.input.parameters.dossier_stage === 'synthesis')
-                : 0,
+            .sort(
+              (a, b) =>
+                Number(b.id === assistantDraft?.id) -
+                Number(a.id === assistantDraft?.id),
             )
             .map((p) => (
-              <details
-                key={p.id}
-                open={
-                  task.input.parameters.dossier_stage === 'review' &&
-                  p.input.parameters.dossier_stage === 'synthesis'
-                }
-              >
+              <details key={p.id} open={p.id === assistantDraft?.id}>
                 <summary>{p.title}</summary>
                 <Button variant="ghost" onClick={() => onSelectTask(p.id)}>
                   {L(
@@ -2767,9 +2776,9 @@ function TaskDetail({
                         s.id === versions.find((v) => v.id === id)?.source_id,
                     )?.title || L('原始资料', 'Original source')
                   }
-                  onSource={(id, page) => {
+                  onSource={(id, page, citation) => {
                     const v = versions.find((v) => v.id === id);
-                    if (v) onOpenSource(v.source_id, id, page);
+                    if (v) onOpenSource(v.source_id, id, page, citation);
                   }}
                 />
                 {p.input.parameters.extraction === true && (
@@ -2898,9 +2907,10 @@ function TaskDetail({
                       versions.find((version) => version.id === id)?.source_id,
                   )?.title || L('原始资料', 'Original source')
                 }
-                onSource={(id, page) => {
+                onSource={(id, page, citation) => {
                   const version = versions.find((item) => item.id === id);
-                  if (version) onOpenSource(version.source_id, id, page);
+                  if (version)
+                    onOpenSource(version.source_id, id, page, citation);
                 }}
               />
             </details>
@@ -3019,6 +3029,7 @@ function TaskDetail({
       <TaskConversation
         key={`assistant:${task.id}`}
         taskId={task.id}
+        nextSteps={researchNextSteps(task.result)}
         models={models}
         sources={sources}
         versions={versions}

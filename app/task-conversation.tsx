@@ -16,6 +16,10 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { api, ApiError } from '@/lib/client-api';
 import { useI18n } from '@/lib/i18n/provider';
+import { nextStepQuestion } from '@/lib/research-next-steps';
+import { citationSpan } from '@/lib/citation-location';
+import type { TaskResult } from '@/lib/platform/types';
+import ResearchText from './research-text';
 import { sourcePath } from '@/lib/navigation';
 import { DEFAULT_RESEARCH_MODEL } from '@/lib/model-routing';
 import { selectedPages } from '@/lib/page-selection';
@@ -49,12 +53,19 @@ export default function TaskConversation({
   sources,
   versions,
   onOpenSource,
+  nextSteps = [],
 }: {
   taskId: string;
   models: Model[];
   sources: Source[];
   versions: SourceVersion[];
-  onOpenSource?: (source: string, version: string, page: number) => void;
+  nextSteps?: string[];
+  onOpenSource?: (
+    source: string,
+    version: string,
+    page: number,
+    citation?: TaskResult['citations'][number],
+  ) => void;
 }) {
   const { locale } = useI18n(),
     L = (zh: string, en: string) => (locale === 'en' ? en : zh);
@@ -72,6 +83,7 @@ export default function TaskConversation({
     [storageFailed, setStorageFailed] = useState(false),
     [submittedId, setSubmittedId] = useState(''),
     [controlSaved, setControlSaved] = useState(false);
+  const questionInput = useRef<HTMLTextAreaElement>(null);
   const draftRef = useRef(draft),
     draftKey = useRef(''),
     dataRef = useRef(data),
@@ -477,7 +489,34 @@ export default function TaskConversation({
                     <summary>
                       {L('查看回答与引用', 'View answer & citations')}
                     </summary>
-                    <p className="preserve-text">{turn.result.summary}</p>
+                    <ResearchText
+                      text={turn.result.summary}
+                      citationLink={(number) => {
+                        const citation = turn.result?.citations[number - 1];
+                        const version = versions.find(
+                          (item) => item.id === citation?.version_id,
+                        );
+                        if (!citation || !version || !onOpenSource)
+                          return undefined;
+                        const title =
+                          sources.find(
+                            (source) => source.id === version.source_id,
+                          )?.title || L('原始资料', 'Original source');
+                        return {
+                          label: L(
+                            `查看引文 ${number} 原文：${title}，第 ${citation.page} 页`,
+                            `Read citation ${number}: ${title}, page ${citation.page}`,
+                          ),
+                          onOpen: () =>
+                            onOpenSource(
+                              version.source_id,
+                              version.id,
+                              citation.page,
+                              citation,
+                            ),
+                        };
+                      }}
+                    />
                     {!!turn.result.citations.length && (
                       <ol>
                         {turn.result.citations.map(
@@ -488,6 +527,17 @@ export default function TaskConversation({
                                   turn.project_id,
                                   citation.version_id,
                                   citation.page,
+                                  citationSpan(
+                                    versions
+                                      .find(
+                                        (version) =>
+                                          version.id === citation.version_id,
+                                      )
+                                      ?.pages.find(
+                                        (page) => page.page === citation.page,
+                                      )?.text || '',
+                                    citation,
+                                  ),
                                 )}
                                 onClick={(event) => {
                                   // Keep modified clicks as ordinary links, while
@@ -510,6 +560,7 @@ export default function TaskConversation({
                                     version.source_id,
                                     version.id,
                                     citation.page,
+                                    citation,
                                   );
                                 }}
                               >
@@ -597,6 +648,64 @@ export default function TaskConversation({
       {initialized && data?.can_write && (
         <form className="task-conversation-form" onSubmit={submit}>
           <fieldset disabled={!!busy || !!draft.pending}>
+            {!!nextSteps.length &&
+              (data.root.id === taskId ||
+                answers.some((answer) => answer.id === taskId)) && (
+                <section
+                  className="task-next-checks"
+                  aria-label={L(
+                    '把建议接到下一轮核查',
+                    'Continue from a proposed check',
+                  )}
+                >
+                  <h5>
+                    {L(
+                      '把建议接到下一轮核查',
+                      'Continue from a proposed check',
+                    )}
+                  </h5>
+                  <p>
+                    {L(
+                      '先准备问题，再补充材料、确认阅读范围并发送。准备问题不会调用模型；建议并不表示已经找到了这些资料。',
+                      'Prepare a question, then add sources, check the reading scope and send. Preparing a question makes no model call; these suggestions do not mean the sources have been found.',
+                    )}
+                  </p>
+                  <ol>
+                    {nextSteps.map((step, index) => (
+                      <li key={step}>
+                        <ResearchText text={step.replace(/\[\d+\]/g, '')} />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={!!draft.question.trim()}
+                          onClick={() => {
+                            changeDraft({
+                              question: nextStepQuestion(step, locale),
+                              after: data.root.id === taskId ? '' : taskId,
+                            });
+                            questionInput.current?.focus();
+                          }}
+                          aria-label={L(
+                            `准备第 ${index + 1} 项核查问题`,
+                            `Prepare question for check ${index + 1}`,
+                          )}
+                        >
+                          {L('准备追问', 'Prepare question')}
+                        </Button>
+                      </li>
+                    ))}
+                  </ol>
+                  {!!draft.question.trim() && (
+                    <small>
+                      {L(
+                        '已有追问草稿。清空问题后可选用另一项建议。',
+                        'A question draft is already present. Clear it to choose another suggestion.',
+                      )}
+                    </small>
+                  )}
+                </section>
+              )}
             <label>
               {L('依据哪条回答', 'Continue from')}
               <NativeSelect
@@ -739,6 +848,7 @@ export default function TaskConversation({
             <label className="task-conversation-question-label">
               {L('你的追问', 'Your question')}
               <Textarea
+                ref={questionInput}
                 value={draft.question}
                 onChange={(event) =>
                   changeDraft({ question: event.target.value })

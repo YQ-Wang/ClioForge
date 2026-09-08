@@ -7,6 +7,7 @@ import { researchTables } from '@/lib/research-report';
 import type { TaskResult } from '@/lib/platform/types';
 import ResearchInsights from './research-insights';
 import ResearchText from './research-text';
+import ReportChecks from './report-checks';
 import { groupedCitations } from '@/lib/review-citations';
 export default function ResearchResult({
   result,
@@ -15,7 +16,11 @@ export default function ResearchResult({
 }: {
   result: TaskResult;
   sourceLabel: (id: string) => string;
-  onSource: (id: string, page: number) => void;
+  onSource: (
+    id: string,
+    page: number,
+    citation?: TaskResult['citations'][number],
+  ) => void;
 }) {
   const { locale } = useI18n();
   const L = (zh: string, en: string) => (locale === 'en' ? en : zh);
@@ -40,7 +45,8 @@ export default function ResearchResult({
                   `查看引文 ${number} 原文：${sourceLabel(citation.version_id)}，第 ${citation.page} 页`,
                   `Open citation ${number}: ${sourceLabel(citation.version_id)}, page ${citation.page}`,
                 ),
-                onOpen: () => onSource(citation.version_id, citation.page),
+                onOpen: () =>
+                  onSource(citation.version_id, citation.page, citation),
               }
             : undefined;
         }}
@@ -165,6 +171,7 @@ export default function ResearchResult({
           )}
         </>
       )}
+      <ReportChecks checks={result.checks} sourceLabel={sourceLabel} />
       {result.citations.length > 0 && (
         <>
           <h3>{L('回到原文核查', 'Check against the source')}</h3>
@@ -176,7 +183,9 @@ export default function ResearchResult({
               <p className="preserve-text">{citation.quote}</p>
               <button
                 className="report-source"
-                onClick={() => onSource(citation.version_id, citation.page)}
+                onClick={() =>
+                  onSource(citation.version_id, citation.page, citation)
+                }
               >
                 {sourceLabel(citation.version_id)} · {L('第', 'p.')}{' '}
                 {citation.page} {locale === 'en' ? '' : '页'} →
@@ -184,32 +193,6 @@ export default function ResearchResult({
             </blockquote>
           ))}
         </>
-      )}
-      {result.checks.length > 0 && (
-        <div className="report-checks">
-          <h3>{L('核查情况', 'Checks')}</h3>
-          {result.checks.map((check, i) => (
-            <p key={i}>
-              {check.passed ? '✓' : '!'}{' '}
-              {check.name.startsWith('citation') ||
-              check.name.startsWith('quote')
-                ? L('引文文字与出处', 'Quotation text and source')
-                : check.name === 'scope'
-                  ? L('材料范围', 'Source scope')
-                  : check.name}{' '}
-              ·{' '}
-              {check.passed
-                ? L('已通过自动检查', 'Automatic check passed')
-                : L('需要你复核', 'Needs your review')}
-            </p>
-          ))}
-          <small>
-            {L(
-              '自动检查能核对文字与出处，不能替代历史解释。',
-              'Automatic checks can match text and sources; historical interpretation remains yours.',
-            )}
-          </small>
-        </div>
       )}
       <details className="platform-technical">
         <summary>

@@ -387,3 +387,12 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* A report citation is a temporary reading cue, not a saved annotation. */
+.citation-focus {
+  color: inherit;
+  background: light-dark(#fff0b3, #5b481e);
+  box-decoration-break: clone;
+  border-bottom: 2px solid light-dark(#a77815, #dcb557);
+  scroll-margin-block: 120px;
+}

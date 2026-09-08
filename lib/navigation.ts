@@ -81,8 +81,13 @@ export function projectPath(projectId: string, tab = 'overview') {
   const params = new URLSearchParams({ project: projectId, tab });
   return `/?${params}`;
 }
-export function sourcePath(projectId: string, versionId: string, page: number) {
-  return `${projectPath(projectId, 'sources')}&version=${encodeURIComponent(versionId)}&page=${page}`;
+export function sourcePath(
+  projectId: string,
+  versionId: string,
+  page: number,
+  span?: { start: number; end: number } | null,
+) {
+  return `${projectPath(projectId, 'sources')}&version=${encodeURIComponent(versionId)}&page=${page}${span ? `&start=${span.start}&end=${span.end}` : ''}`;
 }
 export function argumentPath(
   projectId: string,
