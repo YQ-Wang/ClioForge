@@ -760,20 +760,34 @@ export default function ResearchPlatform({
                   <div className="next-review">
                     <ShieldCheck size={23} />
                     <div>
-                      <h3>{L('轮到你来判断了', 'Your judgment is needed')}</h3>
+                      <h3>
+                        {nextReview.kind === 'publish'
+                          ? L(
+                              '最后检查，留下研究成果',
+                              'Final check before retaining the finding',
+                            )
+                          : L('轮到你来判断了', 'Your judgment is needed')}
+                      </h3>
                       <p>
                         {nextReview.title} ·{' '}
-                        {L(
-                          '请对照引文，记录不同解释和仍然不确定之处。',
-                          'Check the passages and note competing interpretations and remaining uncertainty.',
-                        )}
+                        {nextReview.kind === 'publish'
+                          ? L(
+                              '确认汇编稿保留了你的修改、出处与限制，采纳后即可在研究成果中阅读或继续写作。',
+                              'Confirm the assembled text preserves your edits, sources and limitations. Accept it to read or develop it from Research findings.',
+                            )
+                          : L(
+                              '请对照引文，记录不同解释和仍然不确定之处。',
+                              'Check the passages and note competing interpretations and remaining uncertainty.',
+                            )}
                       </p>
                     </div>
                     <Button
                       variant="outline"
                       onClick={() => selectTask(nextReview.id)}
                     >
-                      {L('开始核查', 'Review this step')}
+                      {nextReview.kind === 'publish'
+                        ? L('检查最终稿', 'Check the final text')
+                        : L('开始核查', 'Review this step')}
                       <ArrowRight size={15} />
                     </Button>
                   </div>
@@ -3051,10 +3065,10 @@ function TaskDetail({
             {L(
               task.input.parameters.gate === 'discussion'
                 ? '写下你的追问、纠正或希望继续检查的解释。保存后，由有审读权限的成员确认采纳；下一位助手随后读取这些意见并回应。'
-                : '核对出处后，写下你愿意保留的研究稿与限制。若本计划包含 AI 对读，成果将采用这里的稿件，助手原稿保留在执行记录中。',
+                : '核对出处后，写下你愿意保留的研究稿与限制。保存后还需确认采纳，才会继续生成成果；助手原稿保留在执行记录中。',
               task.input.parameters.gate === 'discussion'
                 ? 'Write your question, correction or alternative to examine. After saving, a member with review permission accepts the feedback; the next assistant then reads and responds to it.'
-                : 'After checking the sources, write the account and limitations you want to retain. AI reading plans use this reviewed text for the finding; the assistant draft remains in the execution record.',
+                : 'After checking the sources, write the account and limitations you want to retain. Save, then accept the review to continue to the finding. The assistant draft remains in the execution record.',
             )}
           </p>
           <label>
@@ -3095,8 +3109,8 @@ function TaskDetail({
               </summary>
               <p className="muted">
                 {L(
-                  '这里显示保存后的稿件与引文编号。重复引文会合并；点击编号可回到原文。预览不代表审读已通过。',
-                  'This shows the text and citation numbers as they will be saved. Duplicate citations are combined. Select a number to inspect the original; previewing does not accept the review.',
+                  '这里显示保存后的稿件与引文编号。重复引文会合并；若稿件标有引文编号，只保留用到的出处。点击编号可回到原文。预览不代表审读已通过。',
+                  'This shows the text and citation numbers as they will be saved. Duplicate citations are combined; when your text uses citation numbers, only those sources are retained. Select a number to inspect the original; previewing does not accept the review.',
                 )}
               </p>
               <ResearchResult
@@ -3174,10 +3188,15 @@ function TaskDetail({
             id={`review-reason-hint-${task.id}`}
             className="review-reason-hint"
           >
-            {L(
-              '填写核查依据后，即可采纳或退回修改。你的判断会保留在研究记录中。',
-              'Add your review reason to accept or request changes. Your judgment stays in the research record.',
-            )}
+            {task.kind === 'publish'
+              ? L(
+                  '确认稿件、出处与限制无误后，填写依据并保存到本项目的研究成果。之后可以继续写作或下载。',
+                  'Check the final text, sources and limitations, then record your reason and save it to this project’s findings. You can continue writing or download it there.',
+                )
+              : L(
+                  '填写核查依据后，即可采纳或退回修改。你的判断会保留在研究记录中。',
+                  'Add your review reason to accept or request changes. Your judgment stays in the research record.',
+                )}
           </p>
           <div className="flow-actions">
             <Button
@@ -3185,7 +3204,9 @@ function TaskDetail({
               disabled={busy || outdatedDraft || !reason.trim()}
             >
               <Check size={15} />
-              {L('采纳', 'Accept')}
+              {task.kind === 'publish'
+                ? L('采纳并保存研究成果', 'Accept and save finding')
+                : L('采纳', 'Accept')}
             </Button>
             <Button
               type="button"

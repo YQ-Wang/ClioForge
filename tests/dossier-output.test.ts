@@ -164,3 +164,44 @@ void test('a dossier cannot omit competing readings or its next evidence plan', 
     ),
   );
 });
+
+void test('bare repeated passage IDs resolve to their source rather than a display citation number', () => {
+  const result = resolveDossierCitations(
+    resultSchema.parse({
+      summary: 'The proposal [P1] and legal concern [P2].',
+      citations: [],
+      data: {
+        ...details,
+        alternatives: ['P2 concerns power, while P1 proposes a petition.'],
+        limitations: ['P2 cannot establish submission.'],
+      },
+    }),
+    dossierPassages(pages, refs).reverse(),
+  );
+  assert.match(result.summary, /\[2\] concerns power, while \[1\] proposes/);
+  assert.deepEqual(result.data, {
+    limitations: ['[2] cannot establish submission.'],
+  });
+  assert.doesNotMatch(result.summary, /\bP\d/);
+  assert.equal(result.citations[1].quote, text.split('\n\n')[0]);
+});
+
+void test('bare passages cannot silently introduce new references or ambiguous ranges', () => {
+  for (const alternative of [
+    'P2 is new.',
+    'P99 is missing.',
+    'P1-P2',
+    '[P1',
+    'P1]',
+  ])
+    assert.throws(() =>
+      resolveDossierCitations(
+        resultSchema.parse({
+          summary: 'Proposal [P1].',
+          citations: [],
+          data: { ...details, alternatives: [alternative] },
+        }),
+        dossierPassages(pages, refs),
+      ),
+    );
+});

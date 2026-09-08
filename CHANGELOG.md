@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Preserve researcher-edited citation bindings when assembling findings; remap each contribution's references before combining reports.
+- Remove unused draft citations from explicitly cited human reviews, retain legacy uncited context, and clarify the final acceptance and save-to-findings step.
+- Resolve bare repeated passage labels only when the model already selected that exact passage explicitly; reject ambiguous or unselected labels.
 - Add bounded research investigations with persisted search/read/finish operations, long-page continuation, exact passage citations and a final researcher-review gate.
 - Export research execution traces and validate source quotations, dependency graphs, tool decisions and ledger continuity offline without new model calls.
 - Recover confirmed saved answers after local delivery or output-validation failures without repeating paid requests; retain provider-stage diagnostics and uncertain reservations.

@@ -136,7 +136,32 @@ export function resolveDossierCitations(
         .map((n) => `[${n}]`)
         .join(' ');
     });
-  const normalized = normalize(prose);
+  const bracketed = normalize(prose);
+  const selected = new Set(
+    [...bracketed.matchAll(/\[P(\d+)\]/g)].map((match) => match[1]),
+  );
+  // A model sometimes repeats an already selected passage as bare P12.
+  // Resolve only an explicit existing selection; never infer a new source.
+  const normalizeRepeated = (text: string) =>
+    text.replace(
+      /\[P\d+\]|(?<![\p{L}\p{N}_/])P(\d+)(?![\p{L}\p{N}_/])/gu,
+      (
+        marker,
+        number: string | undefined,
+        offset: number,
+        original: string,
+      ) => {
+        if (number === undefined) return marker;
+        if (
+          !selected.has(number) ||
+          /[[\-–]/.test(original[offset - 1] || '') ||
+          /^[\]\-–]/.test(original.slice(offset + marker.length))
+        )
+          throw new HttpError(400, '后台报告请用完整的 [P编号] 标明原文片段。');
+        return `[P${number}]`;
+      },
+    );
+  const normalized = normalizeRepeated(bracketed);
   const numbers = [
     ...new Set(
       [...normalized.matchAll(/\[P(\d+)\]/g)].map((m) => Number(m[1])),
@@ -159,7 +184,9 @@ export function resolveDossierCitations(
   result.summary = render(normalized);
   result.citations = numbers.map((n) => ({ ...passages[n - 1] }));
   result.data = {
-    limitations: data.limitations.map((item) => render(normalize(item))),
+    limitations: data.limitations.map((item) =>
+      render(normalizeRepeated(normalize(item))),
+    ),
   };
   return result;
 }

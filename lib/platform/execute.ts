@@ -18,6 +18,7 @@ import { savedModelResult } from './model-result';
 import { expiredExecution, recoverModelResults } from './recover-model-result';
 import type { JobsEnv } from '../jobs';
 import { invoke } from '../providers';
+import { mergeResearchTexts } from '../review-citations';
 import { createJob, executeJob, jobById } from '../jobs';
 const now = () => new Date().toISOString();
 export async function dependencies(store: MissionStore, task: MissionTask) {
@@ -225,11 +226,14 @@ export async function builtin(
       : undefined;
     return {
       ...base,
-      summary:
-        reviewed?.result?.summary ||
-        deps
-          .map((dep) => `## ${dep.title}\n\n${dep.result?.summary || ''}`)
-          .join('\n\n'),
+      ...mergeResearchTexts(
+        reviewed?.result
+          ? [reviewed.result]
+          : deps.map((dep) => ({
+              summary: `## ${dep.title}\n\n${dep.result?.summary || ''}`,
+              citations: dep.result?.citations || [],
+            })),
+      ),
       data: {
         dependencies: deps.map((dep) => ({
           id: dep.id,

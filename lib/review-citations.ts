@@ -1,4 +1,5 @@
 import type { TaskResult, MissionTask } from './platform/types';
+import { HttpError } from './errors';
 
 export const citationKey = (c: TaskResult['citations'][number]) =>
   JSON.stringify([c.version_id, c.page, c.quote, c.start ?? null]);
@@ -56,7 +57,13 @@ export function compactReviewCitations(
 ) {
   const citations: TaskResult['citations'] = [];
   const indices = new Map<string, number>();
-  const mapping = inherited.map((citation) => {
+  const referenced = new Set(
+    [...summary.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1]) - 1),
+  );
+  const mapping = inherited.map((citation, index) => {
+    // Keep uncited context for legacy free-form reviews. Once the researcher
+    // cites specific passages, discarded draft citations must not follow them.
+    if (referenced.size && !referenced.has(index)) return undefined;
     const key = citationKey(citation);
     let number = indices.get(key);
     if (number === undefined) {
@@ -72,6 +79,30 @@ export function compactReviewCitations(
     ),
     citations,
   };
+}
+
+// Each dependency owns its numbering. Remap before combining their prose.
+export function mergeResearchTexts(
+  results: Pick<TaskResult, 'summary' | 'citations'>[],
+) {
+  const citations: TaskResult['citations'] = [];
+  const indices = new Map<string, number>();
+  const summaries = results.map((result) => {
+    if (unresolvedReviewCitations(result.summary, result.citations).length)
+      throw new HttpError(400, '成果的引文编号没有对应出处，请先纠正原步骤。');
+    const mapping = result.citations.map((citation) => {
+      const key = citationKey(citation);
+      if (!indices.has(key)) {
+        citations.push(citation);
+        indices.set(key, citations.length);
+      }
+      return indices.get(key)!;
+    });
+    return result.summary.replace(/\[(\d+)\]/g, (marker, number: string) =>
+      mapping[Number(number) - 1] ? `[${mapping[Number(number) - 1]}]` : marker,
+    );
+  });
+  return { summary: summaries.join('\n\n'), citations };
 }
 
 export function canRepairProse(task: MissionTask) {

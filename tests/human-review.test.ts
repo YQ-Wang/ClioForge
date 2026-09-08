@@ -11,7 +11,9 @@ import { correctionChanges } from '../lib/platform/review-quality';
 import {
   compactReviewCitations,
   groupedCitations,
+  mergeResearchTexts,
 } from '../lib/review-citations';
+import { builtin } from '../lib/platform/execute';
 import dataset from '../fixtures/led-sample.json';
 
 let mf: Miniflare, db: D1Database;
@@ -178,6 +180,88 @@ void test('review deduplication remaps prose numbers without merging distinct so
     { citation: a, numbers: [1, 2] },
     { citation: b, numbers: [3] },
   ]);
+});
+
+void test('a shortened researcher draft retains only cited passages and renumbers them', () => {
+  const a = {
+    version_id: crypto.randomUUID(),
+    page: 1,
+    quote: 'first',
+    start: 0,
+  };
+  const b = { ...a, quote: 'second', start: 20 };
+  assert.deepEqual(compactReviewCitations('Keep [2], again [2].', [a, b]), {
+    summary: 'Keep [1], again [1].',
+    citations: [b],
+  });
+  assert.deepEqual(
+    compactReviewCitations('General review.', [a, b]).citations,
+    [a, b],
+  );
+  assert.deepEqual(
+    mergeResearchTexts([
+      { summary: 'First [1].', citations: [a] },
+      { summary: 'Second [1], first again [2].', citations: [b, a] },
+    ]),
+    {
+      summary: 'First [1].\n\nSecond [2], first again [1].',
+      citations: [a, b],
+    },
+  );
+  assert.throws(
+    () =>
+      mergeResearchTexts([
+        { summary: 'Unbound [2].', citations: [a] },
+        { summary: 'Other [1].', citations: [b] },
+      ]),
+    status(400),
+  );
+});
+
+void test('publishing a reviewed draft preserves its citation bindings instead of model ordering', async () => {
+  const f = await fixture();
+  const second = { ...f.citation, quote: 'Commodo', start: 10 };
+  await db
+    .prepare('UPDATE mission_tasks SET executor=?,result=? WHERE id=?')
+    .bind(
+      'model',
+      JSON.stringify({
+        summary: 'Original [1] [2].',
+        citations: [f.citation, second],
+        checks: [],
+      }),
+      f.parent,
+    )
+    .run();
+  await db
+    .prepare(
+      'INSERT INTO task_dependencies(task_id,depends_on,mission_id) VALUES(?,?,?)',
+    )
+    .bind(f.publish, f.parent, f.mission)
+    .run();
+  const submitted = await submitHumanReview(f.store, f.human, {
+    ...f.submission,
+    summary: 'Only the second source survives review [2].',
+    citations: [f.citation, second],
+  });
+  assert.deepEqual(submitted.result?.citations, [second]);
+  await f.store.review(
+    f.human,
+    'accepted',
+    'Source checked for this regression.',
+    submitted.revision,
+  );
+  const published = await builtin(f.store, await f.store.task(f.publish));
+  assert.equal(
+    published.summary,
+    'Only the second source survives review [1].',
+  );
+  assert.deepEqual(published.citations, [second]);
+  const claim = await f.store.claim(f.publish, 'test-builtin', 'builtin');
+  await f.store.submit(f.publish, claim.lease, 'test-builtin', published);
+  const artifact = (await f.store.view(f.mission)).artifacts[0];
+  assert.equal(artifact.body.summary, published.summary);
+  assert.deepEqual(artifact.body.citations, [second]);
 });
 
 void test('explicit review citations keep their meaning when upstream numbering differs', async () => {
