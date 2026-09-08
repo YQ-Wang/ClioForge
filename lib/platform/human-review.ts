@@ -2,8 +2,12 @@ import { z } from 'zod';
 import { HttpError } from '../errors';
 import type { MissionStore } from './missions';
 import { sha256 } from './search';
-import type { TaskResult } from './types';
-import { compactReviewCitations } from '../review-citations';
+import { citationSchema, type TaskResult } from './types';
+import {
+  citationKey,
+  compactReviewCitations,
+  unresolvedReviewCitations,
+} from '../review-citations';
 
 export const humanReviewInput = z.object({
   summary: z
@@ -12,6 +16,7 @@ export const humanReviewInput = z.object({
     .max(100000)
     .refine((value) => !!value.trim()),
   expected: z.number().int().positive(),
+  citations: z.array(citationSchema).max(100).optional(),
 });
 
 // Human writing is already complete when submitted. Save it directly, without
@@ -59,11 +64,22 @@ export async function submitHumanReview(
     input: JSON.parse(row.input),
     result: row.result ? (JSON.parse(row.result) as TaskResult) : null,
   }));
+  const inherited = dependencies.flatMap((dep) => dep.result?.citations || []);
+  if (input.citations) {
+    const allowed = new Set(inherited.map(citationKey));
+    if (input.citations.some((citation) => !allowed.has(citationKey(citation))))
+      throw new HttpError(
+        400,
+        '审读引文不在当前前置结果中，请重新打开草稿并核对出处。',
+      );
+    if (unresolvedReviewCitations(input.summary, input.citations).length)
+      throw new HttpError(
+        400,
+        '正文中有找不到出处的引文编号，请对照预览修改后保存。',
+      );
+  }
   const result: TaskResult = {
-    ...compactReviewCitations(
-      input.summary,
-      dependencies.flatMap((dep) => dep.result?.citations || []),
-    ),
+    ...compactReviewCitations(input.summary, input.citations ?? inherited),
     checks: [],
     data: { human_submission: { expected: input.expected, signature } },
   };

@@ -2,7 +2,12 @@
 import MissionProgress from './mission-progress';
 import ResearchRepair from './research-repair';
 import ResearchLibrary from './research-library';
-import { canRepairProse } from '@/lib/review-citations';
+import {
+  canRepairProse,
+  compactReviewCitations,
+  reviewDraftSource,
+  unresolvedReviewCitations,
+} from '@/lib/review-citations';
 import { importSampleBatches, type SampleBatch } from '@/lib/sample-import';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -2405,6 +2410,24 @@ function TaskDetail({
     task.revision,
   );
   const { reason, humanText } = reviewDraft.value;
+  const reviewParents = view.tasks.filter((parent) =>
+    view.edges.some(
+      (edge) => edge.task_id === task.id && edge.depends_on === parent.id,
+    ),
+  );
+  const assistantDraft = reviewDraftSource(reviewParents);
+  // Match the legacy API order only for drafts that predate explicit citations.
+  const inheritedCitations = [...reviewParents]
+    .sort(
+      (a, b) =>
+        a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id),
+    )
+    .flatMap((parent) => parent.result?.citations || []);
+  const reviewCitations = reviewDraft.value.citations ?? inheritedCitations;
+  const reviewPreview = compactReviewCitations(humanText, reviewCitations);
+  const missingReviewCitations = reviewDraft.value.citations
+    ? unresolvedReviewCitations(humanText, reviewCitations)
+    : [];
   const setReason = (reason: string) => reviewDraft.update({ reason });
   const setHumanText = (humanText: string) => reviewDraft.update({ humanText });
   const hasDraft = !!(reason || humanText);
@@ -2418,7 +2441,9 @@ function TaskDetail({
   const submittedDraftWasSaved =
     !!humanText &&
     task.claimed_by === userId &&
-    task.result?.summary === humanText &&
+    task.result?.summary === reviewPreview.summary &&
+    JSON.stringify(task.result?.citations) ===
+      JSON.stringify(reviewPreview.citations) &&
     savedSubmission?.expected === reviewDraft.value.revision;
   useEffect(() => {
     if (submittedDraftWasSaved) reviewDraft.clearIf(reviewDraft.value);
@@ -2792,35 +2817,21 @@ function TaskDetail({
             event.preventDefault();
             void saveReview('submit_human_task', {
               summary: humanText,
+              citations: reviewDraft.value.citations,
               expected: reviewDraft.value.revision,
             });
           }}
         >
-          {view.tasks.some(
-            (parent) =>
-              parent.executor === 'model' &&
-              parent.result &&
-              view.edges.some(
-                (edge) =>
-                  edge.task_id === task.id && edge.depends_on === parent.id,
-              ),
-          ) && (
+          {assistantDraft?.result && (
             <Button
               type="button"
               variant="outline"
               disabled={busy || !!humanText.trim()}
               onClick={() =>
-                setHumanText(
-                  view.tasks.find(
-                    (parent) =>
-                      parent.executor === 'model' &&
-                      view.edges.some(
-                        (edge) =>
-                          edge.task_id === task.id &&
-                          edge.depends_on === parent.id,
-                      ),
-                  )?.result?.summary || '',
-                )
+                reviewDraft.update({
+                  humanText: assistantDraft.result!.summary,
+                  citations: assistantDraft.result!.citations,
+                })
               }
             >
               {L('从助手草稿开始修改', 'Edit the assistant draft')}
@@ -2843,6 +2854,12 @@ function TaskDetail({
             )}
             <Textarea
               value={humanText}
+              aria-invalid={missingReviewCitations.length > 0}
+              aria-describedby={
+                missingReviewCitations.length
+                  ? `review-citation-error-${task.id}`
+                  : undefined
+              }
               disabled={busy}
               onChange={(event) => setHumanText(event.target.value)}
               required
@@ -2850,9 +2867,52 @@ function TaskDetail({
               maxLength={30000}
             />
           </label>
+          {missingReviewCitations.length > 0 && (
+            <output
+              id={`review-citation-error-${task.id}`}
+              className="form-error"
+            >
+              {L(
+                `这些引文编号还没有对应出处：${missingReviewCitations.join('、')}。请核对后再保存；草稿仍保留。`,
+                `These citation numbers have no matching source: ${missingReviewCitations.join(', ')}. Correct them before saving; your draft is retained.`,
+              )}
+            </output>
+          )}
+          {!!humanText.trim() && (
+            <details className="review-writing-preview">
+              <summary>
+                {L('预览我的稿件与出处', 'Preview my text and sources')}
+              </summary>
+              <p className="muted">
+                {L(
+                  '这里显示保存后的稿件与引文编号。重复引文会合并；点击编号可回到原文。预览不代表审读已通过。',
+                  'This shows the text and citation numbers as they will be saved. Duplicate citations are combined. Select a number to inspect the original; previewing does not accept the review.',
+                )}
+              </p>
+              <ResearchResult
+                result={{ ...reviewPreview, checks: [] }}
+                sourceLabel={(id) =>
+                  sources.find(
+                    (source) =>
+                      source.id ===
+                      versions.find((version) => version.id === id)?.source_id,
+                  )?.title || L('原始资料', 'Original source')
+                }
+                onSource={(id, page) => {
+                  const version = versions.find((item) => item.id === id);
+                  if (version) onOpenSource(version.source_id, id, page);
+                }}
+              />
+            </details>
+          )}
           <Button
             type="submit"
-            disabled={busy || outdatedDraft || !humanText.trim()}
+            disabled={
+              busy ||
+              outdatedDraft ||
+              !humanText.trim() ||
+              missingReviewCitations.length > 0
+            }
           >
             <Send size={15} />
             {L('保存我的核查意见', 'Save my review')}

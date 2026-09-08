@@ -30,6 +30,7 @@
   color: var(--muted-foreground);
 }
 .research-platform .mission-brief,
+.research-platform .review-writing-preview,
 .research-platform .research-review-context,
 .research-platform .event-log {
   background: var(--card);
@@ -39,6 +40,7 @@
   margin: 12px 0;
 }
 .research-platform .mission-brief > summary,
+.research-platform .review-writing-preview > summary,
 .research-platform .research-review-context > summary {
   cursor: pointer;
   font-size: 13px;

@@ -668,5 +668,7 @@
   "分页位置无效，请刷新重试。": "Invalid page position. Please refresh and try again.",
   "单条记录过大，无法在页面中加载。请联系支持。": "This record is too large to load. Please contact support.",
   "记录在读取时发生变化，请刷新重试。": "The record changed while loading. Please refresh and try again.",
-  "服务器暂时无法响应，请稍后重试。": "The server is temporarily unavailable. Please try again shortly."
+  "服务器暂时无法响应，请稍后重试。": "The server is temporarily unavailable. Please try again shortly.",
+  "审读引文不在当前前置结果中，请重新打开草稿并核对出处。": "A review citation is not in the current upstream results. Reopen the draft and check its sources.",
+  "正文中有找不到出处的引文编号，请对照预览修改后保存。": "A citation number in your text has no matching source. Check the preview and correct it before saving."
 }

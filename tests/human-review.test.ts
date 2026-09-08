@@ -180,6 +180,58 @@ void test('review deduplication remaps prose numbers without merging distinct so
   ]);
 });
 
+void test('explicit review citations keep their meaning when upstream numbering differs', async () => {
+  const f = await fixture();
+  const second = { ...f.citation, quote: 'Commodo', start: 10 };
+  await db
+    .prepare('UPDATE mission_tasks SET result=? WHERE id=?')
+    .bind(
+      JSON.stringify({
+        summary: 'Names [1] [2].',
+        citations: [f.citation, second],
+        checks: [],
+      }),
+      f.parent,
+    )
+    .run();
+  const submitted = await submitHumanReview(f.store, f.human, {
+    ...f.submission,
+    summary: 'A researcher-selected name [1], then the full phrase [2].',
+    citations: [second, f.citation],
+  });
+  assert.equal(submitted.result?.citations[0].quote, 'Commodo');
+  assert.equal(submitted.result?.citations[1].quote, f.citation.quote);
+  assert.equal(submitted.status, 'review');
+  assert.equal((await f.store.task(f.publish)).status, 'blocked');
+  const retry = await submitHumanReview(f.store, f.human, {
+    ...f.submission,
+    summary: 'A researcher-selected name [1], then the full phrase [2].',
+    citations: [second, f.citation],
+  });
+  assert.equal(retry.attempt, submitted.attempt);
+});
+
+void test('review rejects a real but unselected quotation and missing citation numbers', async () => {
+  const f = await fixture();
+  await assert.rejects(
+    submitHumanReview(f.store, f.human, {
+      ...f.submission,
+      citations: [{ ...f.citation, quote: 'Commodo', start: 10 }],
+    }),
+    status(400),
+  );
+  await assert.rejects(
+    submitHumanReview(f.store, f.human, {
+      ...f.submission,
+      summary: 'A source claim [2].',
+      citations: [f.citation],
+    }),
+    status(400),
+  );
+  assert.equal((await f.store.task(f.human)).status, 'ready');
+  assert.equal((await f.store.task(f.publish)).status, 'blocked');
+});
+
 void test('repair of an uncertain comparison keeps cost records and requires a new review', async () => {
   const f = await fixture();
   const task = await f.store.task(f.human);

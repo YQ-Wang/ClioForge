@@ -1,7 +1,37 @@
 import type { TaskResult, MissionTask } from './platform/types';
 
-const citationKey = (c: TaskResult['citations'][number]) =>
+export const citationKey = (c: TaskResult['citations'][number]) =>
   JSON.stringify([c.version_id, c.page, c.quote, c.start ?? null]);
+
+export function unresolvedReviewCitations(
+  summary: string,
+  citations: TaskResult['citations'],
+) {
+  return [
+    ...new Set(
+      [...summary.matchAll(/\[(\d+)\]/g)]
+        .filter((match) => !citations[Number(match[1]) - 1])
+        .map((match) => `[${match[1]}]`),
+    ),
+  ];
+}
+
+export function reviewDraftSource<
+  T extends Pick<
+    MissionTask,
+    'id' | 'executor' | 'created_at' | 'input' | 'result'
+  >,
+>(parents: T[]) {
+  return parents
+    .filter((parent) => parent.executor === 'model' && parent.result)
+    .sort(
+      (a, b) =>
+        Number(b.input.parameters.dossier_stage === 'synthesis') -
+          Number(a.input.parameters.dossier_stage === 'synthesis') ||
+        a.created_at.localeCompare(b.created_at) ||
+        a.id.localeCompare(b.id),
+    )[0];
+}
 
 // Display legacy findings without changing their immutable citation numbers.
 export function groupedCitations(citations: TaskResult['citations']) {

@@ -39,3 +39,11 @@ The execution history retains paid requests, failures and output corrections. If
 ## Interpreting readiness
 
 A completed preparation round means a researcher has a dossier to check. It does not mean the model has found all relevant archives, resolved every disagreement or produced an independently validated historical conclusion. Review the primary passages and the competing readings before accepting findings or using them in a manuscript.
+
+## Edit and review the dossier
+
+Use **Edit the assistant draft** to start from the synthesis. The draft retains its citation bindings alongside the text, so its numbers keep referring to the same passages even when upstream results have different citation orders. Changes stay in this browser until submitted.
+
+Open **Preview my text and sources** to inspect the saved-text preview and follow its numbered source controls. Repeated citations are combined in that preview and on submission. An unresolved number is shown next to the editor; correct it before saving. Only quotations inherited from the current upstream results can be submitted through this draft action. Adding or changing quotation text uses the separate source-checking revision workflow.
+
+Saving produces a pending review. It does not accept the interpretation or publish the finding. A member with review permission records a reason and explicitly accepts or returns it. Existing drafts without explicit citation bindings retain the earlier inherited-numbering convention rather than being silently reinterpreted.
