@@ -1,4 +1,6 @@
 'use client';
+import { ResearchLedger } from './research-ledger';
+import { ResearchTrace } from './research-trace';
 import MissionProgress from './mission-progress';
 import ResearchRepair from './research-repair';
 import ResearchLibrary from './research-library';
@@ -728,6 +730,11 @@ export default function ResearchPlatform({
                     </Button>
                   </div>
                 </div>
+                <ResearchTrace
+                  key={view.mission.id}
+                  projectId={project.id}
+                  missionId={view.mission.id}
+                />
                 <MissionProgress view={view} onTask={selectTask} />
                 <details className="mission-brief">
                   <summary>
@@ -1573,6 +1580,13 @@ function MissionForm({
   >([]);
   const [saved, setSaved] = useState('');
   const [external, setExternal] = useState(false);
+  const [synthesisId, setSynthesisId] = useState('');
+  const [modelEvidence, setModelEvidence] = useState<
+    import('@/lib/harness/model-evidence').ModelEvidence[] | null
+  >(null);
+  const [evidenceError, setEvidenceError] = useState('');
+  const [synthesisInput, setSynthesisInput] = useState('');
+  const [synthesisOutput, setSynthesisOutput] = useState('');
   const [methodText, setMethodText] = useState('');
   const selectedVersions = selected.flatMap((id) => {
     const version = versions
@@ -1655,6 +1669,7 @@ function MissionForm({
                   formText(data, 'scope') +
                   '\n' +
                   formText(data, 'acceptance'),
+                version: methods.find((m) => m.id === saved)?.body.version || 1,
                 fields: fields
                   .split(/[,，、\n]+/)
                   .map((v) => v.trim())
@@ -1671,6 +1686,14 @@ function MissionForm({
               locale: outputLocale,
               external,
               comparisonText: formText(data, 'comparison'),
+              synthesis:
+                recipe === 'investigate' && synthesisId
+                  ? {
+                      model_id: synthesisId,
+                      input_rate: Number(synthesisInput),
+                      output_rate: Number(synthesisOutput),
+                    }
+                  : undefined,
             });
           } catch (error) {
             setFormError(
@@ -1760,6 +1783,14 @@ function MissionForm({
               ))}
             </select>
           </label>
+          {recipe === 'investigate' && (
+            <p>
+              {L(
+                '助手最多自主选择 4 次检索或读页操作，再整理报告供你审读。只访问本次所选页；每一步可回放，停止探索后不会继续付费选择操作。',
+                'The assistant chooses up to four searches or page reads, then prepares a report for review. It accesses only selected pages. Every step is recorded; stopped exploration makes no further decision calls.',
+              )}
+            </p>
+          )}
           {recipe && (
             <>
               <label>
@@ -1783,7 +1814,7 @@ function MissionForm({
                   </option>
                   {methods.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.title}
+                      {m.title} · v{m.body.version || 1}
                     </option>
                   ))}
                 </select>
@@ -1955,6 +1986,131 @@ function MissionForm({
               </label>
             </div>
           )}
+          {recipe === 'investigate' && (
+            <details className="method-evaluation">
+              <summary>
+                {L(
+                  '为汇总选择另一位助手',
+                  'Choose a different assistant for synthesis',
+                )}
+              </summary>
+              <p>
+                {L(
+                  '探索使用上方助手。汇总可选另一模型，建议先查看相同方法的人工评估，再决定是否值得额外成本。不会因超时自动换模型或重复扣费。',
+                  'Exploration uses the assistant above. For synthesis, compare manual evaluations of the same method before choosing another model and its additional cost. Timeouts never trigger an automatic model switch or a repeated request.',
+                )}
+              </p>
+              <label>
+                {L('汇总助手', 'Synthesis assistant')}
+                <select
+                  value={synthesisId}
+                  onChange={(event) => {
+                    setSynthesisId(event.target.value);
+                    setSynthesisInput('');
+                    setSynthesisOutput('');
+                  }}
+                >
+                  <option value="">
+                    {L('使用同一助手', 'Use the same assistant')}
+                  </option>
+                  {models
+                    .filter((m) => m.id !== modelId)
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  setEvidenceError('');
+                  try {
+                    const r = await api<{
+                      evidence: import('@/lib/harness/model-evidence').ModelEvidence[];
+                    }>(
+                      `/api/platform?project_id=${projectId}&model_evidence=investigate`,
+                    );
+                    setModelEvidence(r.evidence);
+                  } catch {
+                    setEvidenceError(
+                      L(
+                        '评估记录暂时无法读取，请重试。',
+                        'Evaluation records are unavailable. Please retry.',
+                      ),
+                    );
+                  }
+                }}
+              >
+                {L('查看已有人工评估', 'View recorded manual evaluations')}
+              </Button>
+              {evidenceError && <p role="alert">{evidenceError}</p>}
+              {modelEvidence && (
+                <>
+                  <p>
+                    {L(
+                      '以下仅统计当前项目、同类方法的已评估结果，材料难度可能不同，不能视为模型准确率排名。修改模型配置后不沿用旧评估。',
+                      'These are evaluated results for this method in this project. Material difficulty may differ; this is not a model accuracy ranking. Changed model configurations do not inherit earlier evaluations.',
+                    )}
+                  </p>
+                  {!modelEvidence.length ? (
+                    <p>
+                      {L(
+                        '尚无可用评估。先完成一次查证，在汇总步骤记录人工评估。',
+                        'No applicable evaluations yet. Complete an investigation and record a manual evaluation on its synthesis step.',
+                      )}
+                    </p>
+                  ) : (
+                    <ul>
+                      {modelEvidence.map((e) => (
+                        <li key={e.model_id}>
+                          {e.label} · {e.samples} {L('份评估', 'evaluations')} ·{' '}
+                          {e.errors} {L('项问题', 'issues')} ·{' '}
+                          {e.review_minutes.toFixed(1)}{' '}
+                          {L('分钟复核', 'review minutes')} · $
+                          {(e.cost_units / 1000000).toFixed(4)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+              {synthesisId && (
+                <div className="form-pair">
+                  <label>
+                    {L(
+                      '输入费率（USD / 百万 tokens）',
+                      'Input rate (USD / million tokens)',
+                    )}
+                    <Input
+                      type="number"
+                      required
+                      min="0.0001"
+                      step="any"
+                      value={synthesisInput}
+                      onChange={(e) => setSynthesisInput(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    {L(
+                      '输出费率（USD / 百万 tokens）',
+                      'Output rate (USD / million tokens)',
+                    )}
+                    <Input
+                      type="number"
+                      required
+                      min="0.0001"
+                      step="any"
+                      value={synthesisOutput}
+                      onChange={(e) => setSynthesisOutput(e.target.value)}
+                    />
+                  </label>
+                </div>
+              )}
+            </details>
+          )}
           {!budget && canBudget && (
             <label>
               {L(
@@ -2113,16 +2269,22 @@ function MissionForm({
                   title: formText(data, 'title'),
                   kind: recipe,
                   instructions: formText(data, 'question'),
+                  version:
+                    methods.find((m) => m.id === saved)?.body.version || 1,
                   fields: fields
                     .split(/[,，、\n]+/)
                     .map((v) => v.trim())
                     .filter(Boolean),
                 };
-                await api('/api/platform', {
-                  action: 'save_method',
-                  project_id: projectId,
-                  value: method,
-                });
+                const savedMethod = await api<{ result: string }>(
+                  '/api/platform',
+                  {
+                    action: 'save_method',
+                    project_id: projectId,
+                    value: { ...method, parent_id: saved || undefined },
+                  },
+                );
+                if (savedMethod.result) setSaved(savedMethod.result);
                 const result = await api<{ methods: typeof methods }>(
                   `/api/platform?project_id=${projectId}&methods=1`,
                 );
@@ -2140,7 +2302,9 @@ function MissionForm({
               }
             }}
           >
-            {L('保存这套研究方法', 'Save this research method')}
+            {saved
+              ? L('另存为下一版研究方法', 'Save next method edition')
+              : L('保存这套研究方法', 'Save this research method')}
           </Button>
         </div>
       )}
@@ -2675,6 +2839,27 @@ function TaskDetail({
           />
         </>
       )}
+      {canWrite &&
+        task.status === 'failed' &&
+        ['output_validation', 'local_delivery'].includes(
+          task.failure_stage || '',
+        ) && (
+          <div className="space-y-2">
+            <p>
+              {L(
+                '模型回答已经保留。可重新核查并继续保存，不会再次调用模型或增加推理费用。',
+                'The model answer is saved. Recheck and resume saving it without another model call or inference charge.',
+              )}
+            </p>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => void onAction('recheck_response', task.revision)}
+            >
+              {L('重新核查已保存回答', 'Recheck saved answer')}
+            </Button>
+          </div>
+        )}
       {task.result &&
         task.input.parameters.output_schema === 'claim_review_v1' && (
           <ClaimAssessments taskId={task.id} />
@@ -2729,17 +2914,33 @@ function TaskDetail({
           }
         />
       )}
-      {task.result && task.input.parameters.extraction === true && (
-        <MethodEvaluation
-          key={`${task.id}:${task.revision}`}
-          task={task}
-          view={view}
-          busy={busy}
-          canReview={
-            canReview &&
-            ['review', 'succeeded', 'accepted'].includes(task.status)
+      {task.result &&
+        (task.input.parameters.extraction === true ||
+          task.input.parameters.agent_stage === 'report') && (
+          <MethodEvaluation
+            key={`${task.id}:${task.revision}`}
+            task={task}
+            view={view}
+            busy={busy}
+            canReview={
+              canReview &&
+              ['review', 'succeeded', 'accepted'].includes(task.status)
+            }
+            onSave={(value) => onAction('evaluate_task', value)}
+          />
+        )}
+      {task.result && task.input.parameters.agent_stage === 'tool' && (
+        <ResearchLedger
+          data={task.result.data}
+          sourceLabel={(id) =>
+            sources.find(
+              (s) => s.id === versions.find((v) => v.id === id)?.source_id,
+            )?.title || L('原始资料', 'Original source')
           }
-          onSave={(value) => onAction('evaluate_task', value)}
+          onSource={(id, page) => {
+            const version = versions.find((v) => v.id === id);
+            if (version) onOpenSource(version.source_id, id, page);
+          }}
         />
       )}
       {task.result && <ResearchCandidates result={task.result} />}

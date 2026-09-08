@@ -27,3 +27,7 @@ Follow-up: [implemented recovery fixes and live verification](pilot-recovery-202
 Latest workflow pass: [Adams case, sidebar ordering and live manuscript validation, September 7, 2026](workflow-e2e-2026-09-07.md), including permission fixes, provider failures and browser checks still pending.
 
 Background preparation: [Adams dossier, saved-response recovery and bounded output correction](background-dossier-validation-2026-09-07.md).
+
+Research harness: [bounded investigation, replay and method editions](research-harness.md), with [live Adams validation](research-harness-validation-2026-09-07.md).
+
+Current capability inventory: [implemented agentic/harness capabilities, remaining gaps and validation](agentic-harness-status.md).

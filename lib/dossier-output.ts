@@ -97,6 +97,7 @@ export function resolveDossierCitations(
   result: TaskResult,
   passages: TaskResult['citations'],
   locale: 'zh-CN' | 'en' = 'en',
+  maxCitations = 12,
 ) {
   const data = dossierData.parse(result.data);
   if (!/\[P/.test(result.summary))
@@ -143,12 +144,12 @@ export function resolveDossierCitations(
   ];
   if (
     !numbers.length ||
-    numbers.length > 12 ||
+    numbers.length > maxCitations ||
     numbers.some((n) => !passages[n - 1])
   )
     throw new HttpError(
       400,
-      '后台报告引用了不存在的原文片段，或超过 12 个片段。',
+      `后台报告引用了不存在的原文片段，或超过 ${maxCitations} 个片段。`,
     );
   const render = (text: string) =>
     text.replace(

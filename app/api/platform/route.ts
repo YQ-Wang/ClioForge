@@ -1,9 +1,12 @@
+import { recheckSavedResponse } from '@/lib/platform/recover-model-result';
+import { exportTrace } from '@/lib/harness/trace';
 import { postDiscussion } from '@/lib/research-attention';
 import { discussionTarget } from '@/lib/platform/discussions';
+import { modelEvidence } from '@/lib/harness/model-evidence';
+import { saveMethod } from '@/lib/harness/methods';
 import { saveEvaluation } from '@/lib/platform/evaluation';
 import { citationSchema } from '@/lib/platform/types';
 import { updateMission } from '@/lib/platform/incremental';
-import { methodSchema } from '@/lib/platform/research-recipes';
 import { TeamStore } from '@/lib/project-team';
 import { importLedSample, sampleBatchSchema } from '@/lib/platform/dataset';
 import { z } from 'zod';
@@ -26,6 +29,7 @@ const inputSchema = z.object({
     'control_mission',
     'review_task',
     'retry_task',
+    'recheck_response',
     'claim_task',
     'submit_task',
     'submit_human_task',
@@ -86,6 +90,21 @@ export async function GET(request: Request) {
         { headers: { 'Cache-Control': 'private, no-store' } },
       );
     const missionId = params.get('mission_id');
+    if (params.has('model_evidence'))
+      return Response.json(
+        {
+          evidence: await modelEvidence(
+            store,
+            projectId,
+            params.get('model_evidence') || '',
+          ),
+        },
+        { headers: { 'Cache-Control': 'private, no-store' } },
+      );
+    if (missionId && params.get('trace') === '1')
+      return Response.json(await exportTrace(store, projectId, missionId), {
+        headers: { 'Cache-Control': 'private, no-store' },
+      });
     if (missionId) {
       const view = await store.view(missionId);
       if (view.mission.project_id !== projectId)
@@ -199,19 +218,7 @@ export async function POST(request: Request) {
         break;
       }
       case 'save_method': {
-        const method = methodSchema.parse(input.value);
-        result = crypto.randomUUID();
-        await store.db
-          .prepare('INSERT INTO research_methods VALUES(?,?,?,?,?,?)')
-          .bind(
-            result,
-            input.project_id,
-            method.title,
-            JSON.stringify(method),
-            store.owner,
-            new Date().toISOString(),
-          )
-          .run();
+        result = await saveMethod(store, input.project_id, input.value);
         break;
       }
       case 'assign_task': {
@@ -308,6 +315,18 @@ export async function POST(request: Request) {
         await store.review(id, value.decision, value.reason, value.expected);
         await dispatchMission(auth.settings, task.mission_id);
         result = id;
+        break;
+      }
+      case 'recheck_response': {
+        const task = await store.task(requireId());
+        if (task.project_id !== input.project_id)
+          throw new HttpError(404, '任务不属于此项目。');
+        result = await recheckSavedResponse(
+          store,
+          task.id,
+          z.number().int().parse(input.value),
+        );
+        await dispatchMission(auth.settings, task.mission_id);
         break;
       }
       case 'retry_task': {

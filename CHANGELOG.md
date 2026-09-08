@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add bounded research investigations with persisted search/read/finish operations, long-page continuation, exact passage citations and a final researcher-review gate.
+- Export research execution traces and validate source quotations, dependency graphs, tool decisions and ledger continuity offline without new model calls.
+- Recover confirmed saved answers after local delivery or output-validation failures without repeating paid requests; retain provider-stage diagnostics and uncertain reservations.
+- Version reusable research methods, preserve caveats in bounded follow-up context, and show manual evaluation evidence when choosing exploration and synthesis models.
+- Append migration `0022_research_harness.sql` for optional model diagnostics and task failure stages; apply it before upgrading both workers.
 - Reject malformed collection pages and invalid continuation cursors before they can loop or expose a partial collection as complete.
 - Run a frozen, synthetic v1 backup compatibility test by default, without a private account export.
 - Enforce append-only database migrations in CI, including unique migration numbering and unchanged existing SQL.

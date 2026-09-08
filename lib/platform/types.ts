@@ -97,6 +97,7 @@ export type Mission = {
   updated_at: string;
 };
 export type MissionTask = {
+  failure_stage?: string | null;
   board_stage?: 'planned' | 'active' | 'waiting';
   id: string;
   mission_id: string;

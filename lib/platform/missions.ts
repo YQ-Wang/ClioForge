@@ -1,4 +1,9 @@
 import {
+  priorResearch,
+  validateResearchAction,
+  validateResearchReport,
+} from '../harness/research-tools';
+import {
   assertManuscriptCurrent,
   validateManuscriptSection,
 } from '../manuscript';
@@ -440,6 +445,19 @@ export class MissionStore extends ResearchStore {
         for (const citation of (JSON.parse(dep.result) as TaskResult).citations)
           allowed.add(citation.version_id);
     }
+    if (task.input.parameters.agent_stage === 'decision')
+      validateResearchAction(result);
+    if (task.input.parameters.agent_stage === 'report') {
+      const dependencyTasks = (
+        await this.db
+          .prepare(
+            'SELECT p.* FROM task_dependencies d JOIN mission_tasks p ON p.id=d.depends_on WHERE d.task_id=?',
+          )
+          .bind(task.id)
+          .all()
+      ).results.map(decodeTask);
+      validateResearchReport(result, priorResearch(dependencyTasks));
+    }
     if (task.input.parameters.extraction === true)
       checkExtraction(
         result,
@@ -609,7 +627,7 @@ export class MissionStore extends ResearchStore {
         .bind(serialized, status, date, id, task.attempt, actor, hash, date),
       this.db
         .prepare(
-          "UPDATE mission_tasks SET result=?,status=?,error=NULL,lease_hash=NULL,lease_until=NULL,revision=revision+1,updated_at=? WHERE id=? AND attempt=? AND status='running' AND claimed_by=? AND lease_hash=? AND lease_until>?",
+          "UPDATE mission_tasks SET result=?,status=?,error=NULL,failure_stage=NULL,lease_hash=NULL,lease_until=NULL,revision=revision+1,updated_at=? WHERE id=? AND attempt=? AND status='running' AND claimed_by=? AND lease_hash=? AND lease_until>?",
         )
         .bind(serialized, status, date, id, task.attempt, actor, hash, date),
     ]);

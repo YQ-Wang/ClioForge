@@ -1,3 +1,5 @@
+import { priorResearch, researchPassages } from '../harness/research-tools';
+import { decodeTask } from './missions';
 import {
   DOSSIER_OUTPUT_SCHEMA,
   dossierPassages,
@@ -36,6 +38,22 @@ export async function savedModelResult(
     ),
   );
   result.checks = [];
+  if (job.model_snapshot.output_schema === 'research_report_v1') {
+    const deps = (
+      await store.db
+        .prepare(
+          'SELECT p.* FROM task_dependencies d JOIN mission_tasks p ON p.id=d.depends_on WHERE d.task_id=?',
+        )
+        .bind(task.id)
+        .all()
+    ).results.map(decodeTask);
+    return resolveDossierCitations(
+      result,
+      researchPassages(priorResearch(deps)),
+      task.input.locale,
+      24,
+    );
+  }
   if (job.model_snapshot.output_schema === DOSSIER_OUTPUT_SCHEMA) {
     const versions = await Promise.all(
       [...new Set(job.version_ids)].map((id) => store.version(id)),

@@ -22,19 +22,27 @@ export default function MethodEvaluation({
   const { locale } = useI18n(),
     L = (zh: string, en: string) => (locale === 'en' ? en : zh);
   const [saved, setSaved] = useState(false);
+  const investigation = task.input.parameters.agent_stage === 'report';
   const evaluations = (view.evaluations || []).filter(
     (e) => e.config.task_id === task.id,
   );
   return (
     <details className="method-evaluation">
       <summary>
-        {L('记录本页人工评估', 'Record a manual page evaluation')}
+        {investigation
+          ? L('评估这次查证是否有用', 'Evaluate this investigation')
+          : L('记录本页人工评估', 'Record a manual page evaluation')}
       </summary>
       <p>
-        {L(
-          '通读整页并检查遗漏后填写。评估固定在当前输出版本；修改输出后需重新评估。耗时请包括检查和返工，纯人工对照可留空。',
-          'Complete after reading the whole page, including omissions. This evaluates the current output version. Reassess after edits. Include checking and rework time; the manual baseline is optional.',
-        )}
+        {investigation
+          ? L(
+              '请对照全部选定材料核查结论、遗漏与相反证据。记录的是本次报告质量，不代表该模型在其他研究中同样可靠。',
+              'Review conclusions, omissions and counterevidence against all selected material. This evaluates this report, not the model’s reliability on other research.',
+            )
+          : L(
+              '通读整页并检查遗漏后填写。评估固定在当前输出版本；修改输出后需重新评估。耗时请包括检查和返工，纯人工对照可留空。',
+              'Complete after reading the whole page, including omissions. This evaluates the current output version. Reassess after edits. Include checking and rework time; the manual baseline is optional.',
+            )}
       </p>
       {canReview && (
         <form
@@ -66,13 +74,31 @@ export default function MethodEvaluation({
           <div className="form-pair">
             {(
               [
-                ['missed', '遗漏记录数', 'Missed records'],
-                ['false_inclusions', '不应收录的记录数', 'False inclusions'],
-                ['wrong_values', '值有误的栏目数', 'Fields with wrong values'],
+                [
+                  'missed',
+                  investigation ? '遗漏的重要证据数' : '遗漏记录数',
+                  investigation
+                    ? 'Missed important evidence'
+                    : 'Missed records',
+                ],
+                [
+                  'false_inclusions',
+                  investigation ? '无材料支持的判断数' : '不应收录的记录数',
+                  investigation ? 'Unsupported claims' : 'False inclusions',
+                ],
+                [
+                  'wrong_values',
+                  investigation ? '事实错误数' : '值有误的栏目数',
+                  investigation ? 'Factual errors' : 'Fields with wrong values',
+                ],
                 [
                   'wrong_categories',
-                  '分类有误的栏目数',
-                  'Fields with wrong categories',
+                  investigation
+                    ? '混淆作者、时间或语境的判断数'
+                    : '分类有误的栏目数',
+                  investigation
+                    ? 'Attribution or context errors'
+                    : 'Fields with wrong categories',
                 ],
                 [
                   'review_minutes',

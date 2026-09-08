@@ -198,6 +198,7 @@ export const workbenchInput = z.discriminatedUnion('action', [
   }),
 ]);
 export const jobInput = z.object({
+  context_mode: z.literal('catalog').optional(),
   page_refs: z
     .array(
       z.object({ version_id: z.uuid(), page: z.number().int().positive() }),
@@ -208,6 +209,8 @@ export const jobInput = z.object({
   output_format: z.literal('json').optional(),
   output_schema: z
     .enum([
+      'research_report_v1',
+      'research_tool_v1',
       'dossier_answer_v1',
       'comparison_answer_v1',
       'reading_answer_v1',

@@ -93,6 +93,8 @@ export type Job = {
     page_refs?: { version_id: string; page: number }[];
     output_format?: 'json';
     output_schema?:
+      | 'research_report_v1'
+      | 'research_tool_v1'
       | 'dossier_answer_v1'
       | 'comparison_answer_v1'
       | 'reading_answer_v1'
@@ -100,6 +102,7 @@ export type Job = {
       | 'claim_review_v1'
       | 'manuscript_section_v1'
       | 'manuscript_section_v2';
+    context_mode?: 'catalog';
     provider: string;
     model_id: string;
     effort?: import('./model-routing').ThinkingEffort;

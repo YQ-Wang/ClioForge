@@ -1,3 +1,8 @@
+import { exportTrace, replayTrace } from '../lib/harness/trace';
+import { saveMethod } from '../lib/harness/methods';
+import { modelEvidence } from '../lib/harness/model-evidence';
+import { researchMemory, researchTool } from '../lib/harness/research-tools';
+import { recheckSavedResponse } from '../lib/platform/recover-model-result';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -231,6 +236,14 @@ before(async () => {
     )
   ).split('\n'))
     if (statement.trim()) await db.prepare(statement).run();
+  for (const statement of (
+    await fs.readFile(
+      new URL('../drizzle/0022_research_harness.sql', import.meta.url),
+      'utf8',
+    )
+  ).split('\n'))
+    if (statement.trim() && !statement.trim().startsWith('--'))
+      await db.prepare(statement).run();
 });
 after(async () => {
   await mf?.dispose();
@@ -6242,5 +6255,521 @@ void test('saved response recovery refuses obsolete attempts and edited executio
   assert.match(
     (await edited.store.task(edited.claimed.task.id)).error!,
     /inputs or upstream results changed/,
+  );
+});
+
+void test('investigation tools persist scoped reading, stop paid exploration early and replay without secrets', async () => {
+  const f = await jobSetup(),
+    store = new MissionStore(db, f.owner.owner);
+  const page = (await store.version(f.a.versionId)).pages[0];
+  const draft = agentRecipe({
+    method: {
+      kind: 'investigate',
+      title: 'Read a historical testimony',
+      instructions: 'Separate observation from interpretation.',
+      fields: ['Observation'],
+      version: 2,
+    },
+    pages: [{ version_id: f.a.versionId, page: page.page }],
+    model_id: f.input.model_id,
+    input_rate: 1,
+    output_rate: 2,
+    locale: 'en',
+  });
+  const id = await store.create(f.a.project.id, draft);
+  await store.control(id, 'start');
+  let calls = 0;
+  const model: typeof invoke = async (request) => {
+    calls++;
+    const material = request.prompt.split('<materials>')[1];
+    assert.ok(
+      !material.includes(page.text),
+      'catalog must not silently supply unread source text',
+    );
+    if (calls === 1) assert.ok(!request.prompt.includes(page.text));
+    if (calls === 2)
+      assert.ok(
+        request.prompt.includes(page.text),
+        'read tool result must reach the next decision',
+      );
+    request.onDiagnostic?.({
+      stage: 'complete',
+      code: 'success',
+      duration_ms: 5,
+      request_id: 'test-request',
+    });
+    return {
+      text: JSON.stringify(
+        calls === 1
+          ? {
+              summary: 'Read the page.',
+              citations: [],
+              data: {
+                tool: 'read_page',
+                version_id: f.a.versionId,
+                page: page.page,
+              },
+            }
+          : calls === 2
+            ? {
+                summary: 'Enough for this bounded check.',
+                citations: [],
+                data: {
+                  tool: 'finish',
+                  reason:
+                    'Selected page read; independent evidence is still needed.',
+                },
+              }
+            : {
+                summary: 'An observation, not a general conclusion [P1].',
+                citations: [],
+                data: {
+                  limitations: ['Single testimony'],
+                  alternatives: [
+                    'The wording may have another interpretation [P1].',
+                  ],
+                  next_steps: ['Consult another account'],
+                },
+              },
+      ),
+      inputTokens: 100,
+      outputTokens: 50,
+    };
+  };
+  for (let step = 0; step < 15; step++) {
+    const task = (await store.view(id)).tasks.find(
+      (t) => t.status === 'ready' && t.executor !== 'human',
+    );
+    if (!task) break;
+    await executeMissionTask(
+      { DB: db, FOLIOTRACE_ENCRYPTION_KEY: f.secret },
+      task.id,
+      model,
+    );
+    const completed = await store.task(task.id);
+    assert.equal(completed.status, 'succeeded', completed.error || task.title);
+    await executeMissionTask(
+      { DB: db, FOLIOTRACE_ENCRYPTION_KEY: f.secret },
+      task.id,
+      model,
+    );
+    assert.equal((await store.task(task.id)).attempt, 1);
+  }
+  assert.equal(
+    calls,
+    3,
+    'two decisions plus synthesis; stopped rounds must not call a model',
+  );
+  const view = await store.view(id);
+  assert.equal(view.tasks.find((t) => t.executor === 'human')?.status, 'ready');
+  assert.equal(view.tasks.find((t) => t.kind === 'publish')?.status, 'blocked');
+  const trace = await exportTrace(store, f.a.project.id, id);
+  assert.deepEqual((await replayTrace(trace)).failures, []);
+  assert.equal(trace.data.jobs.length, 3);
+  assert.equal(JSON.parse(trace.data.jobs[0].diagnostics!).code, 'success');
+  assert.ok(!JSON.stringify(trace).includes('test-key'));
+  assert.ok(!JSON.stringify(trace).includes('lease_hash'));
+  const altered = structuredClone(trace);
+  altered.data.pages[0].text = 'Altered source';
+  await assert.rejects(replayTrace(altered), /checksum/);
+  altered.sha256 = await sha256(JSON.stringify(altered.data));
+  assert.ok((await replayTrace(altered)).failures.length > 0);
+  await assert.rejects(
+    exportTrace(new MissionStore(db, (await user()).owner), f.a.project.id, id),
+  );
+  const report = view.tasks.find(
+    (t) => t.input.parameters.agent_stage === 'report',
+  )!;
+  await saveEvaluation(store, report.id, {
+    expected: report.revision,
+    missed: 1,
+    false_inclusions: 0,
+    wrong_values: 0,
+    wrong_categories: 0,
+    review_minutes: 2,
+    manual_minutes: 5,
+    notes: 'One source is not enough for a general conclusion.',
+  });
+  const evaluation = (await store.view(id)).evaluations![0];
+  assert.equal(evaluation.config.kind, 'investigation');
+  assert.equal(evaluation.config.method_version, 2);
+  assert.equal(evaluation.current, 1);
+  const evidence = await modelEvidence(store, f.a.project.id, 'investigate');
+  assert.equal(evidence.length, 1);
+  assert.equal(evidence[0].samples, 1);
+  assert.equal(evidence[0].errors, 1);
+  await db
+    .prepare('UPDATE model_connections SET model_id=? WHERE id=?')
+    .bind('changed-model', f.input.model_id)
+    .run();
+  assert.deepEqual(
+    await modelEvidence(store, f.a.project.id, 'investigate'),
+    [],
+  );
+});
+
+void test('a local result-delivery failure recovers the saved paid response without calling the provider twice', async (t) => {
+  const f = await jobSetup(),
+    store = new MissionStore(db, f.owner.owner);
+  const draft = researchTemplate({
+    title: 'Delivery recovery',
+    question: 'What is said?',
+    scope: 'One page',
+    acceptance: 'Review exact text',
+    query: '',
+    version_ids: [f.a.versionId],
+    locale: 'en',
+    model_id: f.input.model_id,
+    input_rate: 1,
+    output_rate: 2,
+  });
+  const id = await store.create(f.a.project.id, draft);
+  await store.control(id, 'start');
+  const fault = t.mock.method(
+    MissionStore.prototype,
+    'submit',
+    async (taskId: string) => {
+      assert.equal(taskId, draft.tasks[0].id);
+      throw new Error('Simulated local write failure');
+    },
+  );
+  let calls = 0;
+  const page = (await store.version(f.a.versionId)).pages[0];
+  await executeMissionTask(
+    { DB: db, FOLIOTRACE_ENCRYPTION_KEY: f.secret },
+    draft.tasks[0].id,
+    async () => {
+      calls++;
+      return {
+        text: JSON.stringify({
+          summary: 'Observation [1]',
+          data: { limitations: ['One selected page.'] },
+          citations: [
+            { version_id: f.a.versionId, page: page.page, quote: page.text },
+          ],
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+      };
+    },
+  );
+  fault.mock.restore();
+  assert.equal((await store.task(draft.tasks[0].id)).status, 'uncertain');
+  assert.equal(
+    (
+      await db
+        .prepare('SELECT failure_stage FROM mission_tasks WHERE id=?')
+        .bind(draft.tasks[0].id)
+        .first()
+    )?.failure_stage,
+    'local_delivery',
+  );
+  await Promise.all([recoverMissions({ DB: db }), recoverMissions({ DB: db })]);
+  assert.equal((await store.task(draft.tasks[0].id)).status, 'succeeded');
+  assert.equal((await store.task(draft.tasks[0].id)).attempt, 1);
+  assert.equal(calls, 1);
+});
+
+void test('method editions are immutable, project scoped and cannot forge their version number', async () => {
+  const f = await jobSetup(),
+    store = new MissionStore(db, f.owner.owner);
+  const method = {
+    kind: 'investigate',
+    title: 'Context first',
+    instructions: 'Read context before drawing conclusions.',
+    fields: ['Observation'],
+    version: 999,
+  };
+  const first = await saveMethod(store, f.a.project.id, method);
+  const second = await saveMethod(store, f.a.project.id, {
+    ...method,
+    parent_id: first,
+    instructions: 'Seek a contrary account as well.',
+  });
+  const rows = (
+    await db
+      .prepare('SELECT id,body FROM research_methods WHERE project_id=?')
+      .bind(f.a.project.id)
+      .all<{ id: string; body: string }>()
+  ).results;
+  assert.equal(JSON.parse(rows.find((r) => r.id === first)!.body).version, 1);
+  assert.equal(
+    JSON.parse(rows.find((r) => r.id === first)!.body).instructions,
+    method.instructions,
+  );
+  assert.equal(JSON.parse(rows.find((r) => r.id === second)!.body).version, 2);
+  const other = await source(f.owner);
+  await assert.rejects(
+    saveMethod(store, other.project.id, { ...method, parent_id: first }),
+  );
+});
+
+void test('investigation search respects fixed pages, rejects foreign reads and stops repeated operations', async () => {
+  const f = await jobSetup(),
+    store = new MissionStore(db, f.owner.owner);
+  const page = (await store.version(f.a.versionId)).pages[0];
+  const draft = agentRecipe({
+    method: {
+      kind: 'investigate',
+      title: 'Scope test',
+      instructions: 'Read only the selected page',
+      fields: ['Observation'],
+    },
+    pages: [{ version_id: f.a.versionId, page: page.page }],
+    model_id: f.input.model_id,
+    input_rate: 1,
+    output_rate: 2,
+    locale: 'en',
+  });
+  const id = await store.create(f.a.project.id, draft),
+    view = await store.view(id);
+  const decision = view.tasks.find(
+    (t) => t.input.parameters.agent_stage === 'decision',
+  )!;
+  const tool = view.tasks.find((t) => t.id === draft.tasks[1].id)!;
+  const unrelated = await source(f.owner);
+  decision.result = {
+    summary: 'Read',
+    citations: [],
+    checks: [],
+    data: { tool: 'read_page', version_id: unrelated.versionId, page: 1 },
+  };
+  await assert.rejects(researchTool(store, tool, [decision]), /outside/);
+  decision.result.data = {
+    tool: 'search',
+    query: page.text.split(/\s+/).find((w) => w.length > 3) || page.text,
+  };
+  const result = await researchTool(store, tool, [decision]);
+  assert.ok(result.citations.length > 0);
+  assert.ok(
+    result.citations.every(
+      (c) => c.version_id === f.a.versionId && c.page === page.page,
+    ),
+  );
+  decision.result.data = {
+    tool: 'search',
+    query: `  ${(decision.result.data as { query: string }).query.toUpperCase()}  `,
+  };
+  const repeated = await researchTool(store, tool, [
+    decision,
+    { ...tool, result },
+  ]);
+  assert.equal((repeated.data as { stopped: boolean }).stopped, true);
+  assert.match(repeated.summary, /Repeated/);
+});
+
+void test('provider timeouts retain structured diagnostics and budget without being retried as local failures', async () => {
+  const f = await jobSetup();
+  const job = await createJob(f.owner, f.input);
+  let calls = 0;
+  await executeJob(
+    { DB: db, FOLIOTRACE_ENCRYPTION_KEY: f.secret },
+    job.id,
+    (request) =>
+      invoke(request, async () => {
+        calls++;
+        throw new DOMException('Request expired', 'TimeoutError');
+      }),
+  );
+  const finished = await jobById(db, job.id);
+  assert.equal(finished?.status, 'uncertain');
+  assert.ok(finished!.reserved_units > 0);
+  const diagnostic = JSON.parse(
+    (await db
+      .prepare('SELECT diagnostics FROM research_jobs WHERE id=?')
+      .bind(job.id)
+      .first<{ diagnostics: string }>())!.diagnostics,
+  );
+  assert.equal(diagnostic.code, 'transport_timeout');
+  assert.equal(diagnostic.stage, 'request');
+  assert.ok(!JSON.stringify(diagnostic).includes('test-key'));
+  await executeJob(
+    { DB: db, FOLIOTRACE_ENCRYPTION_KEY: f.secret },
+    job.id,
+    async () => {
+      calls++;
+      throw new Error('Must not call again');
+    },
+  );
+  assert.equal(calls, 1);
+});
+
+void test('explicit saved-answer rechecks are fenced and do not create jobs or additional cost', async () => {
+  const f = await interruptedModelHandoff();
+  await db
+    .prepare(
+      "UPDATE mission_tasks SET status='failed',failure_stage='output_validation',lease_hash=NULL,lease_until=NULL WHERE id=?",
+    )
+    .bind(f.claimed.task.id)
+    .run();
+  const before = await f.store.task(f.claimed.task.id);
+  const cost = await db
+    .prepare('SELECT committed_units FROM project_budgets WHERE project_id=?')
+    .bind(f.a.project.id)
+    .first();
+  await assert.rejects(
+    recheckSavedResponse(
+      new MissionStore(db, (await user()).owner),
+      before.id,
+      before.revision,
+    ),
+  );
+  await assert.rejects(
+    recheckSavedResponse(f.store, before.id, before.revision - 1),
+  );
+  const result = await recheckSavedResponse(
+    f.store,
+    before.id,
+    before.revision,
+  );
+  assert.equal(result.status, 'succeeded');
+  assert.equal(result.attempt, before.attempt);
+  assert.deepEqual(
+    await db
+      .prepare('SELECT committed_units FROM project_budgets WHERE project_id=?')
+      .bind(f.a.project.id)
+      .first(),
+    cost,
+  );
+  assert.equal(
+    (
+      await db
+        .prepare('SELECT count(*) n FROM research_jobs WHERE project_id=?')
+        .bind(f.a.project.id)
+        .first()
+    )?.n,
+    1,
+  );
+  await assert.rejects(
+    recheckSavedResponse(f.store, before.id, result.revision),
+  );
+});
+
+void test('long-page investigation continues past the first chunk with exact offsets and bounded reads', async () => {
+  const f = await jobSetup(),
+    store = new MissionStore(db, f.owner.owner);
+  const text =
+    'Background. '.repeat(750) +
+    'The petition was proposed, not recorded as submitted.';
+  const version = await f.owner.reviseSource({
+    p_source: f.a.id,
+    p_expected: 1,
+    p_method: 'manual',
+    p_pages: [{ page: 1, text }],
+  });
+  const draft = agentRecipe({
+    method: {
+      kind: 'investigate',
+      title: 'Read the late qualification',
+      instructions: 'Read the complete selected transcription.',
+      fields: ['Qualification'],
+    },
+    pages: [{ version_id: version, page: 1 }],
+    model_id: f.input.model_id,
+    input_rate: 1,
+    output_rate: 2,
+    locale: 'en',
+  });
+  const id = await store.create(f.a.project.id, draft),
+    view = await store.view(id);
+  const decision = view.tasks.find((t) => t.id === draft.tasks[0].id)!;
+  const tool = view.tasks.find((t) => t.id === draft.tasks[1].id)!;
+  decision.result = {
+    summary: 'Read',
+    citations: [],
+    checks: [],
+    data: { tool: 'read_page', version_id: version, page: 1 },
+  };
+  const first = await researchTool(store, tool, [decision]);
+  const firstMemory = researchMemory.parse(first.data);
+  assert.equal(firstMemory.steps[0].reading?.next_start, 8000);
+  assert.equal(first.citations[0].quote.length, 8000);
+  assert.ok(!first.citations[0].quote.includes('petition'));
+  decision.result.data = {
+    tool: 'read_page',
+    version_id: version,
+    page: 1,
+    start: 8000,
+  };
+  const second = await researchTool(store, tool, [
+    decision,
+    { ...tool, result: first },
+  ]);
+  const secondMemory = researchMemory.parse(second.data);
+  assert.equal(
+    secondMemory.stopped,
+    false,
+    'continuing a page is not a repeated read',
+  );
+  assert.equal(secondMemory.steps[1].reading?.next_start, null);
+  assert.equal(secondMemory.steps[1].citations[0].start, 8000);
+  assert.match(
+    secondMemory.steps[1].citations[0].quote,
+    /not recorded as submitted/,
+  );
+  assert.equal(
+    secondMemory.steps.map((s) => s.citations[0].quote).join(''),
+    text,
+  );
+  decision.result.data = {
+    tool: 'read_page',
+    version_id: version,
+    page: 1,
+    start: text.length,
+  };
+  await assert.rejects(researchTool(store, tool, [decision]), /beyond/);
+  decision.result.data = {
+    tool: 'read_page',
+    version_id: version,
+    page: 1,
+    start: 0,
+  };
+  const repeated = await researchTool(store, tool, [
+    decision,
+    { ...tool, result: first },
+  ]);
+  assert.equal(
+    researchMemory.parse(repeated.data).stopped,
+    true,
+    'omitted offset and zero address the same read',
+  );
+});
+
+void test('a second local delivery failure can be explicitly recovered without another paid request', async (t) => {
+  const f = await interruptedModelHandoff();
+  const before = await db
+    .prepare('SELECT committed_units FROM project_budgets WHERE project_id=?')
+    .bind(f.a.project.id)
+    .first();
+  const fault = t.mock.method(MissionStore.prototype, 'submit', async () => {
+    throw new Error('Temporary local write failure');
+  });
+  await recoverMissions({ DB: db });
+  fault.mock.restore();
+  const failed = await f.store.task(f.claimed.task.id);
+  assert.equal(failed.status, 'failed');
+  assert.equal(failed.failure_stage, 'local_delivery');
+  const result = await recheckSavedResponse(
+    f.store,
+    failed.id,
+    failed.revision,
+  );
+  assert.equal(result.status, 'succeeded');
+  assert.equal(result.attempt, failed.attempt);
+  assert.equal(
+    (
+      await db
+        .prepare('SELECT COUNT(*) n FROM research_jobs WHERE project_id=?')
+        .bind(f.a.project.id)
+        .first()
+    )?.n,
+    1,
+  );
+  assert.deepEqual(
+    await db
+      .prepare('SELECT committed_units FROM project_budgets WHERE project_id=?')
+      .bind(f.a.project.id)
+      .first(),
+    before,
   );
 });

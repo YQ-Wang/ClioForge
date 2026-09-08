@@ -1,4 +1,9 @@
 import {
+  RESEARCH_TOOL_SCHEMA,
+  RESEARCH_REPORT_SCHEMA,
+  researchToolJsonSchema,
+} from './harness/tool-output';
+import {
   DOSSIER_OUTPUT_SCHEMA,
   dossierOutputJsonSchema,
 } from './dossier-output';
@@ -46,7 +51,14 @@ export function safeProviderFailure(error: unknown): string {
     return '模型调用配置无法在当前运行环境执行（TypeError）。';
   return '与模型服务的连接中断，未能确认返回结果。';
 }
+export type ModelDiagnostic = {
+  stage: 'request' | 'response' | 'complete';
+  code: string;
+  duration_ms: number;
+  request_id?: string;
+};
 export type ModelRequest = {
+  onDiagnostic?: (value: ModelDiagnostic) => void;
   provider: Provider;
   model: string;
   key: string;
@@ -57,6 +69,8 @@ export type ModelRequest = {
   outputFormat?: 'json';
   sourceVersionIds?: string[];
   outputSchema?:
+    | typeof RESEARCH_REPORT_SCHEMA
+    | typeof RESEARCH_TOOL_SCHEMA
     | typeof DOSSIER_OUTPUT_SCHEMA
     | typeof COMPARISON_OUTPUT_SCHEMA
     | typeof READING_OUTPUT_SCHEMA
@@ -69,6 +83,10 @@ export type ModelRequest = {
   priceCeiling?: { input: number; output: number };
 };
 function constrainedSchema(input: ModelRequest) {
+  if (input.outputSchema === RESEARCH_REPORT_SCHEMA)
+    return dossierOutputJsonSchema;
+  if (input.outputSchema === RESEARCH_TOOL_SCHEMA)
+    return researchToolJsonSchema;
   if (input.outputSchema === DOSSIER_OUTPUT_SCHEMA)
     return dossierOutputJsonSchema;
   if (input.outputSchema === MANUSCRIPT_OUTPUT_SCHEMA)
@@ -140,6 +158,8 @@ export function providerRequest(input: ModelRequest): {
         ...(input.outputFormat === 'json'
           ? {
               response_format:
+                input.outputSchema === RESEARCH_REPORT_SCHEMA ||
+                input.outputSchema === RESEARCH_TOOL_SCHEMA ||
                 input.outputSchema === DOSSIER_OUTPUT_SCHEMA ||
                 input.outputSchema === COMPARISON_OUTPUT_SCHEMA ||
                 input.outputSchema === READING_OUTPUT_SCHEMA ||
@@ -268,6 +288,22 @@ export async function invoke(
   truncated?: boolean;
 }> {
   const request = providerRequest(input);
+  const started = Date.now();
+  const diagnostic = (
+    stage: ModelDiagnostic['stage'],
+    code: string,
+    requestId?: string | null,
+  ) => {
+    input.onDiagnostic?.({
+      stage,
+      code,
+      duration_ms: Date.now() - started,
+      ...(requestId && /^[a-zA-Z0-9_.:-]{1,160}$/.test(requestId)
+        ? { request_id: requestId }
+        : {}),
+    });
+  };
+  diagnostic('request', 'started');
   const response = await fetcher(request.url, {
     method: 'POST',
     headers: request.headers,
@@ -285,11 +321,20 @@ export async function invoke(
     ),
   }).catch((error: unknown) => {
     const code = error instanceof Error ? error.name : 'unknown';
+    diagnostic(
+      'request',
+      ['TimeoutError', 'AbortError'].includes(code)
+        ? 'transport_timeout'
+        : 'transport_failure',
+    );
     throw new ProviderError(
       'transport',
       `模型请求未获得响应（${['TypeError', 'TimeoutError', 'AbortError', 'Error'].includes(code) ? code : '网络错误'}）。请稍后检查任务记录。`,
     );
   });
+  const requestId =
+    response.headers.get('x-request-id') || response.headers.get('request-id');
+  diagnostic('response', `http_${response.status}`, requestId);
   // Do not echo vendor errors: gateways may include request headers or material.
   if (!response.ok)
     throw new ProviderError(
@@ -370,6 +415,7 @@ export async function invoke(
     data.stop_reason === 'max_tokens' ||
     data.candidates?.[0]?.finishReason === 'MAX_TOKENS' ||
     data.choices?.[0]?.finish_reason === 'length';
+  diagnostic('complete', truncated ? 'output_truncated' : 'success', requestId);
   return {
     text,
     inputTokens,

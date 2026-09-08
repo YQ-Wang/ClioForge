@@ -21,6 +21,10 @@ export type Evaluation = {
     revision: number;
     phase: string;
     result_hash: string;
+    recipe?: string;
+    model_id?: string;
+    kind?: 'extraction' | 'investigation';
+    method_version?: number;
   };
   metrics: z.infer<typeof evaluationInput> & {
     records: number;
@@ -37,23 +41,49 @@ export async function saveEvaluation(
   const task = await store.task(taskId, 'review'),
     value = evaluationInput.parse(raw);
   const data = extractionSchema.safeParse(task.result?.data);
+  const investigation = task.input.parameters.agent_stage === 'report';
   if (
     !task.result ||
-    !data.success ||
-    task.input.parameters.extraction !== true ||
+    (!investigation &&
+      (!data.success || task.input.parameters.extraction !== true)) ||
     !['review', 'succeeded', 'accepted'].includes(task.status)
   )
-    throw new HttpError(409, '请选择已完成的摘录。');
-  const fields = data.data.records.reduce((n, r) => n + r.cells.length, 0);
+    throw new HttpError(409, '请选择已完成的摘录或查证报告。');
+  const records = investigation
+    ? task.result.citations.length
+    : data.success
+      ? data.data.records.length
+      : 0;
+  const fields = investigation
+    ? 100000
+    : data.success
+      ? data.data.records.reduce((n, r) => n + r.cells.length, 0)
+      : 0;
   if (
-    value.false_inclusions > data.data.records.length ||
+    (!investigation && value.false_inclusions > records) ||
     value.wrong_values > fields ||
     value.wrong_categories > fields
   )
     throw new HttpError(400, '错误数不能超过本页记录或栏目总数。');
+  const execution = await store.db
+    .prepare(
+      "SELECT json_extract(model_snapshot,'$.provider') provider,json_extract(model_snapshot,'$.model_id') model_name FROM research_jobs WHERE project_id=? AND json_extract(model_snapshot,'$.mission_task.id')=? AND json_extract(model_snapshot,'$.mission_task.attempt')=? AND status='succeeded' ORDER BY created_at DESC LIMIT 1",
+    )
+    .bind(task.project_id, task.id, task.attempt)
+    .first<{ provider: string; model_name: string }>();
   const id = crypto.randomUUID(),
     config = {
       task_id: task.id,
+      recipe:
+        typeof task.input.parameters.recipe === 'string'
+          ? task.input.parameters.recipe
+          : '',
+      kind: investigation ? 'investigation' : 'extraction',
+      model_id: task.input.model_id,
+      ...execution,
+      method_version:
+        (task.input.parameters.method as { version?: number } | undefined)
+          ?.version || 1,
       revision: task.revision,
       phase:
         typeof task.input.parameters.phase === 'string'
@@ -69,7 +99,7 @@ export async function saveEvaluation(
       id,
       task.mission_id,
       JSON.stringify(config),
-      JSON.stringify({ ...value, records: data.data.records.length, fields }),
+      JSON.stringify({ ...value, records, fields: investigation ? 0 : fields }),
       JSON.stringify({ result: task.result, pages: task.input.page_refs }),
       store.owner,
       new Date().toISOString(),
