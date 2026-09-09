@@ -1,58 +1,79 @@
-# ClioForge naming transition
+# ClioForge domain migration
 
-ClioForge 参伍 is the new public name of Canwoo. Its long-term scope is an
-open-source research IDE for humans and agents; current workflows focus on
-history and humanities. The rename does not add scientific computing or
-experimental validation capabilities.
+ClioForge 参伍 is the public name of the former Canwoo project. The canonical
+application is `https://clioforge.com`; the repository is
+`https://github.com/YQ-Wang/ClioForge`. Public support is
+`support@clioforge.com` and transactional messages use `noreply@clioforge.com`.
 
-## Public identity
+## Existing users and links
 
-The UI, page titles, email display names, current guides, package name and new
-download filenames use ClioForge. The original fan and Qiji 參伍 lettering remain;
-the lowercase Latin wordmark uses outlined Geist Sans lettering.
+Projects, originals, notes, memberships and provider credentials stay in the same
+database and bucket. Sign in with the same account on the new domain. Existing
+sessions are host-bound; cookies are not copied between domains.
 
-The repository remains `https://github.com/YQ-Wang/canwoo`, the hosted origin
-remains `https://canwoo.com`, and public support remains `support@canwoo.com`.
-These are working destinations, not placeholders for domains that have not yet
-been configured. Google consent-screen branding is managed separately in Google
-Cloud and is not changed by an application-code rename.
+The old homepage checks for browser-local drafts. With no drafts it continues to
+the matching new URL, preserving project, version and page parameters. With local
+drafts it offers a JSON backup and a link to `/migrate-drafts` on the new site.
+That file includes only recognized draft keys, never login cookies or API-key
+settings. Import preserves existing drafts rather than overwriting them. It is
+browser-local; the researcher still saves each draft to its project as usual.
+The old `/migrate-drafts` page remains available for recovery. Keep the downloaded
+file until the recovered work has been saved. If browser storage is unavailable,
+the old page stays put and reports the problem rather than silently redirecting.
 
-## Compatibility identifiers
+Other old GET/HEAD links redirect to the canonical host. Absolute return URLs in
+old verification emails are updated to the new host. Old write requests return a
+clear migration error instead of forwarding a request with the wrong session or
+origin. `www.clioforge.com` redirects to the apex host.
 
-Do not globally replace `canwoo` or `foliotrace` in persisted records:
+## Provider configuration
 
-- Versioned backup, replay, manuscript and artifact format IDs remain unchanged.
-  New `.clioforge.json` writing downloads retain the existing v1 payload format;
-  the importer also accepts previous `.canwoo.json` files.
-- Browser draft keys, theme/language cookies, internal event names, execution
-  actor names, search-engine IDs and rate-limit keys retain their existing names.
-  This preserves drafts, preferences, running-task ownership and stored traces.
-- Cloudflare Workers, D1, R2 and Queues retain existing resource names. The public
-  example configurations use the same identifiers as before to preserve local
-  development data. Resource names do not determine the application's brand.
-- Existing authentication and encryption secrets are unchanged. Renaming a
-  secret or generating a replacement can invalidate sessions or encrypted keys.
-- Earlier public font/SVG paths and their licenses remain for cached clients.
-  Dated research records and release history retain the name used at the time.
+- Google OAuth uses the existing client and secret, with the new JavaScript
+  origin and both `/api/auth/callback/google` and `/api/connections/callback/google`
+  redirect URIs. The old origin, callbacks and authorized domain have been removed.
+- Google Picker retains Drive/Picker API restrictions and permits the new site
+  alongside `docs.google.com`; the old site is no longer allowed.
+- Google branding and developer contact use the new project name and domain.
+  The consent-screen support selector separately requires an eligible Google
+  account or managed Google Group; a forwarding address alone is not selectable.
+  The existing Google support identity remains pending a separate solution.
+  Email stays on Cloudflare; the new domain is not added to Google Workspace.
+- The GCP display name is `clioforge`. Its immutable project ID remains `canwoo`.
+- Cloudflare Email Sending has its own DKIM, SPF, bounce and DMARC records for
+  clioforge.com. Email Routing forwards support mail to the existing verified
+  private destination. Old support routing remains to receive replies to older
+  messages. No personal destination address is published in the repository.
 
-Use `CLIOFORGE_CONFIG` and `CLIOFORGE_JOBS_CONFIG` for private deployment configs.
-`CANWOO_CONFIG` and `CANWOO_JOBS_CONFIG` remain fallback aliases, independently
-for each worker. The new name takes precedence when both are set. Build and
-deployment scripts use the same resolver.
+## Stable internal identifiers
 
-## Moving to a new domain later
+Versioned backup, replay, manuscript and artifact format IDs stay unchanged.
+The `.clioforge.json` writing export keeps its v1 payload and accepts previous
+`.canwoo.json` files. Draft keys, internal actor IDs, encryption secrets, database,
+bucket and queue names remain compatible with existing data. These names are not
+public service addresses. Historical reports and cached artwork retain their
+original filenames and licensing.
 
-Buying a domain does not move the service. Before switching the public origin:
+Private deployments use `CLIOFORGE_CONFIG` and `CLIOFORGE_JOBS_CONFIG`; previous
+`CANWOO_CONFIG` and `CANWOO_JOBS_CONFIG` remain fallback aliases. The production
+config keeps the old host attached for draft recovery, and sets `BETTER_AUTH_URL`
+to the new host with its verified `EMAIL_FROM` and matching email binding.
 
-1. Verify ownership, configure DNS/TLS and attach the chosen host to the existing
-   application Worker. Keep the same database, bucket and queue.
-2. Configure the new Google OAuth origins and both callback routes, Picker key
-   restrictions, verified sending domain and support-mail routing.
-3. Update `BETTER_AUTH_URL`, deployment routes, public contact/source links and
-   export-link defaults together. Check login, Drive, email and source deep links.
-4. Plan the old-origin transition: browser-local drafts, preferences and sessions
-   do not automatically cross domains. Let users save/export local work before
-   redirecting; preserve existing project/version/page links.
+## Migration validation
 
-The application rename alone does not rename the GitHub repository, buy domains,
-change DNS, or migrate the authentication origin.
+The migration passed 289 tests, type checking, lint, formatting, the production
+build and the research-worker dry run. All 23 database migrations were unchanged.
+Dependency audit reported no vulnerabilities. Source and Git-history scans found
+no secrets; the built-client scanner match was the existing Excalidraw public
+Firebase configuration, not a platform credential.
+
+Live Google sign-in returned to clioforge.com and opened the existing research
+account and projects. The existing Drive connection was retained and Google
+Picker successfully listed available files on the new origin. The new privacy
+page returns 200, the old privacy link
+redirects with 307, and www.clioforge.com redirects to the apex with 308 while
+preserving the query. The legacy draft-recovery page remains available. Legacy
+write requests were checked in the production-build preview and return 409.
+
+Cloudflare reports sending DNS ready and the support forwarding rule enabled.
+No migration test email was sent; actual receipt has not been independently
+verified for the new sender domain.

@@ -7,12 +7,23 @@ export type WritingCitation = {
   href: string;
   stale: boolean;
 };
-export function writingCitationKey(href: string, base = 'https://canwoo.com') {
+export function writingCitationKey(
+  href: string,
+  base = 'https://clioforge.com',
+) {
   let url: URL;
   try {
     url = new URL(href, base);
-    if (url.origin !== new URL(base).origin || url.pathname !== '/')
-      return null;
+    const baseURL = new URL(base);
+    // Both hosted domains reference the same unchanged project database.
+    // Other installations keep their own strict same-origin boundary.
+    if (
+      ['https://canwoo.com', 'https://clioforge.com'].includes(baseURL.origin)
+    ) {
+      baseURL.hostname = 'clioforge.com';
+      if (url.origin === 'https://canwoo.com') url.hostname = 'clioforge.com';
+    }
+    if (url.origin !== baseURL.origin || url.pathname !== '/') return null;
   } catch {
     return null;
   }
@@ -74,7 +85,7 @@ export function writingPageReferences(
 export function citedEvidence(
   body: string,
   citations: WritingCitation[],
-  origin = citations[0]?.href || 'https://canwoo.com',
+  origin = citations[0]?.href || 'https://clioforge.com',
 ) {
   const byId = writingCitationMap(citations);
   const used: WritingCitation[] = [],
@@ -119,7 +130,7 @@ export function writingDocx(
   title: string,
   body: string,
   citations: WritingCitation[],
-  origin = citations[0]?.href || 'https://canwoo.com',
+  origin = citations[0]?.href || 'https://clioforge.com',
 ) {
   const { text, used, missing } = citedEvidence(body, citations, origin);
   if (missing.length)

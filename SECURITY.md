@@ -2,7 +2,7 @@
 
 ClioForge is public alpha. Security fixes target the latest main branch; older releases do not currently have a separate maintenance commitment.
 
-Please report vulnerabilities privately through [GitHub private vulnerability reporting](https://github.com/YQ-Wang/canwoo/security/advisories/new). If that option is unavailable, contact support@canwoo.com. Do not put credentials, private research materials or exploitable account details in a public issue.
+Please report vulnerabilities privately through [GitHub private vulnerability reporting](https://github.com/YQ-Wang/ClioForge/security/advisories/new). If that option is unavailable, contact support@clioforge.com. Do not put credentials, private research materials or exploitable account details in a public issue.
 
 Include the affected revision, a minimal reproduction using synthetic data, the expected access boundary, and the impact. There is no guaranteed response time or paid bounty program.
 

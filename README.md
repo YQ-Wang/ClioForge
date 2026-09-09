@@ -1,15 +1,15 @@
 # ClioForge 参伍
 
-[![CI](https://github.com/YQ-Wang/canwoo/actions/workflows/ci.yml/badge.svg)](https://github.com/YQ-Wang/canwoo/actions/workflows/ci.yml)
+[![CI](https://github.com/YQ-Wang/ClioForge/actions/workflows/ci.yml/badge.svg)](https://github.com/YQ-Wang/ClioForge/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
 **An open-source research IDE for humans and agents.**
 
 Starting with history and humanities, ClioForge brings together original documents, reading notes, evidence and research tasks. Work through larger collections while keeping interpretations connected to the original material and subject to human review.
 
-[Hosted application](https://canwoo.com) · [中文说明](README.zh-CN.md) · [Documentation](docs/README.md) · [Contributing](CONTRIBUTING.md)
+[Hosted application](https://clioforge.com) · [中文说明](README.zh-CN.md) · [Documentation](docs/README.md) · [Contributing](CONTRIBUTING.md)
 
-Formerly Canwoo. The hosted site and repository still use their existing addresses during the rename. Existing projects, backups and browser drafts remain compatible; see [the naming transition](docs/clioforge-transition.md).
+Formerly Canwoo. The hosted site is now clioforge.com and the repository is YQ-Wang/ClioForge. Existing projects and backups remain compatible. Browser-local drafts can be transferred through the old site; see [the naming transition](docs/clioforge-transition.md).
 
 ## What you can do
 
@@ -34,7 +34,7 @@ Semantic search currently covers text, not image similarity. Zotero import is no
 Requires Git and Node.js 22.19 or newer. Local D1, R2 and Queues are emulated; no Cloudflare account is required.
 
 ```sh
-git clone https://github.com/YQ-Wang/canwoo.git clioforge
+git clone https://github.com/YQ-Wang/ClioForge.git clioforge
 cd clioforge
 npm ci
 cp .env.example .dev.vars
@@ -82,4 +82,4 @@ Some internal `foliotrace` identifiers remain for compatibility with stored data
 
 Original application code is licensed under **AGPL-3.0-only**. See [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md) for the separately licensed libraries, fonts, citation style and sample inscriptions. The ClioForge name and logo identify this project; forks should identify their own operator and avoid implying affiliation.
 
-Report reproducible bugs or propose a concrete research workflow through [GitHub issues](https://github.com/YQ-Wang/canwoo/issues). For vulnerabilities, follow [SECURITY.md](SECURITY.md). Please follow the [code of conduct](CODE_OF_CONDUCT.md).
+Report reproducible bugs or propose a concrete research workflow through [GitHub issues](https://github.com/YQ-Wang/ClioForge/issues). For vulnerabilities, follow [SECURITY.md](SECURITY.md). Please follow the [code of conduct](CODE_OF_CONDUCT.md).

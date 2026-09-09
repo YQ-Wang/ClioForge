@@ -94,7 +94,7 @@ for (const effort of ['low', 'high', 'max']) {
           headers: {
             Authorization: `Bearer ${key}`,
             'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://canwoo.com',
+            'HTTP-Referer': 'https://clioforge.com',
             'X-Title': 'ClioForge public-source evaluation',
           },
           redirect: 'error',

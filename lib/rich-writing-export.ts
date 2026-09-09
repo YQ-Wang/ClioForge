@@ -138,7 +138,7 @@ export function richWritingDocx(
   title: string,
   serialized: string,
   citations: WritingCitation[],
-  origin = citations[0]?.href || 'https://canwoo.com',
+  origin = citations[0]?.href || 'https://clioforge.com',
 ) {
   const doc = parseRichDocument(serialized),
     byId = writingCitationMap(citations),
@@ -341,7 +341,7 @@ export function writingPrintHTML(
   body: string,
   serialized: string | null | undefined,
   citations: WritingCitation[],
-  origin = citations[0]?.href || 'https://canwoo.com',
+  origin = citations[0]?.href || 'https://clioforge.com',
 ) {
   const byId = writingCitationMap(citations),
     used: WritingCitation[] = [];

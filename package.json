@@ -115,10 +115,10 @@
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YQ-Wang/canwoo.git"
+    "url": "git+https://github.com/YQ-Wang/ClioForge.git"
   },
-  "homepage": "https://canwoo.com",
+  "homepage": "https://clioforge.com",
   "bugs": {
-    "url": "https://github.com/YQ-Wang/canwoo/issues"
+    "url": "https://github.com/YQ-Wang/ClioForge/issues"
   }
 }
