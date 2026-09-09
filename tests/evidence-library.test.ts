@@ -142,12 +142,12 @@ void test('writing drafts retain fixed version, page, evidence links and source-
   assert.match(draft, /Source changed: review required/);
   assert.match(draft, /v2 · p.1/);
   assert.ok(draft.includes('](/?project='));
-  assert.ok(!draft.includes('https://canwoo.com'));
+  assert.ok(!draft.includes('https://clioforge.com'));
   const refs = [first, second].map((e) => ({
     id: e.id,
     label: 'Source',
     text: e.quote,
-    href: 'https://canwoo.com',
+    href: 'https://clioforge.com',
     stale: needsReview.has(e.id),
   }));
   const parsed = citedEvidence(draft, refs);

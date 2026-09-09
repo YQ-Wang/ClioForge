@@ -20,7 +20,7 @@ const citation = {
   id: 'source',
   label: 'Source',
   text: 'HD010004, p. 1. “parentes”',
-  href: 'https://canwoo.com/?page=1',
+  href: 'https://clioforge.com/?page=1',
   stale: true,
 };
 const document = JSON.stringify({
@@ -50,7 +50,7 @@ const document = JSON.stringify({
           marks: [
             {
               type: 'link',
-              attrs: { href: 'https://canwoo.com/?evidence=source' },
+              attrs: { href: 'https://clioforge.com/?evidence=source' },
             },
           ],
         },

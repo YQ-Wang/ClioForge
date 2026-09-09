@@ -7,8 +7,8 @@ void test('downloaded notes retain usable fixed-version links without rewriting 
     '/?project=adams&tab=sources&version=may-letter&page=1&evidence=quote';
   const body = `| Source |\n| --- |\n| [Letter](${source}) |\n\n[Archive](https://founders.archives.gov/documents/Adams/04-01-02-0259)\n\n\`[Example](${source})\`\n\n\`\`\`md\n[Example](${source})\n\`\`\``;
   const note = { title: 'Adams comparison', body };
-  const exported = noteMarkdown(note, 'https://canwoo.com');
-  assert.ok(exported.includes(`[Letter](https://canwoo.com${source})`));
+  const exported = noteMarkdown(note, 'https://clioforge.com');
+  assert.ok(exported.includes(`[Letter](https://clioforge.com${source})`));
   assert.ok(
     exported.includes(
       '[Archive](https://founders.archives.gov/documents/Adams/04-01-02-0259)',

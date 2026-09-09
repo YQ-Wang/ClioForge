@@ -9,7 +9,7 @@ Starting with history and humanities, ClioForge brings together original documen
 
 [Hosted application](https://clioforge.com) · [中文说明](README.zh-CN.md) · [Documentation](docs/README.md) · [Contributing](CONTRIBUTING.md)
 
-Formerly Canwoo. The hosted site is now clioforge.com and the repository is YQ-Wang/ClioForge. Existing projects and backups remain compatible. The old test domain is retired; see [the naming transition](docs/clioforge-transition.md).
+The hosted site is clioforge.com and the repository is YQ-Wang/ClioForge. See [domain configuration](docs/clioforge-transition.md) for deployment details.
 
 ## What you can do
 

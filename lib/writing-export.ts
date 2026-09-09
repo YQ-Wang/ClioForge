@@ -15,14 +15,6 @@ export function writingCitationKey(
   try {
     url = new URL(href, base);
     const baseURL = new URL(base);
-    // Both hosted domains reference the same unchanged project database.
-    // Other installations keep their own strict same-origin boundary.
-    if (
-      ['https://canwoo.com', 'https://clioforge.com'].includes(baseURL.origin)
-    ) {
-      baseURL.hostname = 'clioforge.com';
-      if (url.origin === 'https://canwoo.com') url.hostname = 'clioforge.com';
-    }
     if (url.origin !== baseURL.origin || url.pathname !== '/') return null;
   } catch {
     return null;

@@ -1,27 +1,24 @@
 # ClioForge domain configuration
 
-ClioForge 参伍 is the public name of the former Canwoo project. The canonical
+ClioForge 参伍 is the project’s public name. The canonical
 application is `https://clioforge.com`; the repository is
 `https://github.com/YQ-Wang/ClioForge`. Public support is
 `support@clioforge.com` and transactional messages use `noreply@clioforge.com`.
 
 ## Active service
 
-The old canwoo.com test domain is retired. It has no application binding,
-redirect, migration notice or browser-draft transfer page. Its support forwarding
-and sending service are disabled. The domain registration is retained.
 `www.clioforge.com` redirects to the apex while preserving the path and query.
 
 Projects, originals, notes, memberships and provider credentials remain in the
 same database and bucket. Sign in with the same account on clioforge.com.
 Existing sessions and local drafts belong to the browser origin and do not
-transfer automatically. Existing test documents retain their citation identity.
+transfer automatically. Citations use the deployment’s current origin.
 
 ## Provider configuration
 
 - Google OAuth uses the existing client and secret, with only the new JavaScript
   origin and both `/api/auth/callback/google` and `/api/connections/callback/google`
-  redirect URIs. The old authorized domain and callbacks have been removed.
+  redirect URIs. The authorized domain is clioforge.com.
 - Google Picker retains Drive/Picker API restrictions and allows only the new
   site alongside `docs.google.com`.
 - The GCP display name is `clioforge`; its immutable project ID remains `canwoo`.
@@ -55,5 +52,6 @@ projects. The existing Drive connection was retained and Google Picker listed
 available files on the new origin. No new private files were imported.
 
 Cloudflare reports sending DNS ready and the new support forwarding rule enabled.
-No migration test email was sent; actual receipt has not been independently
-verified for the new sender domain.
+A test email from `noreply@clioforge.com` to `support@clioforge.com` was sent
+through Cloudflare, and the operator confirmed receipt in the forwarding inbox.
+This verifies the new sender and support-forwarding path end to end.

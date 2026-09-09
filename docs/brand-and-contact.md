@@ -8,7 +8,7 @@ are personal data and are not rewritten by a platform-domain migration.
 
 Cloudflare Email Routing forwards platform support mail to the existing verified
 private inbox. That destination is provider configuration, never public website
-content. The previous test-domain support address is retired.
+content.
 DNS readiness and accepted sending responses do not prove inbox delivery; record
 receipt confirmation separately when validating an actual email.
 

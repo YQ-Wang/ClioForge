@@ -1733,7 +1733,7 @@ void test('Better Auth registers, authenticates and invalidates a cookie session
 
 void test('public signup sends verification through the email binding and requires verification', async () => {
   const messages: EmailMessageBuilder[] = [];
-  const origin = 'https://canwoo.com';
+  const origin = 'https://clioforge.com';
   const auth = createAuth({
     DB: db,
     FILES: {} as R2Bucket,
@@ -1741,7 +1741,7 @@ void test('public signup sends verification through the email binding and requir
     BETTER_AUTH_SECRET:
       'test-only-public-auth-secret-with-at-least-32-characters',
     AUTH_ALLOW_UNVERIFIED_LOCAL: '1',
-    EMAIL_FROM: 'noreply@canwoo.com',
+    EMAIL_FROM: 'noreply@clioforge.com',
     EMAIL: {
       async send(message) {
         if (!('subject' in message)) throw new Error('Expected composed email');
@@ -1771,7 +1771,7 @@ void test('public signup sends verification through the email binding and requir
   assert.equal(signup.status, 200, await signup.clone().text());
   assert.equal(messages.length, 1);
   assert.deepEqual(messages[0].from, {
-    email: 'noreply@canwoo.com',
+    email: 'noreply@clioforge.com',
     name: 'ClioForge',
   });
   assert.equal(messages[0].to, email);
@@ -2547,7 +2547,7 @@ void test('Google OAuth uses per-file scope, account-bound single-use PKCE state
   const env: ConnectionEnv = {
     DB: db,
     FILES: (await mf.getR2Bucket('FILES')) as unknown as R2Bucket,
-    BETTER_AUTH_URL: 'https://canwoo.com',
+    BETTER_AUTH_URL: 'https://clioforge.com',
     FOLIOTRACE_ENCRYPTION_KEY: btoa('g'.repeat(32)),
     GOOGLE_DRIVE_CLIENT_ID: 'test-client',
     GOOGLE_DRIVE_CLIENT_SECRET: 'test-secret',
@@ -2560,7 +2560,7 @@ void test('Google OAuth uses per-file scope, account-bound single-use PKCE state
   );
   assert.equal(
     authorization.searchParams.get('redirect_uri'),
-    'https://canwoo.com/api/connections/callback/google',
+    'https://clioforge.com/api/connections/callback/google',
   );
   assert.equal(cloudProvider.safeParse('microsoft').success, false);
   let calls = 0;
@@ -2917,7 +2917,7 @@ void test('Google sign-in uses app credentials, normal identity scopes and prote
   const environment = {
     DB: db,
     FILES: {} as R2Bucket,
-    BETTER_AUTH_URL: 'https://canwoo.com',
+    BETTER_AUTH_URL: 'https://clioforge.com',
     BETTER_AUTH_SECRET: 'test-only-google-login-secret-long-enough',
     GOOGLE_DRIVE_CLIENT_ID: 'test-canwoo.apps.googleusercontent.com',
     GOOGLE_DRIVE_CLIENT_SECRET: 'test-google-secret',
@@ -2928,9 +2928,9 @@ void test('Google sign-in uses app credentials, normal identity scopes and prote
     false,
   );
   const auth = createAuth(environment);
-  const signIn = (callbackURL: string, origin = 'https://canwoo.com') =>
+  const signIn = (callbackURL: string, origin = 'https://clioforge.com') =>
     auth.handler(
-      new Request('https://canwoo.com/api/auth/sign-in/social', {
+      new Request('https://clioforge.com/api/auth/sign-in/social', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2955,7 +2955,7 @@ void test('Google sign-in uses app credentials, normal identity scopes and prote
   );
   assert.equal(
     url.searchParams.get('redirect_uri'),
-    'https://canwoo.com/api/auth/callback/google',
+    'https://clioforge.com/api/auth/callback/google',
   );
   assert.ok(url.searchParams.get('state'));
   assert.match(url.searchParams.get('scope') || '', /openid/);
@@ -2976,7 +2976,7 @@ void test('Drive authorization returns to its project and cancellation consumes 
   const environment = {
     DB: db,
     FILES: {} as R2Bucket,
-    BETTER_AUTH_URL: 'https://canwoo.com',
+    BETTER_AUTH_URL: 'https://clioforge.com',
     FOLIOTRACE_ENCRYPTION_KEY: btoa('a'.repeat(32)),
     GOOGLE_DRIVE_CLIENT_ID: 'test-client',
     GOOGLE_DRIVE_CLIENT_SECRET: 'test-secret',
@@ -3993,7 +3993,7 @@ void test('Word export creates real footnotes, escapes XML, preserves fixed-sour
     id: crypto.randomUUID(),
     label: 'Archive',
     text: 'A & B <letter>, p. 2.',
-    href: 'https://canwoo.com/?project=x&version=y&page=2',
+    href: 'https://clioforge.com/?project=x&version=y&page=2',
     stale: true,
   };
   const body = `## A finding\nThe letter says so [Archive](${citation.href}&evidence=${citation.id}).`;
@@ -4519,8 +4519,8 @@ void test('invitation mail is owner-authorized, bound to the invited email and n
   const env = {
     DB: db,
     FILES: {} as R2Bucket,
-    EMAIL_FROM: 'noreply@canwoo.com',
-    BETTER_AUTH_URL: 'https://canwoo.com',
+    EMAIL_FROM: 'noreply@clioforge.com',
+    BETTER_AUTH_URL: 'https://clioforge.com',
     EMAIL: {
       send: async (input: { to: string; html: string; text: string }) => {
         sends++;
@@ -5113,12 +5113,12 @@ void test('writing page citations are resolved from the authorized project and n
   const keys = writingPageReferences(
     `[1](${path})\n[missing](${path.replace('page=1', 'page=99')})`,
     null,
-    'https://canwoo.com',
+    'https://clioforge.com',
   );
   const data = await writingSources(
     owner,
     item.project.id,
-    'https://canwoo.com',
+    'https://clioforge.com',
     keys,
   );
   assert.equal(data.evidence.length, 0);
@@ -5126,7 +5126,7 @@ void test('writing page citations are resolved from the authorized project and n
   assert.match(data.citations[0].text, /航运记录/);
   assert.ok(data.citations[0].href.endsWith('page=1'));
   await assert.rejects(
-    writingSources(other, item.project.id, 'https://canwoo.com', keys),
+    writingSources(other, item.project.id, 'https://clioforge.com', keys),
     /不存在/,
   );
   const unrelated = await source(owner);
@@ -5135,7 +5135,7 @@ void test('writing page citations are resolved from the authorized project and n
       await writingSources(
         owner,
         unrelated.project.id,
-        'https://canwoo.com',
+        'https://clioforge.com',
         keys,
       )
     ).citations.length,
