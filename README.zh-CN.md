@@ -6,7 +6,7 @@ ClioForge 参伍目前从历史与人文研究切入：保存原件、阅读批�
 
 [在线使用](https://clioforge.com) · [English README](README.md) · [文档目录](docs/README.md)
 
-项目原名 Canwoo。在线服务现为 clioforge.com，代码仓库为 YQ-Wang/ClioForge。项目与备份保持兼容，本机草稿可从旧站下载并导入新站。详见[更名与兼容说明](docs/clioforge-transition.md)。
+项目原名 Canwoo。在线服务现为 clioforge.com，代码仓库为 YQ-Wang/ClioForge。项目与备份保持兼容，旧测试域名已停用。详见[更名与兼容说明](docs/clioforge-transition.md)。
 
 ## 功能
 
