@@ -125,8 +125,8 @@ export function ResearchTrace({
                         {(
                           {
                             local_delivery: L(
-                              'Canwoo 保存与交接',
-                              'Canwoo persistence and handoff',
+                              'ClioForge 保存与交接',
+                              'ClioForge persistence and handoff',
                             ),
                             output_validation: L(
                               '输出格式或出处核查',
@@ -173,7 +173,7 @@ export function ResearchTrace({
               <Button
                 variant="outline"
                 onClick={() =>
-                  downloadJson(trace, 'canwoo-research-trace.json')
+                  downloadJson(trace, 'clioforge-research-trace.json')
                 }
               >
                 {L('导出回放记录', 'Export replay record')}

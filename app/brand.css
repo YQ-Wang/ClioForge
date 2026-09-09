@@ -1,21 +1,21 @@
-/* Original monoline Latin lettering paired with Qiji outlines. */
-.canwoo-brand {
+/* Geist Sans wordmark outlines paired with Qiji lettering. */
+.clioforge-brand {
   display: inline-flex;
   align-items: center;
   gap: 9px;
   color: var(--foreground);
   white-space: nowrap;
 }
-.canwoo-brand .brand-mark {
+.clioforge-brand .brand-mark {
   width: 36px;
   height: 29px;
   min-width: 36px;
   color: light-dark(#9b7a3f, #d3b783);
 }
-.canwoo-brand.has-tagline {
+.clioforge-brand.has-tagline {
   align-items: flex-start;
 }
-.canwoo-brand.has-tagline .brand-mark {
+.clioforge-brand.has-tagline .brand-mark {
   margin-top: 0;
 }
 .brand-copy {
@@ -29,21 +29,21 @@
 }
 .brand-latin {
   display: block;
-  width: 118px;
-  height: 29px;
+  width: 132px;
+  height: 30px;
   flex: none;
   overflow: visible;
 }
-.canwoo-brand .brand-chinese {
+.clioforge-brand .brand-chinese {
   display: block;
-  width: 47px;
+  width: 42px;
   height: 26px;
   flex: none;
   margin: 0;
   color: var(--foreground);
   opacity: 0.9;
 }
-.brand .canwoo-brand small {
+.brand .clioforge-brand small {
   margin-top: 8px;
   color: var(--muted-foreground);
   font-size: 10px;
@@ -54,7 +54,7 @@
   color: light-dark(#9b7a3f, #d3b783);
 }
 @media (max-width: 600px) {
-  .public-brand .canwoo-brand {
+  .public-brand .clioforge-brand {
     gap: 8px;
   }
   .public-brand .brand-mark {
@@ -63,17 +63,17 @@
     min-width: 36px;
   }
   .public-brand .brand-latin {
-    width: 109px;
+    width: 124px;
     height: 26px;
   }
   .public-brand .brand-wordmark {
     gap: 8px;
   }
   .public-brand .brand-chinese {
-    width: 43px;
+    width: 39px;
     height: 24px;
   }
-  .public-brand .canwoo-brand small {
+  .public-brand .clioforge-brand small {
     font-size: 9px;
     letter-spacing: 0;
   }

@@ -1,4 +1,4 @@
-# Contributing to Canwoo
+# Contributing to ClioForge
 
 Start with a real research task: describe the material, the researcher's next action, and the obstacle. Small improvements to source fidelity, accessibility and recovery are more useful than adding unexplained controls.
 

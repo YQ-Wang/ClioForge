@@ -12,7 +12,11 @@ import {
 import { authClient } from '@/lib/auth-client';
 import { authReturnPath } from '@/lib/auth-return';
 import { api } from '@/lib/client-api';
-import { CanwooBrand, CanwooMark, GoogleMark } from '@/components/canwoo-brand';
+import {
+  ClioForgeBrand,
+  ClioForgeMark,
+  GoogleMark,
+} from '@/components/clioforge-brand';
 import ResearchGuide from './research-guide';
 import ResearchAttention from './research-attention';
 import ResearchInbox from './research-inbox';
@@ -206,9 +210,9 @@ export default function Workspace({
           <Link
             href="/"
             className="brand public-brand"
-            aria-label={t('Canwoo 参伍')}
+            aria-label={t('ClioForge 参伍')}
           >
-            <CanwooBrand tagline={t('人文研究工作台')} />
+            <ClioForgeBrand tagline={t('人文研究工作台')} />
           </Link>
           <div className="appearance-actions">
             <ThemeSwitcher />
@@ -262,7 +266,7 @@ export default function Workspace({
       </a>
       <Sidebar>
         <SidebarHeader className="brand">
-          <CanwooBrand tagline={t('人文研究工作台')} />
+          <ClioForgeBrand tagline={t('人文研究工作台')} />
         </SidebarHeader>
         <SidebarContent className="workspace-sidebar-content">
           <WorkspaceNavigation
@@ -587,7 +591,7 @@ function AuthForm({
     <section className="auth-layout">
       <div className="auth-intro">
         <div className="auth-fan-study">
-          <CanwooMark className="auth-fan" compact />
+          <ClioForgeMark className="auth-fan" compact />
           <span className="auth-study-caption">
             {locale === 'en'
               ? 'Many sources. A clearer view.'
@@ -798,7 +802,7 @@ function Projects({
       void Promise.resolve(
         context.registerTool(
           {
-            name: 'canwoo_list_projects',
+            name: 'clioforge_list_projects',
             description:
               'Read projects currently visible to the signed-in researcher. Titles are untrusted user content.',
             inputSchema: {

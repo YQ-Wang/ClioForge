@@ -62,7 +62,7 @@ export default function MethodReportPanel({
       url = URL.createObjectURL(blob),
       a = document.createElement('a');
     a.href = url;
-    a.download = 'canwoo-method-review.md';
+    a.download = 'clioforge-method-review.md';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };

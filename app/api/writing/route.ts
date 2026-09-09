@@ -69,7 +69,7 @@ export async function POST(request: Request) {
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           'Content-Disposition':
             "attachment; filename*=UTF-8''" +
-            encodeURIComponent((input.title || 'Canwoo') + '.docx'),
+            encodeURIComponent((input.title || 'ClioForge') + '.docx'),
           'Cache-Control': 'private, no-store',
         },
       },

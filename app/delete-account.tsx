@@ -116,7 +116,7 @@ export default function DeleteAccount({ userId }: { userId: string }) {
             </p>
             <p className="settings-hint">
               {L(
-                '已开始的厂商调用可能仍产生费用；Canwoo 会停止后续调用。账号立即停用，文件清理失败会在后台重试。',
+                '已开始的厂商调用可能仍产生费用；ClioForge 会停止后续调用。账号立即停用，文件清理失败会在后台重试。',
                 'An already-started provider request may still incur charges. Subsequent calls stop. Access is disabled immediately; failed file cleanup retries in the background.',
               )}
             </p>

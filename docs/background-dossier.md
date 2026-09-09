@@ -30,7 +30,7 @@ A round covers at most 10 sources and 24 selected pages. Material and dependency
 
 ## Citations and recovery
 
-The application numbers fixed source passages. The model selects those numbers; Canwoo supplies the original text, version, page and character offset. Grouped references such as `[P8, P9]` are resolved without altering the selected passages. Unknown numbers are rejected. Exact quotation matching establishes traceability, not whether an interpretation is justified.
+The application numbers fixed source passages. The model selects those numbers; ClioForge supplies the original text, version, page and character offset. Grouped references such as `[P8, P9]` are resolved without altering the selected passages. Unknown numbers are rejected. Exact quotation matching establishes traceability, not whether an interpretation is justified.
 
 When the research worker loses its execution lease after a response has been saved, background maintenance can resume from that saved response. It checks the execution attempt, current source versions and upstream inputs before applying it. It neither calls the provider again nor counts the same response cost twice. Paused plans wait; changed sources or dependencies prevent the old response from advancing the plan.
 

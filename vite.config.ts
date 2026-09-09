@@ -1,7 +1,9 @@
 import tailwindcss from '@tailwindcss/postcss';
 import vinext from 'vinext';
 import { defineConfig } from 'vite';
+import { deploymentConfigPaths } from './scripts/cloudflare.mjs';
 export default defineConfig(async () => {
+  const { appPath, jobsPath } = deploymentConfigPaths();
   process.env.WRANGLER_WRITE_LOGS ??= 'false';
   process.env.WRANGLER_LOG_PATH ??= '.wrangler/logs';
   process.env.MINIFLARE_REGISTRY_PATH ??= '.wrangler/registry';
@@ -16,10 +18,10 @@ export default defineConfig(async () => {
       vinext(),
       cloudflare({
         viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },
-        configPath: process.env.CANWOO_CONFIG || 'wrangler.jsonc',
+        configPath: appPath,
         auxiliaryWorkers: [
           {
-            configPath: process.env.CANWOO_JOBS_CONFIG || 'wrangler.jobs.jsonc',
+            configPath: jobsPath,
           },
         ],
       }),

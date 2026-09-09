@@ -208,7 +208,7 @@ export function richMarkdown(node: RichNode): string {
         (typeof node.attrs?.caption === 'string'
           ? node.attrs.caption
           : 'Drawing') +
-        ' — editable drawing in Canwoo document]\n\n'
+        ' — editable drawing in ClioForge document]\n\n'
       );
     case 'codeBlock':
       return '```\n' + children() + '\n```\n\n';

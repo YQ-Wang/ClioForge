@@ -508,8 +508,8 @@ export default function AccountSettings({
                 <h2>Zotero</h2>
                 <p>
                   {L(
-                    '在项目的「书目」中预览导入文献。Canwoo 不保存你的 Zotero key。',
-                    'Preview and import references from Bibliography in a project. Canwoo does not store your Zotero key.',
+                    '在项目的「书目」中预览导入文献。ClioForge 不保存你的 Zotero key。',
+                    'Preview and import references from Bibliography in a project. ClioForge does not store your Zotero key.',
                   )}
                 </p>
                 <Button
@@ -643,7 +643,7 @@ export default function AccountSettings({
                           storage: data.storage,
                           usage: data.usage,
                         },
-                        'canwoo-account.json',
+                        'clioforge-account.json',
                       )
                     }
                   >
@@ -689,7 +689,7 @@ export default function AccountSettings({
             </DialogTitle>
             <DialogDescription>
               {L(
-                'Canwoo 会移除此账号的云盘授权。已导入项目的原件仍保留，Google 登录也不受影响。',
+                'ClioForge 会移除此账号的云盘授权。已导入项目的原件仍保留，Google 登录也不受影响。',
                 'Remove this account’s Drive authorization. Imported sources and Google sign-in are retained.',
               )}
             </DialogDescription>

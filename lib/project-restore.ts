@@ -139,7 +139,7 @@ export class ProjectRestore {
       }
     }
     // IDs in textual quotations are not rewritten. Only exact structured IDs and
-    // internal Canwoo citation URL query values are remapped.
+    // internal ClioForge citation URL query values are remapped.
     function remap(value: unknown, key = ''): unknown {
       if (['quote', 'text'].includes(key)) return value;
       if (typeof value === 'string') {

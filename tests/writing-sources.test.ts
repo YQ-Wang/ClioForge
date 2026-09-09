@@ -95,7 +95,7 @@ void test('saved excerpts and page citations identify file pages without inventi
     assert.match(citation.text, new RegExp(`file page ${page};`));
     assert.doesNotMatch(citation.text, new RegExp(`, (?:p\\. )?${page}[,.]`));
     if (page === 8) assert.match(citation.text, /Uncatalogued letter\./);
-    assert.match(citation.text, /Canwoo version 1/);
+    assert.match(citation.text, /ClioForge version 1/);
     assert.ok(citation.href.startsWith(origin));
     if (citation.id.startsWith('page:'))
       assert.doesNotMatch(citation.text, /Original passage|Letter passage/);

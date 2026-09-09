@@ -46,7 +46,7 @@ for glyph, x_min, y_max, scale, width in letters:
 art = {"viewBox": "0 0 64 32", "paths": paths}
 (root / "lib/brand-han.json").write_text(json.dumps(art, indent=2) + "\n")
 body = "".join(f'<path d="{path}"/>' for path in paths)
-(root / "public/brand/canwoo-han-wordmark.svg").write_text(
+(root / "public/brand/clioforge-han-wordmark.svg").write_text(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 32" role="img" aria-label="參伍">'
     '<!-- Qiji, SIL OFL 1.1. See Qiji-OFL.txt. -->'
     f'<g fill="currentColor">{body}</g></svg>\n'

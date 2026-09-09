@@ -38,13 +38,13 @@ export async function sendInvitation(
     ? 'You are invited to a research project'
     : '你收到一份研究项目邀请';
   const body = en
-    ? `Join “${project.title}” on Canwoo. Sign in with this email address to review and accept the invitation. Your role: ${invite.role}. Expires: ${invite.expires_at.slice(0, 10)}. Accepting is optional.`
-    : `邀请你加入 Canwoo 的「${project.title}」。使用收到这封邮件的邮箱登录后，可查看并接受邀请。权限：${{ viewer: '阅读', editor: '编辑', reviewer: '复核' }[invite.role]}。有效期至 ${invite.expires_at.slice(0, 10)}。你可以选择不接受。`;
+    ? `Join “${project.title}” on ClioForge. Sign in with this email address to review and accept the invitation. Your role: ${invite.role}. Expires: ${invite.expires_at.slice(0, 10)}. Accepting is optional.`
+    : `邀请你加入 ClioForge 的「${project.title}」。使用收到这封邮件的邮箱登录后，可查看并接受邀请。权限：${{ viewer: '阅读', editor: '编辑', reviewer: '复核' }[invite.role]}。有效期至 ${invite.expires_at.slice(0, 10)}。你可以选择不接受。`;
   try {
     await env.EMAIL.send({
-      from: { email: env.EMAIL_FROM, name: 'Canwoo 参伍' },
+      from: { email: env.EMAIL_FROM, name: 'ClioForge 参伍' },
       to: invite.email,
-      subject: 'Canwoo · ' + heading,
+      subject: 'ClioForge · ' + heading,
       text: heading + '\n\n' + body + '\n\n' + url,
       html: `<h1>${heading}</h1><p>${escapeXML(body)}</p><p><a href="${escapeXML(url)}">${en ? 'Review invitation' : '查看邀请'}</a></p>`,
     });

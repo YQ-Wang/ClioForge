@@ -41,7 +41,7 @@ export const dossierOutputJsonSchema = {
       minItems: 0,
       maxItems: 0,
       description:
-        'Return an empty array. Canwoo fills exact quotations from the [Pnumber] references in summary.',
+        'Return an empty array. ClioForge fills exact quotations from the [Pnumber] references in summary.',
     },
   },
 } as const;

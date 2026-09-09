@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Rename the public project to ClioForge 参伍, update the wordmark and download names, and add ClioForge deployment configuration aliases while preserving existing data, file formats and live service addresses.
+
 - Simplify document import with localized file-selection buttons shared by writing, replay, archive manifests and backup restore; improve import errors, keyboard disclosures and narrow-screen editor controls.
 - Preserve researcher-edited citation bindings when assembling findings; remap each contribution's references before combining reports.
 - Remove unused draft citations from explicitly cited human reviews, retain legacy uncited context, and clarify the final acceptance and save-to-findings step.

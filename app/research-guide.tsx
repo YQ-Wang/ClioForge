@@ -17,7 +17,7 @@ export default function ResearchGuide({ onStart }: { onStart: () => void }) {
       icon: BookOpen,
       title: L('把材料放到书桌上', 'Bring your sources to the desk'),
       body: L(
-        '创建一个项目，从电脑或 Google Drive 导入 PDF、照片和文本。Canwoo 保留原件，阅读和校订始终可以对照。',
+        '创建一个项目，从电脑或 Google Drive 导入 PDF、照片和文本。ClioForge 保留原件，阅读和校订始终可以对照。',
         'Create a project and import PDFs, photographs or text from your computer or Google Drive. The original stays available beside your reading and corrections.',
       ),
     },
@@ -51,7 +51,7 @@ export default function ResearchGuide({ onStart }: { onStart: () => void }) {
       <div className="page-title">
         <div>
           <p className="eyebrow">
-            {L('CANWOO · 使用指南', 'CANWOO · A SHORT GUIDE')}
+            {L('CLIOFORGE · 使用指南', 'CLIOFORGE · A SHORT GUIDE')}
           </p>
           <h1>
             {L(

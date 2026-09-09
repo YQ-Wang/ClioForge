@@ -17,7 +17,7 @@ export default async function AccountClosed() {
         {L('如需核对清理进度，请联系', 'For cleanup status, contact')}{' '}
         <a href={SUPPORT_MAILTO}>{SUPPORT_EMAIL}</a>。
       </p>
-      <Link href="/">{L('回到 Canwoo', 'Back to Canwoo')}</Link>
+      <Link href="/">{L('回到 ClioForge', 'Back to ClioForge')}</Link>
     </main>
   );
 }

@@ -24,7 +24,7 @@ export async function writingSources(
       return {
         id: e.id,
         label: `${source?.title || 'Source'} · ${e.page}`,
-        text: `${entry ? footnote(entry, '').trim() : `${source?.title || 'Source'}.`} “${e.quote}” (Canwoo version ${version?.revision || '?'}; file page ${e.page}; ${e.version_id})`,
+        text: `${entry ? footnote(entry, '').trim() : `${source?.title || 'Source'}.`} “${e.quote}” (ClioForge version ${version?.revision || '?'}; file page ${e.page}; ${e.version_id})`,
         href: origin + sourcePath(projectId, e.version_id, e.page),
         stale: (snapshot.source_versions as SourceVersion[]).some(
           (v) =>
@@ -50,7 +50,7 @@ export async function writingSources(
         id,
         href,
         label: `${source.title} · ${page.page}`,
-        text: `${entry ? footnote(entry, '').trim() : `${source.title}.`} (Canwoo version ${version.revision}; file page ${page.page}; ${version.id})`,
+        text: `${entry ? footnote(entry, '').trim() : `${source.title}.`} (ClioForge version ${version.revision}; file page ${page.page}; ${version.id})`,
         stale: (snapshot.source_versions as SourceVersion[]).some(
           (v) => v.source_id === source.id && v.revision > version.revision,
         ),

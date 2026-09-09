@@ -154,7 +154,7 @@ void test('research-result page links become versioned footnotes in rich Word, M
   const pageCitation = {
     id: writingCitationKey(href, href)!,
     label: 'Archive page',
-    text: 'HD010004, p. 1 (Canwoo version 1)',
+    text: 'HD010004, p. 1 (ClioForge version 1)',
     href,
     stale: true,
   };
@@ -188,7 +188,7 @@ void test('research-result page links become versioned footnotes in rich Word, M
     );
     const notes = new TextDecoder().decode(files['word/footnotes.xml']);
     assert.match(notes, /HD010004/);
-    assert.match(notes, /Canwoo version 1/);
+    assert.match(notes, /ClioForge version 1/);
     assert.match(notes, /127.0.0.1:3000/);
   }
   assert.match(

@@ -41,7 +41,7 @@ void test('standard CSL letters, maps and interviews survive import and citation
   assert.match(footnote(entry, '402'), /402/);
 });
 
-void test('legacy Canwoo letter records export a standard CSL type', () => {
+void test('legacy ClioForge letter records export a standard CSL type', () => {
   const entry = {
     id: 'old-letter',
     csl: { ...letter, type: 'letter' },

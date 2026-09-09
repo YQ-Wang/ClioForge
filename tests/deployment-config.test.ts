@@ -1,6 +1,37 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readConfig, validateDeployment } from '../scripts/cloudflare.mjs';
+import {
+  deploymentConfigPaths,
+  readConfig,
+  validateDeployment,
+} from '../scripts/cloudflare.mjs';
+
+void test('deployment config rename preserves existing operator targets', () => {
+  const old = {
+    CANWOO_CONFIG: 'existing-app.jsonc',
+    CANWOO_JOBS_CONFIG: 'existing-jobs.jsonc',
+  };
+  assert.deepEqual(deploymentConfigPaths(old), {
+    appPath: 'existing-app.jsonc',
+    jobsPath: 'existing-jobs.jsonc',
+  });
+  assert.deepEqual(
+    deploymentConfigPaths({ ...old, CLIOFORGE_CONFIG: 'selected-app.jsonc' }),
+    { appPath: 'selected-app.jsonc', jobsPath: 'existing-jobs.jsonc' },
+  );
+  assert.deepEqual(
+    deploymentConfigPaths({
+      ...old,
+      CLIOFORGE_CONFIG: 'selected-app.jsonc',
+      CLIOFORGE_JOBS_CONFIG: 'selected-jobs.jsonc',
+    }),
+    { appPath: 'selected-app.jsonc', jobsPath: 'selected-jobs.jsonc' },
+  );
+  assert.deepEqual(deploymentConfigPaths({}), {
+    appPath: 'wrangler.jsonc',
+    jobsPath: 'wrangler.jobs.jsonc',
+  });
+});
 
 function deployment() {
   const app = readConfig('wrangler.jsonc');

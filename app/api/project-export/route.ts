@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     return new Response(body, {
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="canwoo-${id}.zip"`,
+        'Content-Disposition': `attachment; filename="clioforge-${id}.zip"`,
         'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff',
       },

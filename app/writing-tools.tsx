@@ -125,7 +125,7 @@ export default function WritingTools({
               });
               if (!r.ok)
                 throw new Error(((await r.json()) as { error: string }).error);
-              prepare(await r.blob(), (title || 'Canwoo') + '.docx');
+              prepare(await r.blob(), (title || 'ClioForge') + '.docx');
             } catch (e) {
               setError(e instanceof Error ? e.message : 'Export failed');
             } finally {

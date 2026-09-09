@@ -211,7 +211,7 @@ export default function ResearchRecords({
                 );
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'canwoo-records.csv';
+                a.download = 'clioforge-records.csv';
                 a.click();
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
               }}

@@ -1527,7 +1527,7 @@ export default function ResearchPlatform({
                 <Button
                   variant="ghost"
                   onClick={() =>
-                    downloadJson(report, `canwoo-${report.id}.json`)
+                    downloadJson(report, `clioforge-${report.id}.json`)
                   }
                 >
                   JSON

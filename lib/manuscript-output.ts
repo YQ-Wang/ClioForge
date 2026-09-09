@@ -66,7 +66,7 @@ export const manuscriptOutputJsonSchema = {
       minItems: 0,
       maxItems: 0,
       description:
-        'Return an empty array. Canwoo supplies exact citations from the approved dossier; do not write quotation objects.',
+        'Return an empty array. ClioForge supplies exact citations from the approved dossier; do not write quotation objects.',
     },
     data: {
       ...legacyManuscriptOutputJsonSchema.properties.data,

@@ -1772,10 +1772,10 @@ void test('public signup sends verification through the email binding and requir
   assert.equal(messages.length, 1);
   assert.deepEqual(messages[0].from, {
     email: 'noreply@canwoo.com',
-    name: 'Canwoo',
+    name: 'ClioForge',
   });
   assert.equal(messages[0].to, email);
-  assert.equal(messages[0].subject, 'Canwoo · Verify your email');
+  assert.equal(messages[0].subject, 'ClioForge · Verify your email');
   assert.match(messages[0].text || '', /If you did not request this/);
   const link = messages[0].text?.match(/https:\/\/\S+/)?.[0];
   assert.ok(link);

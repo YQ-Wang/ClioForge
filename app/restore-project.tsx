@@ -214,7 +214,7 @@ export default function RestoreProject({
           </div>
         )}
         <FilePicker
-          label={L('选择参伍备份（ZIP）', 'Choose Canwoo backup (ZIP)')}
+          label={L('选择参伍备份（ZIP）', 'Choose ClioForge backup (ZIP)')}
           accept=".zip"
           disabled={busy}
           onSelect={select}

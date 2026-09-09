@@ -1,8 +1,12 @@
-# Canwoo 参伍
+# ClioForge 参伍
 
-参伍是面向历史与人文研究的 AI 工作区：保存原件、阅读批注、组织证据、撰写笔记，并让研究助手在指定材料与预算内处理任务。模型结果需要研究者审读，不能替代史料判断。
+**面向研究者与 agent 的开源研究 IDE。**
+
+ClioForge 参伍目前从历史与人文研究切入：保存原件、阅读批注、组织证据、撰写笔记，并让研究助手在指定材料与预算内处理任务。模型结果需要研究者审读，不能替代史料判断。
 
 [在线使用](https://canwoo.com) · [English README](README.md) · [文档目录](docs/README.md)
+
+项目原名 Canwoo。更名期间，在线服务和代码仓库继续使用原有地址；已有项目、备份和本机草稿保持兼容。详见[更名与兼容说明](docs/clioforge-transition.md)。
 
 ## 功能
 
@@ -19,8 +23,8 @@
 需要 Git 与 Node.js 22.19 或以上。本地使用 Cloudflare 模拟器，无需开通云账号。
 
 ```sh
-git clone https://github.com/YQ-Wang/canwoo.git
-cd canwoo
+git clone https://github.com/YQ-Wang/canwoo.git clioforge
+cd clioforge
 npm ci
 cp .env.example .dev.vars
 ```

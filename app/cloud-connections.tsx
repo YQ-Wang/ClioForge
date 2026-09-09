@@ -9,7 +9,7 @@ import {
   Unplug,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { GoogleMark } from '@/components/canwoo-brand';
+import { GoogleMark } from '@/components/clioforge-brand';
 import { useI18n } from '@/lib/i18n/provider';
 import { api } from '@/lib/client-api';
 import { extractPages, documentType } from '@/lib/documents';
@@ -260,8 +260,8 @@ export default function CloudConnections({
         </header>
         <p>
           {L(
-            '你选择哪些文件，Canwoo 才能导入哪些文件。原件会保存在这个研究项目中，你的云端文件保持原样。',
-            'You choose which files Canwoo can import. A copy of the original is saved in this research project; the file in your Drive stays as it is.',
+            '你选择哪些文件，ClioForge 才能导入哪些文件。原件会保存在这个研究项目中，你的云端文件保持原样。',
+            'You choose which files ClioForge can import. A copy of the original is saved in this research project; the file in your Drive stays as it is.',
           )}
         </p>
         <div className="flow-actions">
@@ -315,8 +315,8 @@ export default function CloudConnections({
           </p>
           <p>
             {L(
-              'Google 的授权说明包含读取和修改所选文件；Canwoo 只读取和导入，不修改云端原件。断开连接后，已导入的材料仍保留在项目内。',
-              'Google describes this permission as reading and modifying selected files. Canwoo reads and imports them; it does not edit your cloud originals. Disconnecting leaves imported sources in this project.',
+              'Google 的授权说明包含读取和修改所选文件；ClioForge 只读取和导入，不修改云端原件。断开连接后，已导入的材料仍保留在项目内。',
+              'Google describes this permission as reading and modifying selected files. ClioForge reads and imports them; it does not edit your cloud originals. Disconnecting leaves imported sources in this project.',
             )}
           </p>
           {connection?.connected && (

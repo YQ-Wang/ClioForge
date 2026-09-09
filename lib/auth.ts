@@ -43,10 +43,10 @@ export function createAuth(
     if (!env.EMAIL || !env.EMAIL_FROM)
       throw new Error('Email service not configured');
     await env.EMAIL.send({
-      from: { email: env.EMAIL_FROM, name: 'Canwoo' },
+      from: { email: env.EMAIL_FROM, name: 'ClioForge' },
       to,
-      subject: `Canwoo · ${translate(locale, subject)}`,
-      text: `Canwoo 参伍\n\n${translate(locale, subject)}\n${url}\n\n${translate(locale, '如果不是你发起的请求，请忽略这封邮件。')}`,
+      subject: `ClioForge · ${translate(locale, subject)}`,
+      text: `ClioForge 参伍\n\n${translate(locale, subject)}\n${url}\n\n${translate(locale, '如果不是你发起的请求，请忽略这封邮件。')}`,
     });
   }
   function deliver(
@@ -63,7 +63,7 @@ export function createAuth(
     return pending;
   }
   return betterAuth({
-    appName: 'Canwoo',
+    appName: 'ClioForge',
     baseURL: origin,
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [origin],

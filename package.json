@@ -1,5 +1,5 @@
 {
-  "name": "canwoo",
+  "name": "clioforge",
   "version": "0.1.0-alpha.2",
   "private": true,
   "engines": {
@@ -108,7 +108,7 @@
       "esbuild": "0.25.12"
     }
   },
-  "description": "A source-grounded AI workspace for history and humanities research",
+  "description": "An open-source research IDE for humans and agents, starting with history and humanities",
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",

@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useI18n } from '@/lib/i18n/provider';
 import '@excalidraw/excalidraw/index.css';
-// Font assets are served by Canwoo, so opening a private drawing makes no CDN request.
+// Font assets are served by ClioForge, so opening a private drawing makes no CDN request.
 if (typeof window !== 'undefined')
   (
     window as unknown as Window & { EXCALIDRAW_ASSET_PATH: string }

@@ -22,7 +22,7 @@ flowchart LR
 - Each decision and tool operation is a persisted mission task. Queue redelivery, leases, source-change invalidation, permissions and budget reservations use the existing execution system.
 - Four exploration operations are available. Choosing `finish`, repeating an operation (including search case/whitespace variants), or reaching the allowance stops exploration. Subsequent decision tasks record the stop without paid calls. An empty evidence ledger produces an insufficient-material handoff without paid synthesis.
 - Search is restricted to selected versions and pages, with at most six excerpts per operation. Reading returns at most 8,000 characters from a selected page. Use the returned `next_start` as the next operation's `start` to continue a long page; each operation records its actual range and total length. Skipped portions remain unread. These are corpus tools, not an unrestricted web browser.
-- Decisions receive a page catalog and previous tool results. Synthesis receives passages derived only from returned tool text, not unread source contents. Models select numbered passages; Canwoo fills exact quotations and offsets. Reports support at most 24 distinct citations; older dossier contracts retain their 12-citation limit.
+- Decisions receive a page catalog and previous tool results. Synthesis receives passages derived only from returned tool text, not unread source contents. Models select numbered passages; ClioForge fills exact quotations and offsets. Reports support at most 24 distinct citations; older dossier contracts retain their 12-citation limit.
 - Model decisions use a separate structured-output contract so answer-writing and citation instructions cannot conflict with tool selection. These are portable JSON action decisions, not provider-specific native tool sessions.
 - Completion means an output exists. A reviewed finding still requires a researcher to inspect the evidence and accept the review. No automatic check establishes historical truth or adequate archival coverage.
 
@@ -42,7 +42,7 @@ A replay file can be checked locally in the browser without upload or paid infer
 
 A completed investigation report has a manual evaluation form: missed evidence, unsupported claims, factual/context errors and review time. Evaluations are attached to the result revision and method/model metadata. The model selector can show current project evaluations of the same recipe; changing a model connection prevents its new model from inheriting the old model's measurements. These observations are not a controlled accuracy ranking or proof of speedup.
 
-Exploration uses the chosen assistant at low reasoning effort. The researcher can explicitly choose another assistant and rates for high-effort synthesis within the existing budget. There is no blind model escalation or timeout-driven fallback. No model has yet been established as superior by a controlled Canwoo benchmark.
+Exploration uses the chosen assistant at low reasoning effort. The researcher can explicitly choose another assistant and rates for high-effort synthesis within the existing budget. There is no blind model escalation or timeout-driven fallback. No model has yet been established as superior by a controlled ClioForge benchmark.
 
 ## Methods and conversation context
 

@@ -1,4 +1,4 @@
-# Deploying Canwoo on Cloudflare
+# Deploying ClioForge on Cloudflare
 
 This guide creates your own installation. Do not reuse another operator's resources or encryption secrets. Cloudflare services and model providers can incur usage charges; check their current pricing before enabling them.
 
@@ -31,12 +31,12 @@ Enable Cloudflare Email Sending for your domain and complete the required DNS ve
 Keep these environment selections active through building and deploying:
 
 ```sh
-export CANWOO_CONFIG=wrangler.production.local.jsonc
-export CANWOO_JOBS_CONFIG=wrangler.jobs.production.local.jsonc
+export CLIOFORGE_CONFIG=wrangler.production.local.jsonc
+export CLIOFORGE_JOBS_CONFIG=wrangler.jobs.production.local.jsonc
 npm run build:cloudflare
 npx wrangler secret put BETTER_AUTH_SECRET --config dist/server/wrangler.json
 npx wrangler secret put FOLIOTRACE_ENCRYPTION_KEY --config dist/server/wrangler.json
-npx wrangler secret put FOLIOTRACE_ENCRYPTION_KEY --config "$CANWOO_JOBS_CONFIG"
+npx wrangler secret put FOLIOTRACE_ENCRYPTION_KEY --config "$CLIOFORGE_JOBS_CONFIG"
 ```
 
 Generate independent high-entropy authentication and encryption secrets. The **encryption key must be identical in the two workers**. Back it up securely; losing or replacing it prevents decrypting saved model credentials. `.dev.vars` is local configuration and does not set production secrets.

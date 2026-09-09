@@ -80,7 +80,7 @@ const purposes: Record<
   },
   drive: {
     body: [
-      '选择允许 Canwoo 读取的 Google Drive 文件并导入项目。导入保存一份材料版本，不会自动跟随云端文件变化。',
+      '选择允许 ClioForge 读取的 Google Drive 文件并导入项目。导入保存一份材料版本，不会自动跟随云端文件变化。',
       'Select authorized Google Drive files and import them into the project. An import preserves a source version; it does not continuously mirror the cloud file.',
     ],
     next: 'sources',

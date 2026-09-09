@@ -1,6 +1,6 @@
 # Google sign-in and Google Drive
 
-Google sign-in establishes identity. Access to Drive is a separate, incremental permission: Canwoo requests access to files the user chooses through Google Picker, not the user's entire Drive.
+Google sign-in establishes identity. Access to Drive is a separate, incremental permission: ClioForge requests access to files the user chooses through Google Picker, not the user's entire Drive.
 
 ## Google Cloud configuration
 
@@ -12,7 +12,7 @@ Google sign-in establishes identity. Access to Drive is a separate, incremental 
 4. Create a browser API key for Picker. Restrict it to the Drive and Picker APIs, and the required website referrers for your deployment and Picker (`https://research.your-domain.org/*`, `https://docs.google.com/*`). Do not use an unrestricted server key in the browser.
 5. Record the numeric Google Cloud project number, not just the project ID. OAuth, Picker and the project number must belong to the same project.
 
-## Canwoo configuration
+## ClioForge configuration
 
 Set the following through Workers Secrets for the application worker, using the configuration built for your own deployment:
 

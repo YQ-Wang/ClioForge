@@ -1,10 +1,12 @@
 // Explicit opt-in live smoke evaluation. No key or internal reasoning is written to results.
-// Run: CANWOO_OPENROUTER_KEY_FILE=/private/path/key node scripts/evaluate-openrouter.mjs
+// Run: CLIOFORGE_OPENROUTER_KEY_FILE=/private/path/key node scripts/evaluate-openrouter.mjs
 import fs from 'node:fs/promises';
-const keyFile = process.env.CANWOO_OPENROUTER_KEY_FILE;
+const keyFile =
+  process.env.CLIOFORGE_OPENROUTER_KEY_FILE ||
+  process.env.CANWOO_OPENROUTER_KEY_FILE;
 if (!keyFile)
   throw new Error(
-    'Set CANWOO_OPENROUTER_KEY_FILE to an owner-readable key file.',
+    'Set CLIOFORGE_OPENROUTER_KEY_FILE to an owner-readable key file.',
   );
 const key = (await fs.readFile(keyFile, 'utf8')).trim();
 const model = 'z-ai/glm-5.3-flash';
@@ -58,7 +60,9 @@ const cases = [
   },
 ];
 const outputPath =
-  process.env.CANWOO_EVAL_OUTPUT || 'work/model-evaluation/glm-5.3-flash.json';
+  process.env.CLIOFORGE_EVAL_OUTPUT ||
+  process.env.CANWOO_EVAL_OUTPUT ||
+  'work/model-evaluation/glm-5.3-flash.json';
 const report = {
   model,
   created_at: new Date().toISOString(),
@@ -91,7 +95,7 @@ for (const effort of ['low', 'high', 'max']) {
             Authorization: `Bearer ${key}`,
             'Content-Type': 'application/json',
             'HTTP-Referer': 'https://canwoo.com',
-            'X-Title': 'Canwoo public-source evaluation',
+            'X-Title': 'ClioForge public-source evaluation',
           },
           redirect: 'error',
           signal: AbortSignal.timeout(110000),

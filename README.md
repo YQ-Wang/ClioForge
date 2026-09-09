@@ -1,13 +1,15 @@
-# Canwoo 参伍
+# ClioForge 参伍
 
 [![CI](https://github.com/YQ-Wang/canwoo/actions/workflows/ci.yml/badge.svg)](https://github.com/YQ-Wang/canwoo/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
-**A source-grounded AI workspace for history and humanities research.**
+**An open-source research IDE for humans and agents.**
 
-Bring together archival documents, reading notes, evidence and research tasks. Canwoo helps researchers work through larger collections while keeping interpretations connected to the original material and subject to human review.
+Starting with history and humanities, ClioForge brings together original documents, reading notes, evidence and research tasks. Work through larger collections while keeping interpretations connected to the original material and subject to human review.
 
 [Hosted application](https://canwoo.com) · [中文说明](README.zh-CN.md) · [Documentation](docs/README.md) · [Contributing](CONTRIBUTING.md)
+
+Formerly Canwoo. The hosted site and repository still use their existing addresses during the rename. Existing projects, backups and browser drafts remain compatible; see [the naming transition](docs/clioforge-transition.md).
 
 ## What you can do
 
@@ -32,8 +34,8 @@ Semantic search currently covers text, not image similarity. Zotero import is no
 Requires Git and Node.js 22.19 or newer. Local D1, R2 and Queues are emulated; no Cloudflare account is required.
 
 ```sh
-git clone https://github.com/YQ-Wang/canwoo.git
-cd canwoo
+git clone https://github.com/YQ-Wang/canwoo.git clioforge
+cd clioforge
 npm ci
 cp .env.example .dev.vars
 ```
@@ -74,10 +76,10 @@ See [development](docs/development.md), [Cloudflare deployment](docs/deployment.
 
 The model proposes interpretations; application code records provenance, enforces access, tracks versions and separates pending results from accepted research. These controls make work inspectable, not automatically historically correct.
 
-Some internal `foliotrace` identifiers remain for compatibility with stored data. Canwoo is an independent project and does not include or depend on Prove2Me code.
+Some internal `foliotrace` identifiers remain for compatibility with stored data. ClioForge is an independent project and does not include or depend on Prove2Me code.
 
 ## License and community
 
-Original application code is licensed under **AGPL-3.0-only**. See [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md) for the separately licensed libraries, fonts, citation style and sample inscriptions. The Canwoo name and logo identify this project; forks should identify their own operator and avoid implying affiliation.
+Original application code is licensed under **AGPL-3.0-only**. See [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md) for the separately licensed libraries, fonts, citation style and sample inscriptions. The ClioForge name and logo identify this project; forks should identify their own operator and avoid implying affiliation.
 
 Report reproducible bugs or propose a concrete research workflow through [GitHub issues](https://github.com/YQ-Wang/canwoo/issues). For vulnerabilities, follow [SECURITY.md](SECURITY.md). Please follow the [code of conduct](CODE_OF_CONDUCT.md).

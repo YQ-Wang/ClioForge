@@ -1,8 +1,8 @@
-# Canwoo project agent protocol
+# ClioForge project agent protocol
 
-Use the API origin supplied by your researcher. Never send a Canwoo token to another origin. The token is scoped to one project, expires after 30 days, and can be revoked in the workspace.
+Use the API origin supplied by your researcher. Never send a ClioForge token to another origin. The token is scoped to one project, expires after 30 days, and can be revoked in the workspace.
 
-POST `/api/agent` with `Authorization: Bearer <CANWOO_AGENT_TOKEN>` and `Content-Type: application/json`. Every response is `{ "result": ... }`; errors carry an HTTP status and `{ "error": ... }`. Store tokens in your runtime's secret environment, never in research artifacts, prompts, logs or source control.
+POST `/api/agent` with `Authorization: Bearer <CLIOFORGE_AGENT_TOKEN>` and `Content-Type: application/json`. Every response is `{ "result": ... }`; errors carry an HTTP status and `{ "error": ... }`. Store tokens in your runtime's secret environment, never in research artifacts, prompts, logs or source control.
 
 1. `{"action":"missions"}` lists available missions.
 2. `{"action":"mission","id":"<mission UUID>"}` reads the dependency graph, acceptance criteria, task inputs, execution states and history.

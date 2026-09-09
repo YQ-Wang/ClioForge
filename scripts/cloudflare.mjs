@@ -74,10 +74,19 @@ export function validateDeployment(app, jobs) {
       'Configure your verified EMAIL_FROM address and matching EMAIL binding.',
     );
 }
+/** @param {Record<string, string | undefined>} env */
+export function deploymentConfigPaths(env = process.env) {
+  return {
+    appPath: env.CLIOFORGE_CONFIG || env.CANWOO_CONFIG || 'wrangler.jsonc',
+    jobsPath:
+      env.CLIOFORGE_JOBS_CONFIG ||
+      env.CANWOO_JOBS_CONFIG ||
+      'wrangler.jobs.jsonc',
+  };
+}
 function main() {
   const command = process.argv[2];
-  const appPath = process.env.CANWOO_CONFIG || 'wrangler.jsonc';
-  const jobsPath = process.env.CANWOO_JOBS_CONFIG || 'wrangler.jobs.jsonc';
+  const { appPath, jobsPath } = deploymentConfigPaths();
   const commands = {
     'deploy-app': ['deploy', '--config', 'dist/server/wrangler.json'],
     'deploy-jobs': ['deploy', '--config', jobsPath],
@@ -109,7 +118,7 @@ function main() {
         built.vars?.BETTER_AUTH_URL !== app.vars?.BETTER_AUTH_URL
       )
         throw new Error(
-          'Rebuild with the selected CANWOO_CONFIG before deploying.',
+          'Rebuild with the selected CLIOFORGE_CONFIG before deploying.',
         );
     }
   }

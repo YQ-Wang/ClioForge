@@ -1,6 +1,6 @@
 # Maintenance and releases
 
-Canwoo remains public alpha. The checks below make changes reviewable and
+ClioForge remains public alpha. The checks below make changes reviewable and
 repeatable; they do not certify historical accuracy, institutional compliance or
 the security of an independently configured installation.
 

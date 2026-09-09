@@ -19,7 +19,7 @@ void test('migration guard permits new migrations but rejects rewrites, deletion
   git('add', 'drizzle');
   git(
     '-c',
-    'user.name=Canwoo Test',
+    'user.name=ClioForge Test',
     '-c',
     'user.email=test@example.test',
     '-c',

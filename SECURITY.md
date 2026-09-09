@@ -1,6 +1,6 @@
 # Security policy
 
-Canwoo is public alpha. Security fixes target the latest main branch; older releases do not currently have a separate maintenance commitment.
+ClioForge is public alpha. Security fixes target the latest main branch; older releases do not currently have a separate maintenance commitment.
 
 Please report vulnerabilities privately through [GitHub private vulnerability reporting](https://github.com/YQ-Wang/canwoo/security/advisories/new). If that option is unavailable, contact support@canwoo.com. Do not put credentials, private research materials or exploitable account details in a public issue.
 

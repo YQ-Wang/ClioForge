@@ -1,4 +1,4 @@
-# Canwoo research platform implementation
+# ClioForge research platform implementation
 
 Requested scope: implement all three stages, with a live workflow / agent status view and validation on licensed historical data. Keep the existing Cloudflare deployment economical. Existing private source data and versions must survive migrations.
 

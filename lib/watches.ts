@@ -34,7 +34,7 @@ export async function checkWatches(
         select: 'DOI,title,URL,published,author,publisher',
       }).toString();
       const response = await fetcher(url, {
-        headers: { 'User-Agent': 'Canwoo/0.1 research-watch' },
+        headers: { 'User-Agent': 'ClioForge/0.1 research-watch' },
         redirect: 'manual',
         signal: AbortSignal.timeout(20000),
       });

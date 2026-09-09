@@ -59,7 +59,7 @@ export default function StudyRecords({
               ),
               a = document.createElement('a');
             a.href = url;
-            a.download = 'canwoo-study-records.csv';
+            a.download = 'clioforge-study-records.csv';
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
           }}

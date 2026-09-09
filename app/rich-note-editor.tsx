@@ -703,14 +703,14 @@ export default function RichNoteEditor({
         <details className="writing-import">
           <summary>
             <Upload size={14} aria-hidden="true" />
-            {L('导入参伍文稿', 'Import a Canwoo document')}
+            {L('导入参伍文稿', 'Import a ClioForge document')}
           </summary>
           <div className="writing-import-content">
             <FilePicker
               label={L('选择文稿', 'Choose document')}
               description={L(
-                '选择从参伍导出的 .canwoo.json 文件。将替换当前正文，可撤销；保存到项目后才会同步。',
-                'Choose a .canwoo.json file exported from Canwoo. It replaces the current text and can be undone. Save to the project to sync it.',
+                '选择从参伍导出的 .clioforge.json 或旧版 .canwoo.json 文件。将替换当前正文，可撤销；保存到项目后才会同步。',
+                'Choose a .clioforge.json file or an older .canwoo.json export. It replaces the current text and can be undone. Save to the project to sync it.',
               )}
               accept=".json,application/json"
               onSelect={async (file) => {
@@ -731,7 +731,7 @@ export default function RichNoteEditor({
                   setError(
                     L(
                       '这不是有效的参伍完整文稿文件。',
-                      'This is not a valid Canwoo writing document.',
+                      'This is not a valid ClioForge writing document.',
                     ),
                   );
                 }
@@ -782,8 +782,8 @@ export default function RichNoteEditor({
             const a = window.document.createElement('a');
             a.href = url;
             a.download =
-              (title.replace(/[^\p{L}\p{N}_-]/gu, '_') || 'canwoo-writing') +
-              '.canwoo.json';
+              (title.replace(/[^\p{L}\p{N}_-]/gu, '_') || 'clioforge-writing') +
+              '.clioforge.json';
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
           }}
