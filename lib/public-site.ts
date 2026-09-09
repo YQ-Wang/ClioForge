@@ -19,7 +19,6 @@ export const publicPages = {
     zh: '从原始材料到审读后的草稿 | ClioForge',
   },
 } as const;
-export const SITE_ORIGIN = 'https://clioforge.com';
 export const WORKSPACE_URL = '/?view=projects';
 // This only selects the entrance/cache policy. Better Auth still verifies the session.
 export function hasSessionCookie(header: string | null) {
@@ -60,16 +59,13 @@ export function publicMetadata(page: PublicPage, locale: Locale): Metadata {
     locale === 'en'
       ? 'An open-source workspace for history and humanities: read sources, review evidence and work with AI while keeping citations and research judgments traceable.'
       : '为历史与人文学者构建的开源工作台：阅读材料、审读证据、与 AI 协作，让引用和研究判断有据可循。';
-  const url = SITE_ORIGIN + publicPages[page].path;
   return {
     title,
     description,
-    alternates: { canonical: url },
-    robots: { index: true, follow: true },
+    robots: { index: false, follow: false },
     openGraph: {
       title,
       description,
-      url,
       siteName: 'ClioForge',
       type: 'website',
     },

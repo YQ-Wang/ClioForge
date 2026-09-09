@@ -4,7 +4,8 @@
 
 - [Project overview and local setup](../README.md)
 - [中文说明](../README.zh-CN.md)
-- [ClioForge naming and compatibility](clioforge-transition.md)
+- [Self-hosting and data ownership](self-hosting.md)
+- [Hosted service retirement](clioforge-transition.md)
 - [Development and architecture](development.md)
 - [Maintenance, compatibility and release checks](maintenance.md)
 - [Prepare a source-linked dossier in the background](background-dossier.md)
@@ -15,7 +16,7 @@
 - [Security reporting](../SECURITY.md)
 - [Third-party licenses and attribution](../THIRD_PARTY_NOTICES.md)
 - [Adams case: reusable editions and source rights](adams-source-rights.md)
-- [Public pages, source preparation and search discovery](public-site.md)
+- [Bundled guides, source preparation and indexing defaults](public-site.md)
 
 ## Research and design notes
 

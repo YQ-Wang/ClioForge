@@ -1,4 +1,4 @@
-# Deploying ClioForge on Cloudflare
+# Self-hosting ClioForge on your Cloudflare account
 
 This guide creates your own installation. Do not reuse another operator's resources or encryption secrets. Cloudflare services and model providers can incur usage charges; check their current pricing before enabling them.
 
@@ -7,18 +7,19 @@ This guide creates your own installation. Do not reuse another operator's resour
 Install dependencies, sign in with `npx wrangler login`, and create a D1 database, private R2 bucket and queue in your own account:
 
 ```sh
-npx wrangler d1 create canwoo
-npx wrangler r2 bucket create canwoo-originals
-npx wrangler queues create canwoo-research
+npx wrangler d1 create clioforge
+npx wrangler r2 bucket create clioforge-originals
+npx wrangler queues create clioforge-research
 cp wrangler.jsonc wrangler.production.local.jsonc
 cp wrangler.jobs.jsonc wrangler.jobs.production.local.jsonc
 ```
 
-The `*.local.jsonc` files are ignored by Git. Set both copies to your own account ID, database ID, bucket and queue names. Keep the binding names `DB`, `FILES` and `JOB_QUEUE`. The main producer, background producer and consumer must use the same queue. Use separate resources and secrets for development, staging and production.
+The `*.local.jsonc` files are ignored by Git. Set both copies to your own Worker names, account ID, database ID, database name, bucket and queue names. The default resource names in the local templates preserve existing local data and are not shared infrastructure. Keep the binding names `DB`, `FILES` and `JOB_QUEUE`. The main producer, background producer and consumer must use the same queue. Use separate resources and secrets for development, staging and production.
 
 In the application copy:
 
-- Set `vars.BETTER_AUTH_URL` to your public HTTPS origin.
+- Set `vars.BETTER_AUTH_URL` to your own HTTPS origin. The retired project domain is not a deployment target.
+- Set `vars.INSTANCE_CONTACT_EMAIL` to your installation administrator’s public email. This is displayed on `/privacy`; use your own contact, not the upstream maintainer’s. Review and adapt that page to your actual data practices before inviting others.
 - Add a route such as `{"pattern":"research.your-domain.org","custom_domain":true}` for that origin, in a zone you control.
 - Set `vars.EMAIL_FROM` and the `EMAIL` binding's `allowed_sender_addresses` to the same verified sender on your domain.
 - Keep R2 private and `workers_dev` and preview URLs disabled for this custom-domain deployment.
@@ -58,4 +59,4 @@ Verify registration and actual verification-email delivery, sign-in, file upload
 
 The background worker checks scheduled work every 15 minutes. Queue concurrency starts at one to limit simultaneous work. Application budgets estimate provider charges; monitor both provider and Cloudflare usage independently. Back up D1, original files and encryption secrets. Test migrations in a separate environment before production.
 
-CI checks builds and tests but never deploys. Maintain your own release and rollback process. If you deploy a modified version, make its corresponding source available under the AGPL and update `SOURCE_CODE_URL` in `lib/platform-contact.ts` to that source. Also replace the support address and identify your installation's operator in its privacy information.
+CI checks builds and tests but never deploys. Maintain your own release and rollback process. If you deploy a modified version, make its corresponding source available under the AGPL and update `SOURCE_CODE_URL` in `lib/platform-contact.ts` to that source. Identify your installation's operator in its privacy information. Self-hosted pages default to `noindex, nofollow`, and the sitemap is empty; authentication remains the actual access control.

@@ -10,7 +10,7 @@ import {
 } from '../lib/public-site';
 import adams from '../lib/adams-public-case.json';
 
-void test('appearance cookies do not hide the public entrance from indexing', () => {
+void test('session cookie detection does not mistake appearance preferences for authentication', () => {
   assert.equal(
     hasSessionCookie('clioforge_locale=en; clioforge_theme=dark'),
     false,
@@ -47,16 +47,12 @@ void test('public entrance keeps auth recovery, invitations and project deep lin
   );
 });
 
-void test('public canonical URLs contain only deliberately published pages', () => {
+void test('bundled guides cannot advertise or index the retired hosted service', () => {
   for (const page of Object.keys(publicPages) as (keyof typeof publicPages)[]) {
     const metadata = publicMetadata(page, 'en');
-    assert.deepEqual(metadata.robots, { index: true, follow: true });
-    const canonical = metadata.alternates?.canonical;
-    assert.equal(typeof canonical, 'string');
-    const url = new URL(canonical as string);
-    assert.equal(url.origin, 'https://clioforge.com');
-    assert.equal(url.search, '');
-    assert.equal(url.pathname, publicPages[page].path);
+    assert.deepEqual(metadata.robots, { index: false, follow: false });
+    assert.equal(metadata.alternates?.canonical, undefined);
+    assert.ok(!JSON.stringify(metadata).includes('clioforge.com'));
     assert.notEqual(metadata.title, publicMetadata(page, 'zh-CN').title);
   }
 });

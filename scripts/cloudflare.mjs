@@ -46,6 +46,17 @@ export function validateDeployment(app, jobs) {
   )
     throw new Error('Both workers must publish to the same research queue.');
   const origin = new URL(app.vars?.BETTER_AUTH_URL || 'http://localhost');
+  const retiredHost = (host) =>
+    /(^|\.)clioforge\.com$/i.test(host.replace(/\.$/, ''));
+  if (
+    retiredHost(origin.hostname) ||
+    app.routes?.some((route) =>
+      retiredHost(String(route.pattern || '').split('/')[0]),
+    )
+  )
+    throw new Error(
+      'The maintainer-operated domain is retired. Use your own domain for self-hosting; see docs/self-hosting.md.',
+    );
   if (
     origin.protocol !== 'https:' ||
     /(^|\.)(localhost|example\.com)$/.test(origin.hostname) ||

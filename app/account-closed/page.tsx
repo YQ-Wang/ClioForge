@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { requestLocale } from '@/lib/i18n/request';
-import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '@/lib/platform-contact';
+import { SUPPORT_URL } from '@/lib/platform-contact';
 export default async function AccountClosed() {
   const locale = await requestLocale(),
     L = (zh: string, en: string) => (locale === 'en' ? en : zh);
@@ -15,7 +15,10 @@ export default async function AccountClosed() {
       </p>
       <p>
         {L('如需核对清理进度，请联系', 'For cleanup status, contact')}{' '}
-        <a href={SUPPORT_MAILTO}>{SUPPORT_EMAIL}</a>。
+        <a href={SUPPORT_URL}>
+          {L('联系本实例管理员', 'Contact this installation’s administrator')}
+        </a>
+        。
       </p>
       <Link href="/">{L('回到 ClioForge', 'Back to ClioForge')}</Link>
     </main>

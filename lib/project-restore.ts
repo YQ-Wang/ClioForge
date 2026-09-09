@@ -148,7 +148,7 @@ export class ProjectRestore {
         if (ids.has(value)) return ids.get(value);
         return value.replace(/\/(?:\?)project=[^\s)\]"<>]+/g, (link) => {
           try {
-            const url = new URL(link, 'https://clioforge.com');
+            const url = new URL(link, 'http://127.0.0.1:3000');
             for (const field of [
               'project',
               'version',

@@ -111,13 +111,13 @@
       "sharp": "0.35.4"
     }
   },
-  "description": "An open-source research IDE for humans and agents, starting with history and humanities",
+  "description": "A self-hosted, open-source research IDE for humans and agents, starting with history and humanities",
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/YQ-Wang/ClioForge.git"
   },
-  "homepage": "https://clioforge.com",
+  "homepage": "https://github.com/YQ-Wang/ClioForge#readme",
   "bugs": {
     "url": "https://github.com/YQ-Wang/ClioForge/issues"
   }

@@ -1,5 +1,4 @@
-// Public contact details only. Personal inboxes belong in provider configuration.
-export const SUPPORT_EMAIL = 'support@clioforge.com';
-export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
+// Account and research-data questions belong to each installation's operator.
+export const SUPPORT_URL = '/privacy#contact';
 
 export const SOURCE_CODE_URL = 'https://github.com/YQ-Wang/ClioForge';

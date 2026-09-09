@@ -130,7 +130,10 @@ void test('rich Word export preserves tables, merged cells, image bytes, native 
     new TextDecoder().decode(files['word/footnotes.xml']),
     /newer version/,
   );
-  assert.throws(() => richWritingDocx('Reading', document, []), /找不到/);
+  assert.throws(
+    () => richWritingDocx('Reading', document, [], citation.href),
+    /找不到/,
+  );
 });
 void test('print export retains rich content, rendered equations and source notes without executing user markup', () => {
   const html = writingPrintHTML('<script>alert(1)</script>', '', document, [

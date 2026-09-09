@@ -4013,7 +4013,7 @@ void test('Word export creates real footnotes, escapes XML, preserves fixed-sour
     strFromU8(doc['[Content_Types].xml']),
     /wordprocessingml.footnotes/,
   );
-  assert.throws(() => writingDocx('Draft', body, []), /找不到/);
+  assert.throws(() => writingDocx('Draft', body, [], citation.href), /找不到/);
 });
 void test('IIIF v2 and v3 preserve canvas order, rights and attribution and reject private or credential-bearing image URLs', () => {
   const v3 = {

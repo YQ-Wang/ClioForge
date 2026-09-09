@@ -3,13 +3,13 @@
 [![CI](https://github.com/YQ-Wang/ClioForge/actions/workflows/ci.yml/badge.svg)](https://github.com/YQ-Wang/ClioForge/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
-**An open-source research IDE for humans and agents.**
+**A self-hosted, open-source research IDE for humans and agents.**
 
 Starting with history and humanities, ClioForge brings together original documents, reading notes, evidence and research tasks. Work through larger collections while keeping interpretations connected to the original material and subject to human review.
 
-[Hosted application](https://clioforge.com) · [中文说明](README.zh-CN.md) · [Documentation](docs/README.md) · [Contributing](CONTRIBUTING.md)
+[Self-hosting guide](docs/self-hosting.md) · [中文说明](README.zh-CN.md) · [Documentation](docs/README.md) · [Contributing](CONTRIBUTING.md)
 
-The hosted site is clioforge.com and the repository is YQ-Wang/ClioForge. See [domain configuration](docs/clioforge-transition.md) for deployment details.
+ClioForge is a personal open-source research experiment. There is no maintainer-operated hosted service. Run it on your own computer or deploy it to your own Cloudflare account. Each installation manages its own accounts, data, integrations and user-provided model keys; infrastructure and model providers may charge you for usage.
 
 ## What you can do
 
@@ -25,11 +25,11 @@ The hosted site is clioforge.com and the repository is YQ-Wang/ClioForge. See [d
 
 ## Status and limits
 
-**Public alpha.** Automated tests and selected end-to-end research exercises cover important workflows; they do not establish reliability for every archive, model or institution. Back up important work and review model output before treating it as evidence.
+**Self-hosted alpha.** Automated tests and selected end-to-end research exercises cover important workflows; they do not establish reliability for every archive, model or institution. Back up important work and review model output before treating it as evidence.
 
 Semantic search currently covers text, not image similarity. Zotero import is not continuous synchronization. Scheduled literature monitoring checks a bounded set of Crossref metadata, not the entire web. Spending controls use estimates and are not a provider billing cap. Local recovery drafts are browser-specific. Google integration, email and model calls require separate configuration; basic local development does not.
 
-## Run locally
+## Run on your own computer
 
 Requires Git and Node.js 22.19 or newer. Local D1, R2 and Queues are emulated; no Cloudflare account is required.
 
@@ -48,7 +48,9 @@ npm run db:migrate:local
 npm run dev:cloudflare
 ```
 
-Open **http://127.0.0.1:3000** and create a local account. `AUTH_ALLOW_UNVERIFIED_LOCAL=1` only bypasses email verification on localhost or 127.0.0.1. Local development does not deliver real email by default. Keep the encryption key backed up: replacing it makes existing saved model credentials unreadable.
+Open **http://127.0.0.1:3000** and create an account in your own installation. Accounts from any other installation do not carry over. `AUTH_ALLOW_UNVERIFIED_LOCAL=1` only bypasses email verification on localhost or 127.0.0.1. Local development does not deliver real email by default. Keep the encryption key backed up: replacing it makes existing saved model credentials unreadable.
+
+This is a loopback-only development runtime for personal use, not a hardened public server. Keep `.wrangler/state` and your encryption key backed up. For a persistent hosted installation under your control, follow the [self-hosting guide](docs/self-hosting.md). A generic Docker/VPS production backend is not currently provided.
 
 ## Development
 
@@ -60,7 +62,7 @@ npm run build:cloudflare
 npm run check:jobs
 ```
 
-See [development](docs/development.md), [Cloudflare deployment](docs/deployment.md) and [Google setup](docs/cloud-drive-setup.md). Public configuration files are local examples; deployment commands reject the placeholder database and origin. CI does not deploy the hosted application or call paid model APIs.
+See [development](docs/development.md), [Cloudflare deployment](docs/deployment.md) and [Google setup](docs/cloud-drive-setup.md). Public configuration files are local examples; deployment commands reject the placeholder database and origin. CI does not deploy any installation or call paid model APIs.
 
 ## Architecture
 

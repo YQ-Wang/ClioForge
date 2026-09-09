@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { ClioForgeBrand } from '@/components/clioforge-brand';
 import { useI18n } from '@/lib/i18n/provider';
-import { SOURCE_CODE_URL, SUPPORT_MAILTO } from '@/lib/platform-contact';
+import { SOURCE_CODE_URL, SUPPORT_URL } from '@/lib/platform-contact';
 import { publicTitle, WORKSPACE_URL, type PublicPage } from '@/lib/public-site';
 import adams from '@/lib/adams-public-case.json';
 import { LanguageSwitcher } from './language-switcher';
@@ -81,7 +81,7 @@ export default function PublicSite({ page }: { page: PublicPage }) {
           <Link prefetch={false} href="/privacy">
             {L('隐私', 'Privacy')}
           </Link>
-          <Link prefetch={false} href={SUPPORT_MAILTO}>
+          <Link prefetch={false} href={SUPPORT_URL}>
             {L('联系', 'Contact')}
           </Link>
           <Link prefetch={false} href={SOURCE_CODE_URL + '/blob/main/LICENSE'}>
@@ -137,8 +137,8 @@ function HomeContent({ L }: { L: Translate }) {
           </div>
           <p className="discovery-caption">
             {L(
-              '案例无需注册。托管版使用你自己的模型密钥，模型调用由服务商计费；也可以自行部署。',
-              'No account needed for the example. Bring your own model key for the hosted workspace; providers bill model usage. Self-hosting is also available.',
+              'ClioForge 是自托管软件。账号与资料保存在本实例；模型使用你自己的密钥，费用由服务商收取。',
+              'ClioForge is self-hosted software. Accounts and research belong to this installation. Bring your own model key; providers bill model usage.',
             )}
           </p>
         </div>

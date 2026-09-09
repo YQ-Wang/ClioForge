@@ -9,7 +9,7 @@ export type WritingCitation = {
 };
 export function writingCitationKey(
   href: string,
-  base = 'https://clioforge.com',
+  base = 'http://127.0.0.1:3000',
 ) {
   let url: URL;
   try {
@@ -77,7 +77,7 @@ export function writingPageReferences(
 export function citedEvidence(
   body: string,
   citations: WritingCitation[],
-  origin = citations[0]?.href || 'https://clioforge.com',
+  origin = citations[0]?.href || 'http://127.0.0.1:3000',
 ) {
   const byId = writingCitationMap(citations);
   const used: WritingCitation[] = [],
@@ -122,7 +122,7 @@ export function writingDocx(
   title: string,
   body: string,
   citations: WritingCitation[],
-  origin = citations[0]?.href || 'https://clioforge.com',
+  origin = citations[0]?.href || 'http://127.0.0.1:3000',
 ) {
   const { text, used, missing } = citedEvidence(body, citations, origin);
   if (missing.length)

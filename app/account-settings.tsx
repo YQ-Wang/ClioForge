@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { api, downloadJson } from '@/lib/client-api';
 import { authClient } from '@/lib/auth-client';
-import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '@/lib/platform-contact';
+import { SUPPORT_URL } from '@/lib/platform-contact';
 import { useI18n } from '@/lib/i18n/provider';
 import { accountSections } from '@/lib/navigation';
 import type { AccountOverview } from '@/lib/account-settings';
@@ -672,8 +672,12 @@ export default function AccountSettings({
                     'Contact support if you need help with restoring a backup or cleaning up data. To delete your account, use the separate control below and review its project list.',
                   )}
                 </p>
-                <a className="settings-contact" href={SUPPORT_MAILTO}>
-                  {SUPPORT_EMAIL} <ExternalLink size={14} />
+                <a className="settings-contact" href={SUPPORT_URL}>
+                  {L(
+                    '联系本实例管理员',
+                    'Contact this installation’s administrator',
+                  )}{' '}
+                  <ExternalLink size={14} />
                 </a>
               </section>
               <DeleteAccount userId={user.id} />

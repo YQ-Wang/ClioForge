@@ -1,57 +1,19 @@
-# ClioForge domain configuration
+# Hosted service retirement
 
-ClioForge 参伍 is the project’s public name. The canonical
-application is `https://clioforge.com`; the repository is
-`https://github.com/YQ-Wang/ClioForge`. Public support is
-`support@clioforge.com` and transactional messages use `noreply@clioforge.com`.
+The maintainer-operated service at `clioforge.com` and `www.clioforge.com` was retired on September 9, 2026. ClioForge continues as [self-hosted open-source software](self-hosting.md) in [YQ-Wang/ClioForge](https://github.com/YQ-Wang/ClioForge).
 
-## Active service
+## What changed
 
-`www.clioforge.com` redirects to the apex while preserving the path and query.
+- All former webpages, downloads and API routes return HTTP 410 with `X-Robots-Tag: noindex, nofollow, noarchive`. There is no sign-up, login, Google callback or model execution through the retired website.
+- A minimal `workers/offline.ts` handler replaces the hosted application. It has no database, object-store, email or queue access. The old application assets are not served.
+- The research queue is paused and its Cron Triggers are removed. Existing private databases, files and encryption secrets are retained, not erased or published. Undelivered queue messages remain subject to the provider’s retention period; database research records are separate.
+- Google Search Console received a removal request for the whole site, covering www/non-www and HTTP/HTTPS variants. Submission does not mean Google has finished processing it. The 410 responses provide the persistent removal signal after temporary search suppression expires.
+- The source repository stays public. Removing the hosted website from search does not remove GitHub pages or independent third-party references from search.
 
-Projects, originals, notes, memberships and provider credentials remain in the
-same database and bucket. Sign in with the same account on clioforge.com.
-Existing sessions and local drafts belong to the browser origin and do not
-transfer automatically. Citations use the deployment’s current origin.
+The DNS and minimal 410 handler remain to let crawlers observe removal; this is not an operational research service. Infrastructure subscriptions and retained storage may still incur charges. Domain ownership and email routing are separate from the retired web application.
 
-## Provider configuration
+## Independent installations
 
-- Google OAuth uses the existing client and secret, with only the new JavaScript
-  origin and both `/api/auth/callback/google` and `/api/connections/callback/google`
-  redirect URIs. The authorized domain is clioforge.com.
-- Google Picker retains Drive/Picker API restrictions and allows only the new
-  site alongside `docs.google.com`.
-- The GCP display name is `clioforge`; its immutable project ID remains `canwoo`.
-- Google branding and developer contact use the new name and domain. The
-  consent-screen support selector requires an eligible Google account or managed
-  Google Group. That existing support identity remains pending a separate
-  solution; forwarding alone does not make an address selectable.
-- Email stays on Cloudflare. The domain is not added to Google Workspace.
-  Email Sending has its own DKIM, SPF, bounce and DMARC records. Email Routing
-  forwards support mail to the existing verified private destination, which is
-  never published in the repository.
+Use your own account, domain, Google OAuth application, sender address and model credentials. Existing account records are not transferred automatically. Exported project backups can be restored into another installation. Local resource names and `foliotrace` storage identifiers remain unchanged for compatibility; they do not connect a self-hosted installation to the retired service.
 
-## Stable internal identifiers
-
-Versioned backup, replay, manuscript and artifact format IDs stay unchanged.
-The `.clioforge.json` writing export keeps its v1 payload and accepts previous
-`.canwoo.json` files. Draft keys, internal actor IDs, encryption secrets, database,
-bucket and queue names remain compatible with existing data. These names are not
-public service addresses. Historical reports and cached artwork retain their
-original filenames and licensing.
-
-Private deployments use `CLIOFORGE_CONFIG` and `CLIOFORGE_JOBS_CONFIG`; previous
-`CANWOO_CONFIG` and `CANWOO_JOBS_CONFIG` remain fallback aliases. Production sets
-`BETTER_AUTH_URL` to the new host, with the verified `EMAIL_FROM` and matching
-email binding.
-
-## Validation boundaries
-
-Live Google sign-in on clioforge.com opened the existing research account and
-projects. The existing Drive connection was retained and Google Picker listed
-available files on the new origin. No new private files were imported.
-
-Cloudflare reports sending DNS ready and the new support forwarding rule enabled.
-A test email from `noreply@clioforge.com` to `support@clioforge.com` was sent
-through Cloudflare, and the operator confirmed receipt in the forwarding inbox.
-This verifies the new sender and support-forwarding path end to end.
+The normal deployment wrapper refuses the retired domain to avoid accidentally restoring it. CI does not deploy. Do not roll an old hosted application version back into service while search removal is intended.

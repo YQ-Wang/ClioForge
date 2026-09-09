@@ -10,6 +10,7 @@ export type AppEnv = Pick<Cloudflare.Env, 'DB' | 'FILES'> &
     FOLIOTRACE_ENCRYPTION_KEY?: string;
     AUTH_ALLOW_UNVERIFIED_LOCAL?: string;
     EMAIL_FROM?: string;
+    INSTANCE_CONTACT_EMAIL?: string;
     GOOGLE_DRIVE_CLIENT_ID?: string;
     GOOGLE_DRIVE_CLIENT_SECRET?: string;
     GOOGLE_PICKER_API_KEY?: string;

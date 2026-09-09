@@ -63,6 +63,18 @@ void test('a consistent private deployment configuration is accepted', () => {
   assert.doesNotThrow(() => validateDeployment(app, jobs));
 });
 
+void test('application deployment cannot reactivate the retired hosted domain', () => {
+  for (const host of ['clioforge.com', 'www.clioforge.com', 'clioforge.com.']) {
+    const { app, jobs } = deployment();
+    app.vars.BETTER_AUTH_URL = `https://${host}`;
+    app.routes = [{ pattern: host, custom_domain: true }];
+    assert.throws(() => validateDeployment(app, jobs), /domain is retired/);
+  }
+  const { app, jobs } = deployment();
+  app.routes.push({ pattern: 'www.clioforge.com', custom_domain: true });
+  assert.throws(() => validateDeployment(app, jobs), /domain is retired/);
+});
+
 void test('deployment refuses split resources and unsafe public settings', () => {
   const mutations = [
     ({ jobs }: ReturnType<typeof deployment>) => {

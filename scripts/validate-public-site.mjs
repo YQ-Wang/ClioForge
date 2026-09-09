@@ -1,4 +1,4 @@
-// Read-only HTTP checks of the rendered public site, without a login cookie.
+// Read-only HTTP checks of a self-hosted installation, without a login cookie.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -23,19 +23,24 @@ async function get(path, headers = {}) {
   return { response, body: await response.text() };
 }
 for (const [path, title] of [
-  ['/', 'ClioForge: Open-source AI research IDE'],
+  ['/', 'ClioForge: Research Workspace'],
   ['/research/adams', 'Reading the Adams letters with evidence'],
   ['/guide', 'From sources to a reviewed draft'],
 ]) {
   const { response, body } = await get(path);
   assert.ok(body.includes(`<title>${title}`), `SSR title: ${path}`);
-  assert.match(body, /<h1[ >]/, `SSR heading: ${path}`);
+  if (path === '/')
+    assert.ok(
+      body.includes('session-loading'),
+      'SSR session check before sign-in',
+    );
+  else assert.match(body, /<h1[ >]/, `SSR heading: ${path}`);
   assert.ok(
-    body.includes(`href="https://clioforge.com${path}"`),
-    `canonical: ${path}`,
+    !body.includes('href="https://clioforge.com'),
+    `no shared-service links: ${path}`,
   );
-  assert.match(body, /name="robots" content="index,\s*follow"/, path);
-  assert.ok(!response.headers.get('x-robots-tag')?.includes('noindex'), path);
+  assert.match(body, /name="robots" content="noindex,\s*nofollow"/, path);
+  assert.match(response.headers.get('x-robots-tag') || '', /noindex/, path);
   if (path === '/research/adams') {
     for (const letter of manifest.letters) {
       assert.ok(body.includes(`id="${letter.id}"`));
@@ -63,16 +68,12 @@ for (const path of [
 const { body: sitemap } = await get('/sitemap.xml');
 assert.deepEqual(
   [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1]).sort(),
-  [
-    'https://clioforge.com/',
-    'https://clioforge.com/guide',
-    'https://clioforge.com/research/adams',
-  ],
+  [],
 );
 const { body: robots } = await get('/robots.txt');
-assert.ok(robots.includes('Sitemap: https://clioforge.com/sitemap.xml'));
-assert.ok(robots.includes('Disallow: /api/'));
-console.log('PASS sitemap allowlist + robots');
+assert.ok(!robots.includes('Sitemap:'));
+assert.ok(robots.includes('Allow: /'));
+console.log('PASS no advertised sitemap + crawlable noindex pages');
 for (const letter of manifest.letters) {
   const { body } = await get(letter.file);
   assert.equal(createHash('sha256').update(body).digest('hex'), letter.sha256);

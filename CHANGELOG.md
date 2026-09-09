@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-- Add server-rendered public research pages, a source-verified Adams walkthrough with attributed downloads, and an introductory workflow guide. Add canonical metadata, a public-page sitemap and workspace indexing exclusions while preserving existing project links and sign-in.
+- Retire the maintainer-operated website and background research service. The retired domain returns HTTP 410; search removal was requested separately.
+- Make self-hosting the primary setup: direct workspace entry, no search indexing or canonical links to a shared service, and per-installation administrator contact.
+- Remove hosted-service links from setup documentation and package metadata. Preserve research features, existing data formats and user-provided model credentials.
+
+- Add server-rendered public research pages, a source-verified Adams walkthrough with attributed downloads, and an introductory workflow guide. Keep the bundled examples and guide available to self-hosted installations, with indexing disabled and no shared-service canonical URLs.
 - Keep public-page browser titles intact when switching languages instead of replacing them with the workspace title.
 
 - Pin Miniflare’s Sharp dependency to 0.35.4 to include the libheif security fixes (GHSA-rgj7-g3m4-5g8c).

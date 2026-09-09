@@ -1,12 +1,12 @@
 # ClioForge 参伍
 
-**面向研究者与 agent 的开源研究 IDE。**
+**面向研究者与 agent、由使用者自行部署的开源研究 IDE。**
 
 ClioForge 参伍目前从历史与人文研究切入：保存原件、阅读批注、组织证据、撰写笔记，并让研究助手在指定材料与预算内处理任务。模型结果需要研究者审读，不能替代史料判断。
 
-[在线使用](https://clioforge.com) · [English README](README.md) · [文档目录](docs/README.md)
+[自托管指南](docs/self-hosting.md) · [English README](README.md) · [文档目录](docs/README.md)
 
-在线服务为 clioforge.com，代码仓库为 YQ-Wang/ClioForge。部署信息详见[域名配置说明](docs/clioforge-transition.md)。
+这是个人开源研究实验项目，不提供由维护者运营的在线服务。你可以在本机运行，或部署到自己的 Cloudflare 账号。每个实例使用独立的账号、资料、集成配置与用户自己的模型密钥；基础设施与模型厂商可能收取费用。
 
 ## 功能
 
@@ -38,6 +38,8 @@ npm run dev:cloudflare
 ```
 
 打开 http://127.0.0.1:3000 并注册本地账号。默认本地不发送真实邮件；AI、Google 登录与 Drive 需要另行配置。不要提交密钥，保管好加密主密钥。
+
+本机模式仅监听回环地址，用于个人实验，不是加固后的公网服务器。请备份 `.wrangler/state` 与加密密钥。持久化部署请看[自托管指南](docs/self-hosting.md)，目前不提供通用 Docker/VPS 生产后端。其他实例的账号不会自动迁移。
 
 ## 当前边界
 
