@@ -8,6 +8,7 @@ import './theme.css';
 import './reading.css';
 import './interactions.css';
 import './auth.css';
+import './public-site.css';
 import { cookies } from 'next/headers';
 import { resolveTheme, THEME_COOKIE } from '@/lib/theme';
 import { ThemeProvider } from './theme-switcher';
@@ -27,6 +28,7 @@ const geistMono = Geist_Mono({
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await requestLocale();
   return {
+    robots: { index: false, follow: false },
     icons: { icon: '/icon.svg?v=atelier4' },
     title:
       locale === 'en'

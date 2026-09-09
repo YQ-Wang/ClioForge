@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add server-rendered public research pages, a source-verified Adams walkthrough with attributed downloads, and an introductory workflow guide. Add canonical metadata, a public-page sitemap and workspace indexing exclusions while preserving existing project links and sign-in.
+- Keep public-page browser titles intact when switching languages instead of replacing them with the workspace title.
+
 - Pin Miniflare’s Sharp dependency to 0.35.4 to include the libheif security fixes (GHSA-rgj7-g3m4-5g8c).
 
 - Rename the public project to ClioForge 参伍, update the wordmark and download names, and add ClioForge deployment configuration aliases while preserving existing data, file formats and live service addresses.

@@ -14,6 +14,8 @@
 - [Contributing](../CONTRIBUTING.md)
 - [Security reporting](../SECURITY.md)
 - [Third-party licenses and attribution](../THIRD_PARTY_NOTICES.md)
+- [Adams case: reusable editions and source rights](adams-source-rights.md)
+- [Public pages, source preparation and search discovery](public-site.md)
 
 ## Research and design notes
 

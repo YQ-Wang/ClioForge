@@ -1,0 +1,39 @@
+{
+  "edition": "Charles Francis Adams (ed.), Familiar Letters, 1876",
+  "sourceUrl": "https://www.gutenberg.org/files/34123/34123-h/34123-h.htm",
+  "rightsUrl": "https://www.gutenberg.org/ebooks/34123",
+  "sourceHtmlSha256": "c998da83626b20f0ec6e6294c81509d46aa33f1b369e5e0eeb516be3e53de489",
+  "rights": "Public domain in the USA",
+  "letters": [
+    {
+      "id": "letter-91",
+      "number": 91,
+      "date": "1776-03-31",
+      "author": "Abigail Adams",
+      "recipient": "John Adams",
+      "excerpt": "I long to hear that you have declared an independency. And, by the way, in the new code of laws which I suppose it will be necessary for you to make, I desire you would remember the ladies and be more generous and favorable to them than your ancestors. Do not put such unlimited power into the hands of the husbands. Remember, all men would be tyrants if they could. If particular care and attention is not paid to the ladies, we are determined to foment a rebellion, and will not hold ourselves bound by any laws in which we have no voice or representation.",
+      "file": "/examples/adams/letter-91.txt",
+      "sha256": "7ffb793579f2e1f84aaec81a996438fc2fcd73f4a23e671333fd1fe5359e29b6"
+    },
+    {
+      "id": "letter-94",
+      "number": 94,
+      "date": "1776-04-14",
+      "author": "John Adams",
+      "recipient": "Abigail Adams",
+      "excerpt": "As to your extraordinary code of laws, I cannot but laugh. We have been told that our struggle has loosened the bonds of government everywhere; that children and apprentices were disobedient; that schools and colleges were grown turbulent; that Indians slighted their guardians, and negroes grew insolent to their masters. But your letter was the first intimation that another tribe, more numerous and powerful than all the rest, were grown discontented. This is rather too coarse a compliment, but you are so saucy, I won't blot it out. Depend upon it, we know better than to repeal our masculine systems. Although they are in full force, you know they are little more than theory. We dare not exert our power in its full latitude. We are obliged to go fair and softly, and, in practice, you know we are the subjects. We have only the name of masters, and rather than give up this, which would completely subject us to the despotism of the petticoat, I hope General Washington and all our brave heroes would fight; I am sure every good politician would plot, as long as he would against despotism, empire, monarchy, aristocracy, oligarchy, or ochlocracy. A fine story, indeed! I begin to think the ministry as deep as they are wicked. After stirring up Tories, land-jobbers, trimmers, bigots, Canadians, Indians, negroes, Hanoverians, Hessians, Russians, Irish Roman Catholics, Scotch renegadoes, at last they have stimulated the —— to demand new privileges and threaten to rebel.",
+      "file": "/examples/adams/letter-94.txt",
+      "sha256": "ad395b81841215e0f5f47849623ff03fddab5b98ddeb63de80af131034b9c081"
+    },
+    {
+      "id": "letter-102",
+      "number": 102,
+      "date": "1776-05-07",
+      "author": "Abigail Adams",
+      "recipient": "John Adams",
+      "excerpt": "I cannot say that I think you are very generous to the ladies; for, whilst you are proclaiming peace and good-will to men, emancipating all nations, you insist upon retaining an absolute power over wives. But you must remember that arbitrary power is like most other things which are very hard, very liable to be broken; and, notwithstanding all your wise laws and maxims, we have it in our power, not only to free ourselves, but to subdue our masters, and, without violence, throw both your natural and legal authority at our feet;—",
+      "file": "/examples/adams/letter-102.txt",
+      "sha256": "0dc93131ab3453581d6e67b3880bfb42d4b4fbbb4e8af828f2161a4a67ca284b"
+    }
+  ]
+}

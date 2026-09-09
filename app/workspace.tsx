@@ -100,6 +100,12 @@ export default function Workspace({
   googleAvailable?: boolean;
 }) {
   const { t, locale, setLocale } = useI18n();
+  useEffect(() => {
+    document.title =
+      locale === 'en'
+        ? 'ClioForge: Research Workspace'
+        : 'ClioForge 参伍: 研究工作台';
+  }, [locale]);
   const {
     data: session,
     isPending,
