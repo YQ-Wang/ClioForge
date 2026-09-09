@@ -1449,7 +1449,7 @@
   line-height: 2;
   color: light-dark(#60718a, hsl(216 18% 74%));
 }
-.privacy-page a,
+.privacy-page a:not([data-slot='button']),
 .public-footer a {
   color: light-dark(#416dab, hsl(215 45% 74%));
 }

@@ -103,6 +103,7 @@ export default function DomainMove() {
               {L('下载本机草稿', 'Download local drafts')}
             </Button>
             <a
+              data-slot="button"
               className={buttonVariants({ variant: 'outline' })}
               href={`${PRIMARY_ORIGIN}/migrate-drafts`}
             >
@@ -148,7 +149,7 @@ export default function DomainMove() {
       {error && <p role="alert">{error}</p>}
       {status && <output className="block">{status}</output>}
       <p>
-        <a className={buttonVariants()} href={target}>
+        <a data-slot="button" className={buttonVariants()} href={target}>
           {L('前往研究工作台', 'Continue to your research')}
         </a>
       </p>
