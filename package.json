@@ -106,6 +106,9 @@
     "lodash-es": "4.18.1",
     "@esbuild-kit/core-utils": {
       "esbuild": "0.25.12"
+    },
+    "miniflare": {
+      "sharp": "0.35.4"
     }
   },
   "description": "An open-source research IDE for humans and agents, starting with history and humanities",

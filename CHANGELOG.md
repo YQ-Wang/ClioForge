@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Pin Miniflare’s Sharp dependency to 0.35.4 to include the libheif security fixes (GHSA-rgj7-g3m4-5g8c).
+
 - Rename the public project to ClioForge 参伍, update the wordmark and download names, and add ClioForge deployment configuration aliases while preserving existing data, file formats and live service addresses.
 
 - Simplify document import with localized file-selection buttons shared by writing, replay, archive manifests and backup restore; improve import errors, keyboard disclosures and narrow-screen editor controls.
