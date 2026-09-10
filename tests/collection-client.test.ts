@@ -8,7 +8,7 @@ void test('paged clients preserve all records and reject failed continuations', 
   const requests: URL[] = [];
   let fail = false;
   t.mock.method(globalThis, 'fetch', async (path: string) => {
-    const url = new URL(path, 'https://canwoo.test');
+    const url = new URL(path, 'https://clioforge.test');
     requests.push(url);
     if (!url.searchParams.has('before'))
       return Response.json({ rows: [{ id: 'new' }], next: '42' });
@@ -144,7 +144,7 @@ void test('snapshot loading passes the same insertion checkpoint to every collec
   };
   const collections: string[] = [];
   t.mock.method(globalThis, 'fetch', async (path: string) => {
-    const params = new URL(path, 'https://canwoo.test').searchParams;
+    const params = new URL(path, 'https://clioforge.test').searchParams;
     const collection = params.get('collection');
     if (!collection)
       return Response.json({

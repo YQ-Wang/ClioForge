@@ -1,8 +1,8 @@
-# Canwoo visual refinement · 2026-09-05
+# ClioForge visual refinement · 2026-09-05
 
-The interface uses bundled Geist for Latin UI and system Chinese sans-serif fallbacks. The current brand pairs an original gold-paper fan with Google Sans Flex glyph outlines for lowercase `canwoo` and Qiji glyph outlines for 參伍. The Latin lettering has a moderately light weight and subtly softened terminals. Both wordmarks are fixed SVG artwork; earlier monoline lettering, serif lettering and CW-monogram brand treatments have been retired. See [current brand details](cw-brand.md).
+The interface uses bundled Geist for Latin UI and system Chinese sans-serif fallbacks. The current brand pairs an original gold-paper fan with Google Sans Flex glyph outlines for lowercase `clioforge` and Qiji glyph outlines for 參伍. The Latin lettering has a moderately light weight and subtly softened terminals. Both wordmarks are fixed SVG artwork; earlier monoline lettering, serif lettering and CW-monogram brand treatments have been retired. See [current brand details](cw-brand.md).
 
-Design references: [OpenAI](https://openai.com/) and [Google Design](https://design.google/). Canwoo uses its own icon and open-source typefaces. The resulting direction favors neutral surfaces, clear text hierarchy, restrained blue action color, compact navigation, and consistent controls.
+Design references: [OpenAI](https://openai.com/) and [Google Design](https://design.google/). ClioForge uses its own icon and open-source typefaces. The resulting direction favors neutral surfaces, clear text hierarchy, restrained blue action color, compact navigation, and consistent controls.
 
 Changes cover the shared button/input primitives, page headings, sidebar selection, project cards, search fields, overview panels, account settings, login page, and both appearance modes. Research transcription keeps its reading typography and originals are not modified. Error and review status colors remain distinct. Controls preserve focus treatment, and reduced-motion users avoid decorative transitions.
 

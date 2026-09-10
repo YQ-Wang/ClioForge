@@ -1,4 +1,4 @@
-# Canwoo product acceptance
+# ClioForge product acceptance
 
 ## Research assistant workflow checkpoint — 2026-09-05
 
@@ -92,7 +92,7 @@ The owner requested invitations, permission management and removal, and explicit
 
 ## 2026-09-05 evidence and remaining acceptance
 
-- Added the Canwoo folded-leaf vector mark, restrained Material surfaces, project overview, simpler import entry, readable findings with exact source quotations and Markdown export, and an in-product research guide. Technical records are collapsed. Source content remains unchanged across UI language changes.
+- Added the ClioForge folded-leaf vector mark, restrained Material surfaces, project overview, simpler import entry, readable findings with exact source quotations and Markdown export, and an in-product research guide. Technical records are collapsed. Source content remains unchanged across UI language changes.
 - Added Google sign-in with basic identity scopes, account-bound Drive authorization returning to the original project, cancellation recovery and per-file import errors. OAuth state has a single-use lifetime, validated return destination and PKCE. Migration `0006_oauth_return.sql` applied locally and remotely.
 - Published a bilingual `/privacy` page explaining selected-file access, provider processing, encrypted credentials, retention, revocation and the current contact-based account deletion process.
 - All 36 tests passed (`work/saas-final-test.log`), including new social login, callback destination, account-bound return, cancellation and readable export checks. Typecheck, lint and Cloudflare production build passed. No paid model calls were made for this pass.

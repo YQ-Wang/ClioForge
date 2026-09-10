@@ -4,13 +4,13 @@ Implemented 2026-09-05 (deployment verification recorded below).
 
 ## Editor choice
 
-Canwoo uses Tiptap 3.31.3 (MIT core/extensions), KaTeX 0.18.6 and Excalidraw 0.18.1 (MIT). No Tiptap Cloud subscription, hosted collaboration service or additional database is required. The editor and drawing canvas load lazily. Drawing fonts are self-hosted.
+ClioForge uses Tiptap 3.31.3 (MIT core/extensions), KaTeX 0.18.6 and Excalidraw 0.18.1 (MIT). No Tiptap Cloud subscription, hosted collaboration service or additional database is required. The editor and drawing canvas load lazily. Drawing fonts are self-hosted.
 
-- [Tiptap React](https://tiptap.dev/docs/editor/getting-started/install/react) is headless, allowing Canwoo's existing controls and theme to remain consistent.
+- [Tiptap React](https://tiptap.dev/docs/editor/getting-started/install/react) is headless, allowing ClioForge's existing controls and theme to remain consistent.
 - [TableKit](https://tiptap.dev/docs/editor/extensions/nodes/table) supplies editable/resizable tables; text styles supply family, size and color.
 - [Mathematics](https://tiptap.dev/docs/editor/extensions/nodes/mathematics) uses KaTeX for inline/display LaTeX. Clicking an equation opens its source for editing.
 - [Excalidraw](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/installation) supplies freehand drawing, shapes, text and connectors. React 19 is declared in the installed package's peer dependencies.
-- [BlockNote](https://www.blocknotejs.org/docs/features/blocks) is a good block-oriented alternative. Its opinionated editor UI is less useful here because Canwoo already has navigation, materials, evidence and version management.
+- [BlockNote](https://www.blocknotejs.org/docs/features/blocks) is a good block-oriented alternative. Its opinionated editor UI is less useful here because ClioForge already has navigation, materials, evidence and version management.
 - [Lexical](https://lexical.dev/docs/intro) is another extensible foundation; implementing this specific set of tools would require more assembly. This is a product-fit choice, not a universal ranking.
 
 Tiptap's [Markdown support is beta](https://tiptap.dev/docs/editor/markdown) and Markdown cannot represent every table/layout feature. Consequently, the editable document is stored separately from the readable text projection.

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { checkMigrations } from '../scripts/check-migrations.mjs';
 
 void test('migration guard permits new migrations but rejects rewrites, deletions and ordering collisions', (t) => {
-  const cwd = mkdtempSync(join(tmpdir(), 'canwoo-migrations-'));
+  const cwd = mkdtempSync(join(tmpdir(), 'clioforge-migrations-'));
   t.after(() => rmSync(cwd, { recursive: true, force: true }));
   const git = (...args: string[]) =>
     execFileSync('git', args, { cwd, stdio: 'pipe' });

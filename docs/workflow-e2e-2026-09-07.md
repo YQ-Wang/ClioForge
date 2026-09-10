@@ -40,7 +40,7 @@ The regression checks both creation and update attempts, draft editing and subse
 
 The first control-model response arrived in roughly five seconds, but it included additional source-page quotations outside the selected evidence. The application correctly rejected those citations. Requiring the model to construct quotation objects nevertheless made an avoidable formatting and selection problem part of the critical path.
 
-New manuscript calls use `manuscript_section_v2`: paragraphs select numbered entries from the frozen dossier, and Canwoo fills the exact quotation, version and page. Unknown indices, mixed quotation modes and unlinked claims remain errors. Canonical saved results and the previous output schema remain readable. Validation finishes before canonicalized results are committed.
+New manuscript calls use `manuscript_section_v2`: paragraphs select numbered entries from the frozen dossier, and ClioForge fills the exact quotation, version and page. Unknown indices, mixed quotation modes and unlinked claims remain errors. Canonical saved results and the previous output schema remain readable. Validation finishes before canonicalized results are committed.
 
 The live retry then completed both chapters and created a note. Inspecting that note exposed two presentation issues: repeated references acquired new numbers across chapters, and blank lines inside one model paragraph could visually separate its prose from its citation. Assembly now reuses reference numbers, and each paragraph item is rendered as one paragraph. Focused regression tests verify both behaviors. These final rendering changes were tested with injected responses; the already-created live note was preserved rather than regenerated.
 

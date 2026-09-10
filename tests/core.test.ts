@@ -1762,7 +1762,7 @@ void test('public signup sends verification through the email binding and requir
       headers: {
         Origin: origin,
         'Content-Type': 'application/json',
-        Cookie: 'canwoo_locale=en',
+        Cookie: 'clioforge_locale=en',
         'Accept-Language': 'zh-CN',
       },
       body: JSON.stringify(body),
@@ -2919,7 +2919,7 @@ void test('Google sign-in uses app credentials, normal identity scopes and prote
     FILES: {} as R2Bucket,
     BETTER_AUTH_URL: 'https://clioforge.com',
     BETTER_AUTH_SECRET: 'test-only-google-login-secret-long-enough',
-    GOOGLE_DRIVE_CLIENT_ID: 'test-canwoo.apps.googleusercontent.com',
+    GOOGLE_DRIVE_CLIENT_ID: 'test-clioforge.apps.googleusercontent.com',
     GOOGLE_DRIVE_CLIENT_SECRET: 'test-google-secret',
   };
   assert.equal(googleConfigured(environment), true);
@@ -2935,7 +2935,7 @@ void test('Google sign-in uses app credentials, normal identity scopes and prote
         headers: {
           'Content-Type': 'application/json',
           Origin: origin,
-          Cookie: 'canwoo_locale=en',
+          Cookie: 'clioforge_locale=en',
         },
         body: JSON.stringify({
           provider: 'google',
@@ -5488,14 +5488,17 @@ void test('concurrent API requests respect account-wide limits without blocking 
   assert.equal(
     await db
       .prepare('SELECT count FROM rate_limit WHERE key=?')
-      .bind(`canwoo:api:write:${owner.owner}`)
+      .bind(`clioforge:api:write:${owner.owner}`)
       .first('count'),
     1,
   );
   assert.equal(
     await db
-      .prepare('SELECT COUNT(*) AS n FROM rate_limit WHERE key LIKE ?')
-      .bind(`canwoo:api:%:${owner.owner}`)
+      .prepare('SELECT COUNT(*) AS n FROM rate_limit WHERE key IN (?,?)')
+      .bind(
+        `clioforge:api:read:${owner.owner}`,
+        `clioforge:api:write:${owner.owner}`,
+      )
       .first('n'),
     2,
   );
@@ -5887,6 +5890,96 @@ void test('background recovery bypasses thirty review-gated plans and isolates f
   assert.equal((await store.mission(active)).status, 'active');
 });
 
+void test('scheduled model work uses only its creator key and never falls back to another account', async () => {
+  const other = await jobSetup();
+  for (const connection of ['own', 'foreign', 'deleted'] as const) {
+    const f = await jobSetup();
+    const store = new MissionStore(db, f.owner.owner);
+    const taskId = crypto.randomUUID();
+    const ownKey = `fixture-key-${crypto.randomUUID()}`;
+    await db
+      .prepare('UPDATE model_connections SET encrypted_key=? WHERE id=?')
+      .bind(
+        await encrypt(ownKey, f.secret, `${f.owner.owner}:${f.input.model_id}`),
+        f.input.model_id,
+      )
+      .run();
+    const mission = await store.create(f.a.project.id, {
+      title: 'Background key ownership',
+      question: 'What does the source say?',
+      scope: 'One source',
+      acceptance: 'Human review',
+      tasks: [
+        {
+          id: taskId,
+          title: 'Read source',
+          kind: 'extract',
+          executor: 'model',
+          dependencies: [],
+          input: {
+            version_ids: f.input.version_ids,
+            model_id: f.input.model_id,
+            prompt: 'Read the source',
+            input_rate: 1,
+            output_rate: 2,
+            max_output: 128,
+          },
+        },
+      ],
+    });
+    await store.control(mission, 'start');
+    const sent: string[] = [];
+    const env = {
+      DB: db,
+      FOLIOTRACE_ENCRYPTION_KEY: f.secret,
+      JOB_QUEUE: {
+        async send(message: { id: string }) {
+          sent.push(message.id);
+          return {
+            metadata: {
+              metrics: { backlogCount: sent.length, backlogBytes: 0 },
+            },
+          };
+        },
+        async sendBatch() {
+          throw new Error('Unexpected batch dispatch');
+        },
+        async metrics() {
+          return { backlogCount: sent.length, backlogBytes: 0 };
+        },
+      } satisfies Queue<{ id: string }>,
+    };
+    await recoverMissions(env);
+    assert.ok(sent.includes(taskId));
+    if (connection === 'foreign')
+      await db
+        .prepare(
+          "UPDATE mission_tasks SET input=json_set(input,'$.model_id',?) WHERE id=?",
+        )
+        .bind(other.input.model_id, taskId)
+        .run();
+    if (connection === 'deleted')
+      await db
+        .prepare('DELETE FROM model_connections WHERE id=?')
+        .bind(f.input.model_id)
+        .run();
+    const usedKeys: string[] = [];
+    await executeMissionTask(env, taskId, async (request) => {
+      usedKeys.push(request.key);
+      return {
+        text: JSON.stringify({ summary: 'Candidate', citations: [] }),
+        inputTokens: 10,
+        outputTokens: 10,
+      };
+    });
+    assert.deepEqual(usedKeys, connection === 'own' ? [ownKey] : []);
+    if (connection !== 'own')
+      assert.equal((await store.task(taskId)).status, 'failed');
+    if ((await store.mission(mission)).status === 'active')
+      await store.control(mission, 'pause');
+  }
+});
+
 async function interruptedModelHandoff() {
   const f = await jobSetup(),
     store = new MissionStore(db, f.owner.owner);
@@ -5904,7 +5997,11 @@ async function interruptedModelHandoff() {
   });
   const mission = await store.create(f.a.project.id, draft);
   await store.control(mission, 'start');
-  const claimed = await store.claim(draft.tasks[0].id, 'canwoo:model', 'model');
+  const claimed = await store.claim(
+    draft.tasks[0].id,
+    'clioforge:model',
+    'model',
+  );
   const job = await createJob(
     store,
     { ...f.input, id: crypto.randomUUID(), output_format: 'json' },
@@ -5964,7 +6061,7 @@ void test('a saved paid response survives a worker handoff crash without another
     1,
   );
   await assert.rejects(
-    f.store.submit(task.id, f.claimed.lease, 'canwoo:model', task.result),
+    f.store.submit(task.id, f.claimed.lease, 'clioforge:model', task.result),
   );
   await recoverMissions({ DB: db });
   assert.equal((await f.store.task(task.id)).cost_units, 200);

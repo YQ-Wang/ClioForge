@@ -2600,7 +2600,7 @@ function TaskDetail({
 }) {
   const { L } = useWords();
   const reviewDraft = useReviewDraft(
-    `canwoo:review-draft:${userId}:${task.project_id}:${task.id}`,
+    `clioforge:review-draft:${userId}:${task.project_id}:${task.id}`,
     task.revision,
   );
   const { reason, humanText } = reviewDraft.value;
@@ -2881,7 +2881,7 @@ function TaskDetail({
       {task.result && task.input.parameters.extraction === true && (
         <ResearchRecords
           key={task.id}
-          draftKey={`canwoo:record-draft:${userId}:${task.project_id}:${task.id}`}
+          draftKey={`clioforge:record-draft:${userId}:${task.project_id}:${task.id}`}
           revision={task.revision}
           result={task.result}
           fields={

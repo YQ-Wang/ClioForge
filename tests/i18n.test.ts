@@ -11,7 +11,7 @@ void test('saved language overrides browser preference; invalid cookies use supp
   assert.equal(
     localeFromHeaders(
       new Headers({
-        cookie: 'other=1; canwoo_locale=en',
+        cookie: 'other=1; clioforge_locale=en',
         'accept-language': 'zh-CN',
       }),
     ),

@@ -11,7 +11,7 @@ import type { MissionStore } from '../platform/missions';
 import { HttpError } from '../errors';
 import { orderedTasks } from '../task-presentation';
 const traceData = z.object({
-  format: z.literal('canwoo-agent-trace'),
+  format: z.enum(['clioforge-agent-trace', 'canwoo-agent-trace']),
   version: z.literal(1),
   mission: z.object({
     id: z.uuid(),
@@ -353,7 +353,7 @@ export async function exportTrace(
   ).results;
   // Schema projection deliberately omits leases, credentials and internal tokens.
   const data = traceData.parse({
-    format: 'canwoo-agent-trace',
+    format: 'clioforge-agent-trace',
     version: 1,
     mission: view.mission,
     tasks: orderedTasks(view.tasks, view.edges),

@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { authClient } from '@/lib/auth-client';
 import { authReturnPath } from '@/lib/auth-return';
+import { WORKSPACE_URL } from '@/lib/public-site';
 import { api } from '@/lib/client-api';
 import {
   ClioForgeBrand,
@@ -183,12 +184,14 @@ export default function Workspace({
     )
       return;
     event.preventDefault();
-    navigateWorkspace(event.currentTarget.getAttribute('href') || '/');
+    navigateWorkspace(
+      event.currentTarget.getAttribute('href') || WORKSPACE_URL,
+    );
   }
   function openProject(value: Project | null) {
     setProject(value);
     setCounts({});
-    navigateWorkspace(value ? projectPath(value.id) : '/');
+    navigateWorkspace(value ? projectPath(value.id) : WORKSPACE_URL);
   }
   function openSettings(section = 'profile') {
     const params = new URLSearchParams(
@@ -201,7 +204,9 @@ export default function Workspace({
     if (project) navigateWorkspace(projectPath(project.id, section));
   }
   function returnToResearch() {
-    navigateWorkspace(project ? projectPath(project.id, route.tab) : '/');
+    navigateWorkspace(
+      project ? projectPath(project.id, route.tab) : WORKSPACE_URL,
+    );
   }
   useEffect(() => {
     setRecovery(new URLSearchParams(window.location.search).has('token'));
@@ -245,7 +250,7 @@ export default function Workspace({
               recovery={recovery}
               onRecovered={() => {
                 setRecovery(false);
-                window.history.replaceState(null, '', window.location.pathname);
+                navigateWorkspace(WORKSPACE_URL, true);
               }}
             />
           )}
@@ -338,7 +343,11 @@ export default function Workspace({
             >
               <ol>
                 <li className="breadcrumb-root">
-                  <Link prefetch={false} href="/" onClick={followBreadcrumb}>
+                  <Link
+                    prefetch={false}
+                    href={WORKSPACE_URL}
+                    onClick={followBreadcrumb}
+                  >
                     {t('工作台')}
                   </Link>
                 </li>

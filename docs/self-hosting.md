@@ -19,7 +19,7 @@ The app currently depends on Cloudflare runtime bindings. It is not a standalone
 4. For AI tasks, add your own provider key under assistant settings, choose a model and start a small task. Providers charge their own fees; app estimates are not a billing cap.
 5. Review the result against its source. Export a project backup including original files and test restoring it into a separate project.
 
-For a persistent deployment, follow [Cloudflare setup](deployment.md). It provisions no resources in the upstream maintainer's account and must not point to the retired project domain. Google sign-in and Drive are optional and require [your own Google application](cloud-drive-setup.md); password-based sign-in does not require Google. Public password registration and recovery require configured email delivery. The localhost-only verification bypass is not suitable for a public hostname.
+For a persistent deployment, follow [Cloudflare setup](deployment.md). It provisions no resources in the upstream maintainer's account and must not point to the upstream project domain. Operators can enable [invitation-only GitHub access](private-access.md) for their own installation. Google sign-in and Drive are optional and require [your own Google application](cloud-drive-setup.md); password-based sign-in does not require Google. Public password registration and recovery require configured email delivery. The localhost-only verification bypass is not suitable for a public hostname.
 
 ## Data and responsibilities
 

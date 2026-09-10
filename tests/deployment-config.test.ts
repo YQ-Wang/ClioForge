@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { parsePrivateDeployment } from '../scripts/prepare-ci-deployment.mjs';
 import {
   deploymentConfigPaths,
   readConfig,
@@ -107,4 +108,76 @@ void test('deployment refuses split resources and unsafe public settings', () =>
     mutate(config);
     assert.throws(() => validateDeployment(config.app, config.jobs));
   }
+});
+
+void test('private deployment enforces worker-first assets, exact IDs and disabled alternate URLs', () => {
+  const { app, jobs } = deployment();
+  app.vars.BETTER_AUTH_URL = 'https://clioforge.com';
+  app.routes = [{ pattern: 'clioforge.com', custom_domain: true }];
+  app.vars.PRIVATE_GITHUB_ACCESS = '1';
+  app.vars.PRIVATE_GITHUB_USER_IDS = '123,456';
+  app.vars.PRIVATE_GITHUB_CLIENT_ID = 'test-client';
+  assert.doesNotThrow(() => validateDeployment(app, jobs));
+  for (const key of ['PRIVATE_GITHUB_USER_IDS', 'PRIVATE_GITHUB_CLIENT_ID']) {
+    const invalid = structuredClone(app);
+    delete invalid.vars[key];
+    assert.throws(
+      () => validateDeployment(invalid, jobs),
+      /Private GitHub access requires/,
+    );
+  }
+  for (const change of [
+    { workers_dev: true },
+    { preview_urls: true },
+    { assets: { run_worker_first: false } },
+    { assets: { run_worker_first: true } },
+  ])
+    assert.throws(
+      () => validateDeployment({ ...app, ...change }, jobs),
+      /Private GitHub access requires/,
+    );
+});
+
+void test('CI rejects missing config, wrong targets and public research worker URLs', () => {
+  const { app, jobs } = deployment();
+  app.vars.BETTER_AUTH_URL = 'https://clioforge.com';
+  app.routes = [{ pattern: 'clioforge.com', custom_domain: true }];
+  app.vars.PRIVATE_GITHUB_ACCESS = '1';
+  app.vars.PRIVATE_GITHUB_USER_IDS = '123,456';
+  app.vars.PRIVATE_GITHUB_CLIENT_ID = 'test-client';
+  const parse = (a = app, j = jobs) =>
+    parsePrivateDeployment(JSON.stringify(a), JSON.stringify(j));
+  assert.deepEqual(parse(), { app, jobs });
+  assert.throws(
+    () => parsePrivateDeployment('', JSON.stringify(jobs)),
+    /Missing app/,
+  );
+  assert.throws(
+    () => parsePrivateDeployment('{broken', JSON.stringify(jobs)),
+    /Invalid app/,
+  );
+  assert.throws(
+    () => parse({ ...app, name: 'another-worker' }),
+    /private ClioForge/,
+  );
+  assert.throws(
+    () => parse({ ...app, main: 'workers/offline.ts' }),
+    /private ClioForge/,
+  );
+  assert.throws(
+    () => parse(app, { ...jobs, workers_dev: true }),
+    /private ClioForge/,
+  );
+  assert.throws(
+    () => parse(app, { ...jobs, preview_urls: true }),
+    /private ClioForge/,
+  );
+  assert.throws(
+    () =>
+      parse(app, {
+        ...jobs,
+        routes: [{ pattern: 'jobs.clioforge.com', custom_domain: true }],
+      }),
+    /private ClioForge/,
+  );
 });

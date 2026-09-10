@@ -3,7 +3,7 @@ import { MAX_FILE_BYTES } from './files';
 export const MAX_PACKAGE_BYTES = 512 * 1024 * 1024;
 export const MAX_METADATA_BYTES = 8 * 1024 * 1024;
 export const packageManifest = z.object({
-  format: z.literal('canwoo-research-package'),
+  format: z.enum(['clioforge-research-package', 'canwoo-research-package']),
   version: z.literal(1),
   files: z
     .array(
@@ -19,7 +19,7 @@ export const packageManifest = z.object({
     .max(501),
 });
 export const packageMetadata = z.object({
-  format: z.literal('canwoo-research-package'),
+  format: z.enum(['clioforge-research-package', 'canwoo-research-package']),
   version: z.literal(1),
   exported_at: z.string(),
   project: z.object({

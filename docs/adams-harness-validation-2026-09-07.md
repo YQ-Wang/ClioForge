@@ -6,7 +6,7 @@ September 7, 2026, Pacific time. This continued the same five-source production 
 
 A new GLM 5.3 Flash request succeeded on the John Adams to James Sullivan excerpt. The operator added a reading comment asking whether “Women will demand a Vote.” predicts a consequence of changing voter qualifications or endorses it, then asked the assistant for a short interpretation with a continuous quotation.
 
-The answer interpreted the sentence in its warning context, cited an exact passage beginning “Depend upon it, sir,” and acknowledged the excerpt's limits. Canwoo's automatic text check passed. The UI recorded approximately $0.0004 for this step; provider billing was not independently reconciled.
+The answer interpreted the sentence in its warning context, cited an exact passage beginning “Depend upon it, sir,” and acknowledged the excerpt's limits. ClioForge's automatic text check passed. The UI recorded approximately $0.0004 for this step; provider billing was not independently reconciled.
 
 The operator then opened the review task, assigned it, rewrote the answer to limit the inference to this paragraph, and accepted it with a recorded reason. The compiled report preserved that revision and its fixed-version citation. It was accepted and converted into the saved note **1776 选民资格 · 从批注到审读结论**, with an inline source link, original quotation and explicit scholarly limitations. This is an operational review by an AI coding assistant, not independent historian verification.
 
@@ -16,7 +16,7 @@ A second live GLM 5.3 Flash request also succeeded after deployment. From an ori
 
 The combined recorded cost of these two successful steps is approximately $0.0007. This excludes prior uncertain reservations and is not a provider billing audit.
 
-## Canwoo defects addressed
+## ClioForge defects addressed
 
 - **Implicit inherited source scope:** follow-ups can now explicitly select 1–24 pages from at most ten source versions. This replaces inherited source pages. Earlier questions remain as background, but previous answer text and quotations are omitted in this mode so excluded material is not silently reintroduced. The selected scope and immutable retry request survive browser draft restoration.
 - **Mixed findings:** the library separates compiled research reports, review notes and supporting steps, with title/excerpt search and a direct return to the originating research plan. Shared findings do not expose the private originating plan identifier. Long headings are clamped visually while their full text remains available.

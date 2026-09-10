@@ -129,7 +129,7 @@ export async function requestAccountDeletion(
       .bind(owner, owner),
     db
       .prepare(
-        "UPDATE user SET name='Deleted researcher',email='closed-'||id||'@canwoo.invalid',email_verified=0,image=NULL,updated_at=? WHERE id=?",
+        "UPDATE user SET name='Deleted researcher',email='closed-'||id||'@clioforge.invalid',email_verified=0,image=NULL,updated_at=? WHERE id=?",
       )
       .bind(Date.now(), owner),
   ]);

@@ -50,7 +50,7 @@ export async function recoverModelResults(env: JobsEnv, taskId?: string) {
           hash = await sha256(lease);
         const date = new Date().toISOString();
         const changed =
-          await env.DB.prepare(`UPDATE mission_tasks SET status='running',claimed_by='canwoo:model',lease_hash=?,lease_until=?,revision=revision+1,updated_at=?
+          await env.DB.prepare(`UPDATE mission_tasks SET status='running',claimed_by='clioforge:model',lease_hash=?,lease_until=?,revision=revision+1,updated_at=?
         WHERE id=? AND attempt=? AND status='uncertain' AND (error=? OR failure_stage='local_delivery')
           AND EXISTS(SELECT 1 FROM missions m WHERE m.id=mission_id AND m.status='active')
           AND NOT EXISTS(SELECT 1 FROM task_inputs ti JOIN source_versions v ON v.id=ti.version_id JOIN source_versions newer ON newer.source_id=v.source_id AND newer.project_id=v.project_id AND newer.revision>v.revision WHERE ti.task_id=mission_tasks.id)
@@ -116,7 +116,7 @@ export async function recoverModelResults(env: JobsEnv, taskId?: string) {
             );
           await assertConversationContext(store, task);
           const result = await savedModelResult(store, task, job);
-          await store.submit(task.id, lease, 'canwoo:model', result);
+          await store.submit(task.id, lease, 'clioforge:model', result);
           await store.event(
             task.mission_id,
             task.id,

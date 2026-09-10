@@ -4,7 +4,7 @@ Code audit: 7 September 2026. This inventory describes the local working tree, i
 
 ## Implemented within explicit boundaries
 
-| Capability                               | What Canwoo actually does                                                                                                                   | Evidence and limits                                                                                                                |
+| Capability                               | What ClioForge actually does                                                                                                                | Evidence and limits                                                                                                                |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Durable task orchestration               | Persists dependencies, attempts, leases, results and pause/cancel state; recovers lost queue handoffs and rejects duplicate delivery        | `lib/platform/missions.ts`, `execute.ts`; integration tests exercise concurrent recovery, stale leases and stopped missions        |
 | Permission and spending control          | Checks project access, fixed source scope and budget reservations before calls; retains uncertain paid requests                             | `lib/jobs.ts`; no promise of a provider billing hard cap or cancellation after sending                                             |

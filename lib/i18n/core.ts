@@ -1,13 +1,17 @@
 import english from './en.json';
 export type Locale = 'zh-CN' | 'en';
-export const LOCALE_COOKIE = 'canwoo_locale';
+export const LOCALE_COOKIE = 'clioforge_locale';
 export function localeFromHeaders(headers?: Pick<Headers, 'get'>): Locale {
-  const preference = headers
-    ?.get('cookie')
-    ?.split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${LOCALE_COOKIE}=`))
-    ?.slice(LOCALE_COOKIE.length + 1);
+  const parts =
+    headers
+      ?.get('cookie')
+      ?.split(';')
+      .map((part) => part.trim()) || [];
+  const preference = [LOCALE_COOKIE, 'canwoo_locale']
+    .map((name) =>
+      parts.find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1),
+    )
+    .find((value) => value !== undefined);
   return resolveLocale(preference, headers?.get('accept-language') || '');
 }
 const messages: Record<string, string> = english;

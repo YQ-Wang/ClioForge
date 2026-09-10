@@ -148,7 +148,7 @@ export async function projectArchive(
   const metadata = strToU8(
     JSON.stringify(
       {
-        format: 'canwoo-research-package',
+        format: 'clioforge-research-package',
         version: 1,
         exported_at: new Date().toISOString(),
         project,
@@ -230,7 +230,7 @@ export async function projectArchive(
         strToU8(
           JSON.stringify(
             {
-              format: 'canwoo-research-package',
+              format: 'clioforge-research-package',
               version: 1,
               files: manifest,
               notes:

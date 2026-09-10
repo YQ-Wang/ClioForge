@@ -56,6 +56,14 @@ export default function PublicSite({ page }: { page: PublicPage }) {
           </Link>
         </nav>
         <div className="appearance-actions">
+          <Link
+            prefetch={false}
+            href={WORKSPACE_URL}
+            className="discovery-button primary"
+          >
+            {L('登录工作台', 'Sign in to workspace')}
+            <ArrowRight size={16} />
+          </Link>
           <ThemeSwitcher />
           <LanguageSwitcher />
         </div>

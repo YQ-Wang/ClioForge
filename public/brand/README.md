@@ -11,13 +11,13 @@ rendered by `components/clioforge-brand.tsx`.
 - `clioforge-mark.svg`: transparent gold-paper display fan.
 - `clioforge-wordmark.svg`: lowercase Geist Sans 600 lettering, SIL OFL 1.1.
 - `clioforge-han-wordmark.svg`: current Qiji Chinese lettering.
-- Earlier `canwoo-*.svg` assets remain available for cached clients.
+- Obsolete brand filenames have been removed; current assets use the `clioforge-` prefix.
 - `GoogleSans-OFL.txt` and `Newsreader-OFL.txt`: retained licenses for earlier font-derived Latin artwork. The earlier font-derived wordmark is not used by the current lockup.
-- `clioforge-han-wordmark.svg` (with `canwoo-han-wordmark.svg` retained as a legacy asset): transparent 參伍 lettering from Qiji. Copyright 2020 Lingdong Huang; source font under SIL OFL 1.1, retained in `Qiji-OFL.txt`. The source is the `qiji.ttf` asset from [release 0.0.4](https://github.com/LingDong-/qiji-font/releases/tag/0.0.4). `scripts/build-han-wordmark.py` uses fontTools and a local copy of that TTF, checks its SHA-256, and generates the SVG and shared path data. Each glyph outline is uniformly scaled and optically positioned; the site does not load the full font.
+- `clioforge-han-wordmark.svg`: transparent 參伍 lettering from Qiji. Copyright 2020 Lingdong Huang; source font under SIL OFL 1.1, retained in `Qiji-OFL.txt`. The source is the `qiji.ttf` asset from [release 0.0.4](https://github.com/LingDong-/qiji-font/releases/tag/0.0.4). `scripts/build-han-wordmark.py` uses fontTools and a local copy of that TTF, checks its SHA-256, and generates the SVG and shared path data. Each glyph outline is uniformly scaled and optically positioned; the site does not load the full font.
 - `MaShanZheng-OFL.txt`: retained attribution and license for the previously distributed Ma Shan Zheng 参伍 lettering. The current Chinese wordmark uses Qiji.
-- Noto Sans SC: the previously used self-hosted two-character weight-600 subset `canwoo-han-sans.ttf` remains for cached clients. SIL OFL 1.1, see `NotoSansSC-OFL.txt` and https://github.com/google/fonts/tree/main/ofl/notosanssc.
+- Noto Sans SC: the previously used self-hosted two-character weight-600 subset `clioforge-han-sans.ttf` is retained for attribution and reproducibility. SIL OFL 1.1, see `NotoSansSC-OFL.txt` and https://github.com/google/fonts/tree/main/ofl/notosanssc.
 - Geist: Latin wordmark and interface type. The wordmark uses checked-in SVG outlines; interface fonts are bundled by next/font at build time. SIL OFL 1.1, see `Geist-OFL.txt` and https://github.com/google/fonts/tree/main/ofl/geist.
 
-Earlier Google Sans Flex, Manrope and Noto Serif assets remain for cached clients with their original licenses. Current brand styles no longer request the Latin font subsets. Typeface attribution does not imply any brand affiliation. See `docs/clioforge-brand.md` for design rationale and validation.
+Earlier font subsets are retained under ClioForge filenames with their original licenses. Current brand styles no longer request the Latin font subsets. Typeface attribution does not imply any brand affiliation. See `docs/clioforge-brand.md` for design rationale and validation.
 
 `history-canal.webp` is an original AI-generated decorative illustration, not a historical source or reproduction. See docs/history-background.md for its generation prompt and intended use.

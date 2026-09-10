@@ -1,8 +1,8 @@
-# GLM 5.3 Flash · Canwoo suitability check
+# GLM 5.3 Flash · ClioForge suitability check
 
 2026-09-05. Recommendation: suitable as an initial working-model preset with exact-citation checks, schema validation and human review. This small check does not establish expert historical competence, handwriting accuracy or long-context reliability.
 
-Model: `z-ai/glm-5.3-flash` through OpenRouter. The catalog advertises text/image/video input and a 1,310,720-token model context; individual endpoints have different context limits. Its reasoning metadata lists mandatory reasoning and `low`, `high`, `max`, with **max as the default**. Canwoo explicitly sets effort instead of relying on that default.
+Model: `z-ai/glm-5.3-flash` through OpenRouter. The catalog advertises text/image/video input and a 1,310,720-token model context; individual endpoints have different context limits. Its reasoning metadata lists mandatory reasoning and `low`, `high`, `max`, with **max as the default**. ClioForge explicitly sets effort instead of relying on that default.
 
 ## Controlled evaluation
 

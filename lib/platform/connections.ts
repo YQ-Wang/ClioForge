@@ -47,7 +47,7 @@ async function boundedJSON(
       `云盘服务返回 HTTP ${response.status}。请检查连接与权限。`,
     );
   const bytes = await boundedBytes(
-    new Request('https://canwoo.invalid', {
+    new Request('https://clioforge.invalid', {
       method: 'POST',
       body: response.body,
       duplex: 'half',
@@ -330,7 +330,7 @@ export async function readGoogleFile(
   let bytes: Uint8Array;
   try {
     bytes = await boundedBytes(
-      new Request('https://canwoo.invalid', {
+      new Request('https://clioforge.invalid', {
         method: 'POST',
         body: response.body,
         duplex: 'half',

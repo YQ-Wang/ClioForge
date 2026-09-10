@@ -18,7 +18,7 @@ export async function enforceApiLimit(
   const maximum = read ? 600 : 120;
   const window = 60_000;
   const start = Math.floor(time / window) * window;
-  const key = `canwoo:api:${read ? 'read' : 'write'}:${subject}`;
+  const key = `clioforge:api:${read ? 'read' : 'write'}:${subject}`;
   const accepted = await db
     .prepare(
       `INSERT INTO rate_limit(id,key,count,last_request) VALUES(?,?,1,?)

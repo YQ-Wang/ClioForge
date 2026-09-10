@@ -46,17 +46,34 @@ export function validateDeployment(app, jobs) {
   )
     throw new Error('Both workers must publish to the same research queue.');
   const origin = new URL(app.vars?.BETTER_AUTH_URL || 'http://localhost');
-  const retiredHost = (host) =>
+  const protectedHost = (host) =>
     /(^|\.)clioforge\.com$/i.test(host.replace(/\.$/, ''));
   if (
-    retiredHost(origin.hostname) ||
+    protectedHost(origin.hostname) ||
     app.routes?.some((route) =>
-      retiredHost(String(route.pattern || '').split('/')[0]),
+      protectedHost(String(route.pattern || '').split('/')[0]),
     )
-  )
-    throw new Error(
-      'The maintainer-operated domain is retired. Use your own domain for self-hosting; see docs/self-hosting.md.',
-    );
+  ) {
+    if (app.vars?.PRIVATE_GITHUB_ACCESS !== '1')
+      throw new Error(
+        'The maintainer-operated domain is retired for public access. Configure private GitHub access first.',
+      );
+  }
+  if (app.vars?.PRIVATE_GITHUB_ACCESS === '1') {
+    if (
+      !/^[1-9]\d*(?:\s*,\s*[1-9]\d*)*$/.test(
+        app.vars.PRIVATE_GITHUB_USER_IDS || '',
+      ) ||
+      !app.vars.PRIVATE_GITHUB_CLIENT_ID ||
+      app.assets?.run_worker_first !== true ||
+      app.assets?.binding !== 'ASSETS' ||
+      app.workers_dev !== false ||
+      app.preview_urls !== false
+    )
+      throw new Error(
+        'Private GitHub access requires explicit user IDs, an OAuth client, worker-first assets and disabled public preview URLs.',
+      );
+  }
   if (
     origin.protocol !== 'https:' ||
     /(^|\.)(localhost|example\.com)$/.test(origin.hostname) ||

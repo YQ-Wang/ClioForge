@@ -69,7 +69,7 @@ function DrawingView({ node, editor, getPos, selected }: NodeViewProps) {
             const pos = getPos();
             if (typeof pos === 'number')
               editor.view.dom.dispatchEvent(
-                new CustomEvent('canwoo-drawing', {
+                new CustomEvent('clioforge-drawing', {
                   detail: { pos, attrs: node.attrs },
                 }),
               );
@@ -231,7 +231,7 @@ export default function RichNoteEditor({
       const { pos, attrs } = (event as CustomEvent).detail;
       setDrawing({ pos, scene: attrs.scene, caption: attrs.caption });
     };
-    editor.view.dom.addEventListener('canwoo-drawing', listener);
+    editor.view.dom.addEventListener('clioforge-drawing', listener);
     handle.current = {
       selectedText() {
         const { from, to } = editor.state.selection;
@@ -248,7 +248,7 @@ export default function RichNoteEditor({
       },
     };
     return () => {
-      editor.view.dom.removeEventListener('canwoo-drawing', listener);
+      editor.view.dom.removeEventListener('clioforge-drawing', listener);
       handle.current = null;
     };
   }, [editor, handle]);
@@ -718,7 +718,12 @@ export default function RichNoteEditor({
                 try {
                   if (file.size > 750000) throw new Error();
                   const value = JSON.parse(await file.text());
-                  if (value.format !== 'canwoo-writing' || value.version !== 1)
+                  if (
+                    !['clioforge-writing', 'canwoo-writing'].includes(
+                      value.format,
+                    ) ||
+                    value.version !== 1
+                  )
                     throw new Error();
                   const doc = parseRichDocument(JSON.stringify(value.document));
                   editor
@@ -767,7 +772,7 @@ export default function RichNoteEditor({
                 [
                   JSON.stringify(
                     {
-                      format: 'canwoo-writing',
+                      format: 'clioforge-writing',
                       version: 1,
                       title,
                       document: editor.getJSON(),

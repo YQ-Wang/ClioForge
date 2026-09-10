@@ -6,7 +6,7 @@ import { transform, transformSync } from '@esbuild-kit/core-utils';
 void test('patched schema-tooling transformer preserves CommonJS TypeScript execution', () => {
   const transformed = transformSync(
     'const answer: number = 21 * 2; module.exports = answer;',
-    '/tmp/canwoo-toolchain-check.cts',
+    '/tmp/clioforge-toolchain-check.cts',
   );
   const context = { module: { exports: undefined } };
   runInNewContext(transformed.code, context);
@@ -16,7 +16,7 @@ void test('patched schema-tooling transformer preserves CommonJS TypeScript exec
 void test('patched schema-tooling transformer preserves ESM TypeScript exports', async () => {
   const transformed = await transform(
     'export const answer: number = 21 * 2;',
-    '/tmp/canwoo-toolchain-check.mts',
+    '/tmp/clioforge-toolchain-check.mts',
     { format: 'esm' },
   );
   const result = await import(

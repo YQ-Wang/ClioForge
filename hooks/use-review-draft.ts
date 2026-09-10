@@ -1,4 +1,5 @@
 'use client';
+import { readRenamedDraft } from '@/lib/legacy-storage';
 import { useEffect, useState } from 'react';
 import {
   readReviewDraft,
@@ -17,7 +18,7 @@ export function useReviewDraft(key: string, revision: number) {
   const value = state?.key === key ? state.value : fallback;
   useEffect(() => {
     try {
-      const stored = readReviewDraft(localStorage.getItem(key));
+      const stored = readReviewDraft(readRenamedDraft(localStorage, key));
       setState({
         key,
         value: stored || { humanText: '', reason: '', revision },

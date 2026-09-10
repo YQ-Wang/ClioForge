@@ -201,7 +201,7 @@ void test('Worker API throttling returns a private response and a usable retry i
     const start = Math.floor(Date.now() / 60000) * 60000;
     await db
       .prepare('INSERT INTO rate_limit VALUES(?,?,120,?)')
-      .bind('test', 'canwoo:api:write:test-account', start)
+      .bind('test', 'clioforge:api:write:test-account', start)
       .run();
     const response = await mf.dispatchFetch('http://test.local/', {
       method: 'POST',

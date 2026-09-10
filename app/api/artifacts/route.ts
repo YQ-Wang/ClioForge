@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     ).results;
     return Response.json(
       {
-        format: 'canwoo-artifact-v1',
+        format: 'clioforge-artifact-v1',
         artifact: {
           ...artifact,
           body: JSON.parse(String(artifact.body)),

@@ -104,9 +104,9 @@ export function argumentPath(
 }
 // OAuth returns only to the workspace, never to a supplied host or arbitrary route.
 export function safeWorkspaceReturn(value: string) {
-  if (!URL.canParse(value, 'https://canwoo.invalid')) return '/';
-  const parsed = new URL(value, 'https://canwoo.invalid');
-  if (parsed.origin !== 'https://canwoo.invalid' || parsed.pathname !== '/')
+  if (!URL.canParse(value, 'https://clioforge.invalid')) return '/';
+  const parsed = new URL(value, 'https://clioforge.invalid');
+  if (parsed.origin !== 'https://clioforge.invalid' || parsed.pathname !== '/')
     return '/';
   const project = parsed.searchParams.get('project');
   return project && projectIdPattern.test(project)

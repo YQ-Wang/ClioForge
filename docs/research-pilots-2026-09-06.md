@@ -1,6 +1,6 @@
 # Three historical-source pilots
 
-Run on the production Canwoo installation on September 6, 2026 (Pacific time), using an authorized researcher account and its OpenRouter connection to `z-ai/glm-5.3-flash`.
+Run on the production ClioForge installation on September 6, 2026 (Pacific time), using an authorized researcher account and its OpenRouter connection to `z-ai/glm-5.3-flash`.
 
 ## What this establishes
 
@@ -73,7 +73,7 @@ The final short calls took approximately 10.1 seconds (Adams), 17.7 seconds (Dar
 
 The application recorded **$0.015068** in settled model usage across these pilots, including successful responses subsequently rejected by research validation and one completed OCR call. Three uncertain calls retain **$0.222137** in budget reservations: two comparison timeouts and one OCR timeout. Reservations are not verified provider charges. The OpenRouter invoice was not reconciled, and these figures exclude hosting and developer time. Uncertain calls were not automatically retried.
 
-- `CANWOO_BACKUP_TEST_FILE=work/e2e-september6/LED-end-to-end.zip npm test`: **201 passed, 0 failed, 0 skipped**. The backup is an ignored local fixture and is not published.
+- `CLIOFORGE_BACKUP_TEST_FILE=work/e2e-september6/LED-end-to-end.zip npm test`: **201 passed, 0 failed, 0 skipped**. The backup is an ignored local fixture and is not published.
 - `npm run check`: comment-policy check, TypeScript and lint passed.
 - Production Cloudflare build passed; no schema migration or additional paid resource was needed.
 - Regression coverage includes comparison output limits, fixed-version schema constraints, and exclusion of untrusted candidate citations from follow-up scope.

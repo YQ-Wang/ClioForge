@@ -47,7 +47,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await requestLocale();
-  const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
+  const theme = resolveTheme(
+    (await cookies()).get(THEME_COOKIE)?.value ??
+      (await cookies()).get('canwoo-theme')?.value,
+  );
   return (
     <html lang={locale} data-theme={theme}>
       <body className={`${geist.variable} ${geistMono.variable} antialiased`}>

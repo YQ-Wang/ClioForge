@@ -119,7 +119,7 @@ export async function builtin(
       data: {
         query: task.input.query,
         hits: hits.map(({ text: _text, ...hit }) => hit),
-        engine: 'canwoo-fts-v1',
+        engine: 'clioforge-fts-v1',
       },
     };
   }
@@ -240,7 +240,7 @@ export async function builtin(
           attempt: dep.attempt,
           result: dep.result,
         })),
-        format: 'canwoo-research-artifact-v1',
+        format: 'clioforge-research-artifact-v1',
       },
     };
   }
@@ -293,7 +293,7 @@ export async function executeMissionTask(
   try {
     const claimed = await store.claim(
       id,
-      `canwoo:${String(record.executor)}`,
+      `clioforge:${String(record.executor)}`,
       record.executor as 'builtin' | 'model',
     );
     lease = claimed.lease;
@@ -425,7 +425,12 @@ export async function executeMissionTask(
         throw error;
       }
     }
-    await store.submit(id, lease, `canwoo:${String(record.executor)}`, result);
+    await store.submit(
+      id,
+      lease,
+      `clioforge:${String(record.executor)}`,
+      result,
+    );
     await dispatchMission(env, String(record.mission_id));
   } catch (error) {
     if (!lease) return;

@@ -1,4 +1,5 @@
 'use client';
+import { readRenamedDraft } from '@/lib/legacy-storage';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -135,11 +136,11 @@ export default function TaskConversation({
       let current = draftRef.current;
       const restoring = !draftKey.current;
       if (!draftKey.current) {
-        draftKey.current = `canwoo:task-question:${result.user_id}:${result.root.id}`;
+        draftKey.current = `clioforge:task-question:${result.user_id}:${result.root.id}`;
         current = emptyConversationDraft(defaultModelRef.current, latest);
         try {
           current = readConversationDraft(
-            localStorage.getItem(draftKey.current),
+            readRenamedDraft(localStorage, draftKey.current),
             current,
             result.root.id,
           );

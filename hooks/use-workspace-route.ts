@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useSyncExternalStore } from 'react';
 import { workspaceRoute } from '@/lib/navigation';
-const changed = 'canwoo:navigation';
+const changed = 'clioforge:navigation';
 function subscribe(notify: () => void) {
   window.addEventListener('popstate', notify);
   window.addEventListener(changed, notify);

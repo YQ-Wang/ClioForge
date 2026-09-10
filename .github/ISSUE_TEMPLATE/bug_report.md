@@ -14,7 +14,7 @@ assignees: ''
 
 ### Environment
 
-Canwoo revision, browser and hosted or self-hosted installation:
+ClioForge revision, browser and hosted or self-hosted installation:
 
 ### Safe supporting material
 

@@ -26,11 +26,11 @@ export function authReturnPath(value: string): string {
     return '/';
   let url: URL;
   try {
-    url = new URL(value, 'https://canwoo.invalid');
+    url = new URL(value, 'https://clioforge.invalid');
   } catch {
     return '/';
   }
-  if (url.origin !== 'https://canwoo.invalid' || url.pathname !== '/')
+  if (url.origin !== 'https://clioforge.invalid' || url.pathname !== '/')
     return '/';
   const params = new URLSearchParams();
   for (const [key, item] of url.searchParams) {
@@ -42,7 +42,7 @@ export function authReturnPath(value: string): string {
         : key === 'settings'
           ? settings.has(item)
           : key === 'view'
-            ? ['inbox', 'guide'].includes(item)
+            ? ['projects', 'inbox', 'guide'].includes(item)
             : key === 'tasks'
               ? ['list', 'board', 'flow'].includes(item)
               : key === 'page'

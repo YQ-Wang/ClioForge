@@ -17,7 +17,7 @@ Ignored local evidence: `work/background-e2e/state-v6.json`, `view-v6.json` and 
 
 ## Failures that changed the implementation
 
-1. Copying historical quotations produced altered spelling, ellipsis-joined passages and mismatched citation numbers. These were confirmed provider responses, not timeouts. The dossier now asks the model to select application-numbered passages. Canwoo fills exact version/page/character references and rejects unknown numbers.
+1. Copying historical quotations produced altered spelling, ellipsis-joined passages and mismatched citation numbers. These were confirmed provider responses, not timeouts. The dossier now asks the model to select application-numbered passages. ClioForge fills exact version/page/character references and rejects unknown numbers.
 2. The normal grouped form `[P8, P9]` was initially rejected. It is now parsed as two explicit references without inferring missing numbers or relaxing exact-text checks.
 3. A technically valid early report repeated its summary instead of supplying useful critique or a next-reading plan. Those are now required output fields and visible report sections. Their citations and the limitations' citations are resolved against the same fixed passage bank.
 4. A longer report hit the configured output limit. This was output truncation, not a network timeout. Shorter section instructions and omission of repeated machine-check records from the next model's context let the final round complete within the existing output limit. The truncated attempt and its conservative budget reservation were retained.

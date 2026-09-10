@@ -9,7 +9,7 @@ import {
   type TextHighlight,
 } from '@/lib/text-highlights';
 
-const citationFocusId = 'canwoo:temporary-citation-focus';
+const citationFocusId = 'clioforge:temporary-citation-focus';
 
 export type TextSelection = { start: number; end: number; quote: string };
 

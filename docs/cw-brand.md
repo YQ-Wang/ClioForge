@@ -1,4 +1,6 @@
-# Canwoo — folded paper identity
+# Earlier folded-paper identity (archived)
+
+This is a historical design record. Asset names below describe earlier revisions; see [the current brand specification](clioforge-brand.md) for maintained files.
 
 The current identity pairs an original gold-paper fan with original lowercase monoline lettering and Qiji Chinese lettering. The fan takes the restraint and folded construction of a Ming-style fan as its starting point, without tracing a historical object or another company's logo.
 

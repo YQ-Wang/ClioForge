@@ -1,6 +1,6 @@
 ---
 name: Research workflow improvement
-about: Describe a concrete humanities research task Canwoo could support better
+about: Describe a concrete humanities research task ClioForge could support better
 title: ''
 labels: ''
 assignees: ''

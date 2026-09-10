@@ -185,7 +185,7 @@ export class ProjectRestore {
         row: {
           id: newId,
           name: `${peopleNames.get(old) || 'Contributor'} · imported record`,
-          email: `imported-${newId}@canwoo.invalid`,
+          email: `imported-${newId}@clioforge.invalid`,
           email_verified: 0,
           created_at: Date.now(),
           updated_at: Date.now(),

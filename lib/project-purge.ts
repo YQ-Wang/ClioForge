@@ -110,7 +110,7 @@ export async function purgeProject(
       'upload_receipts',
       'upload_reservations',
     ].map((t) => `DELETE FROM ${t} WHERE project_id=?`),
-    "UPDATE user SET name='Imported contributor',email='closed-'||id||'@canwoo.invalid',image=NULL WHERE id IN (SELECT user_id FROM restore_people WHERE project_id=?)",
+    "UPDATE user SET name='Imported contributor',email='closed-'||id||'@clioforge.invalid',image=NULL WHERE id IN (SELECT user_id FROM restore_people WHERE project_id=?)",
     'DELETE FROM restore_people WHERE project_id=?',
     'DELETE FROM restore_files WHERE restore_id IN (SELECT id FROM project_restores WHERE project_id=?)',
     'DELETE FROM project_restores WHERE project_id=?',

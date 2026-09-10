@@ -26,7 +26,10 @@ export default function ResearchResult({
   const L = (zh: string, en: string) => (locale === 'en' ? en : zh);
   const manuscript = z
     .object({
-      format: z.literal('canwoo-manuscript-draft-v1'),
+      format: z.enum([
+        'clioforge-manuscript-draft-v1',
+        'canwoo-manuscript-draft-v1',
+      ]),
       project_id: z.uuid(),
       note_id: z.uuid(),
     })

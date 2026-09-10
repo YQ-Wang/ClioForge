@@ -23,7 +23,7 @@ export function missionPath(
 ) {
   const url = new URL(
     projectPath(projectId, 'platform'),
-    'https://canwoo.invalid',
+    'https://clioforge.invalid',
   );
   if (uuid.test(mission)) {
     url.searchParams.set('mission', mission);

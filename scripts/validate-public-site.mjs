@@ -23,18 +23,18 @@ async function get(path, headers = {}) {
   return { response, body: await response.text() };
 }
 for (const [path, title] of [
-  ['/', 'ClioForge: Research Workspace'],
+  ['/', 'ClioForge: Open-source AI research IDE'],
   ['/research/adams', 'Reading the Adams letters with evidence'],
   ['/guide', 'From sources to a reviewed draft'],
 ]) {
   const { response, body } = await get(path);
   assert.ok(body.includes(`<title>${title}`), `SSR title: ${path}`);
+  assert.match(body, /<h1[ >]/, `SSR heading: ${path}`);
   if (path === '/')
     assert.ok(
-      body.includes('session-loading'),
-      'SSR session check before sign-in',
+      body.includes('href="/?view=projects"'),
+      'homepage links to workspace sign-in',
     );
-  else assert.match(body, /<h1[ >]/, `SSR heading: ${path}`);
   assert.ok(
     !body.includes('href="https://clioforge.com'),
     `no shared-service links: ${path}`,

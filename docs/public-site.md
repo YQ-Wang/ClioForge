@@ -1,6 +1,6 @@
 # Bundled guides and source examples
 
-ClioForge is self-hosted software. The root opens the current installation’s workspace/sign-in, not a hosted-service marketing page. `/guide` and `/research/adams` remain bundled learning resources. They do not require an upstream account or send users to an upstream installation.
+ClioForge is self-hosted software. The root introduces the research workflow and links to this installation's workspace/sign-in at `/?view=projects`. `/guide` and `/research/adams` provide bundled learning resources. Project deep links, invitations and account-recovery links continue to open the workspace directly. These pages do not send users to an upstream installation. On a private GitHub installation, the access gate protects the homepage and guides as well as the workspace; only invited GitHub users can see them.
 
 Every page uses `noindex, nofollow`; the sitemap is empty and robots.txt advertises no sitemap. Crawling remains allowed so crawlers can observe indexing exclusions. These are indexing preferences, not access controls: authentication and project permissions protect research data. No canonical URL or www redirect points to the retired project domain.
 

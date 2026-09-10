@@ -4,7 +4,7 @@ September 7, 2026, Pacific time. This trial continued the existing Adams project
 
 ## Productivity assessment
 
-Canwoo provided a useful connected workspace for supervised reading, evidence organization, bibliographic work and a defensible working note. It did **not** demonstrate reliable AI acceleration in this run: all three new GLM 5.3 Flash calls timed out without a usable answer, including a single-source, approximately 60-character request. The completed research synthesis was written by the trial operator, not produced by those failed calls.
+ClioForge provided a useful connected workspace for supervised reading, evidence organization, bibliographic work and a defensible working note. It did **not** demonstrate reliable AI acceleration in this run: all three new GLM 5.3 Flash calls timed out without a usable answer, including a single-source, approximately 60-character request. The completed research synthesis was written by the trial operator, not produced by those failed calls.
 
 This is an operational trial by an AI coding assistant, not independent historical scholarship or a historian-led usability study. There was no timed comparison with an established workflow. No percentage speedup, historical novelty or readiness for unattended research is claimed.
 
@@ -51,7 +51,7 @@ The working note distinguishes a criticism of a husband's absolute power from a 
 
 The new note is titled **1776 五信续读 · 法律保护、代表权与请愿边界**. It contains the comparison table, three evidence excerpts, fixed-version links and an explicitly provisional conclusion. The completed deterministic plan is **三条关键措辞 · 固定版本复核**. These are useful retained outputs, not empty test scaffolding.
 
-Word inspection found one table and three real footnote references. Markdown retains the table and three absolute Canwoo source links. Links remain subject to project access controls. The ZIP contains five original text files and the project records, including note versions, claims, bibliography, task attempts and review decisions. Local trial exports are ignored by Git; account details, private project identifiers and credentials are not published in this report.
+Word inspection found one table and three real footnote references. Markdown retains the table and three absolute ClioForge source links. Links remain subject to project access controls. The ZIP contains five original text files and the project records, including note versions, claims, bibliography, task attempts and review decisions. Local trial exports are ignored by Git; account details, private project identifiers and credentials are not published in this report.
 
 ## Corrections driven by this trial
 
@@ -62,7 +62,7 @@ Word inspection found one table and three real footnote references. Markdown ret
 5. Cite the matching search snippet and its exact source offset rather than the first characters of a page. The same repair applies to project-source discovery candidates.
 6. Avoid recording verification checks twice and stop numbering arbitrary checks as though they were citation numbers.
 7. Keep an explicit, reusable download link for prepared Word files and project archives. Do not claim that file generation proves successful browser download.
-8. Keep Canwoo file-page numbers out of Chicago's original-page locator. Exported notes identify them explicitly as file pages alongside the immutable version.
+8. Keep ClioForge file-page numbers out of Chicago's original-page locator. Exported notes identify them explicitly as file pages alongside the immutable version.
 
 Application and background-worker fixes were deployed to the existing Cloudflare resources; no migration, new service or subscription was required.
 

@@ -611,12 +611,12 @@ for (const scenario of [
       'frozen v1 synthetic archive restores originals and research records',
     bytes: compatibilityArchive,
   },
-  ...(process.env.CANWOO_BACKUP_TEST_FILE
+  ...(process.env.CLIOFORGE_BACKUP_TEST_FILE
     ? [
         {
           title:
             'an operator-provided archive restores originals and research records',
-          bytes: () => fs.readFile(process.env.CANWOO_BACKUP_TEST_FILE!),
+          bytes: () => fs.readFile(process.env.CLIOFORGE_BACKUP_TEST_FILE!),
         },
       ]
     : []),

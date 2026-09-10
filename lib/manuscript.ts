@@ -611,7 +611,7 @@ export async function runManuscriptBuiltin(
       },
     ],
     data: {
-      format: 'canwoo-manuscript-draft-v1',
+      format: 'clioforge-manuscript-draft-v1',
       project_id: task.project_id,
       note_id: noteId,
       manuscript_note: { title: config.title, body },

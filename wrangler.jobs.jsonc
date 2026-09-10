@@ -1,24 +1,24 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "canwoo-research",
+  "name": "clioforge-research",
   "main": "workers/research.ts",
   "compatibility_date": "2026-09-04",
   "compatibility_flags": ["nodejs_compat"],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "canwoo",
+      "database_name": "clioforge",
       // Use the same database ID as the app in your private deployment copy.
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "drizzle",
     },
   ],
-  "r2_buckets": [{ "binding": "FILES", "bucket_name": "canwoo-originals" }],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "clioforge-originals" }],
   "queues": {
-    "producers": [{ "binding": "JOB_QUEUE", "queue": "canwoo-research" }],
+    "producers": [{ "binding": "JOB_QUEUE", "queue": "clioforge-research" }],
     "consumers": [
       {
-        "queue": "canwoo-research",
+        "queue": "clioforge-research",
         "max_batch_size": 1,
         "max_batch_timeout": 1,
         "max_retries": 3,

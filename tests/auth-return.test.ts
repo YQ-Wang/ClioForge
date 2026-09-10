@@ -21,6 +21,7 @@ void test('authentication retains plan, inbox, settings and invitation destinati
     `/?project=${project}&tab=team&discussion=${annotation}`,
     `/?project=${project}&tab=sources&settings=models`,
     '/?view=inbox',
+    '/?view=projects',
     '/?settings=security',
     '/?view=guide',
     `/?invitation=${annotation}`,
@@ -54,7 +55,7 @@ void test('authentication callback is always a relative workspace URL', () => {
     '/privacy',
     '/%2f%2fevil.test',
     '/\n/evil.test',
-    'https://canwoo.invalid/?view=inbox',
+    'https://clioforge.invalid/?view=inbox',
   ])
     assert.equal(authReturnPath(route), '/', route);
   assert.equal(

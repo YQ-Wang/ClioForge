@@ -86,7 +86,7 @@ function recording(): AgentTrace['data'] {
     previous = tool;
   }
   return {
-    format: 'canwoo-agent-trace',
+    format: 'clioforge-agent-trace',
     version: 1,
     mission: {
       id: crypto.randomUUID(),

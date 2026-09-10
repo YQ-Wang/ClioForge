@@ -1,4 +1,5 @@
 'use client';
+import { readRenamedDraft } from '@/lib/legacy-storage';
 import { useState, useEffect, useRef } from 'react';
 import ReviewSource, { type ReviewPage } from './review-source';
 import { Download, Pencil, Plus, Save, X } from 'lucide-react';
@@ -85,7 +86,7 @@ export default function ResearchRecords({
   useEffect(() => {
     if (!draftKey || !canCorrect) return;
     try {
-      const raw = localStorage.getItem(draftKey);
+      const raw = readRenamedDraft(localStorage, draftKey);
       if (!raw) return;
       const restored = readRecordCorrectionDraft(raw);
       if (!restored) {

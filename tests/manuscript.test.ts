@@ -486,14 +486,14 @@ void test('manuscript workflow freezes research, drafts sequentially, saves once
   const refs = await writingSources(
     f.store,
     f.project.id,
-    'https://canwoo.test',
-    writingPageReferences(note.body, null, 'https://canwoo.test'),
+    'https://clioforge.test',
+    writingPageReferences(note.body, null, 'https://clioforge.test'),
   );
   const docx = writingDocx(
     note.title,
     note.body,
     refs.citations,
-    'https://canwoo.test',
+    'https://clioforge.test',
   );
   assert.ok(docx.byteLength > 1000);
   assert.ok(refs.citations.some((c) => c.id === f.evidence));

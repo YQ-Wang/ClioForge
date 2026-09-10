@@ -1,4 +1,4 @@
-# Canwoo real-account research pilot — 2026-09-05
+# ClioForge real-account research pilot — 2026-09-05
 
 ## Question and material boundary
 
@@ -21,7 +21,7 @@ These are LOC-generated text transcriptions, not manuscript image scans. The fir
 4. After the failures described below were repaired, all five quotations matched fixed source versions and pages. Opened a quotation in the original reader and checked the page and version.
 5. Corrected the candidate's citation-number error, its treatment of editorial material and an unsupported colonization-clause description. Review was performed by Codex for software acceptance, explicitly not by a professional historian. The final report uses the edited review text while retaining the model candidate in its dependency history.
 6. Saved the reviewed report to a pinned project note. Reload confirmed the persisted item. Saved a second note with the material inventory, duplicate warning and next research questions.
-7. Connected Google Drive through two owner-controlled Google accounts, returning to the same Canwoo project. Uploaded one public PDF to the owner's Drive with the connector, selected only that file in Picker and imported it successfully. No private Drive file was selected or processed. Restricted Picker key, API activation, branding URLs and test users are configured. Google OAuth remains Testing pending explicit approval to publish to all Google users.
+7. Connected Google Drive through two owner-controlled Google accounts, returning to the same ClioForge project. Uploaded one public PDF to the owner's Drive with the connector, selected only that file in Picker and imported it successfully. No private Drive file was selected or processed. Restricted Picker key, API activation, branding URLs and test users are configured. Google OAuth remains Testing pending explicit approval to publish to all Google users.
 8. Ran one low-effort OCR call on page 2 of the clear final-proclamation PDF. The candidate was displayed without replacing the saved original. This validates image transport and review behavior, not historical handwriting recognition or character accuracy.
 9. Local browser checks covered independent note drafts, close/resume/reload/save, counts, search, pinning, archive/undo and Chinese/English layouts at desktop and 390 px. Batch selection of two PDFs completed with both marked ready. Existing 40-record LED project data was preserved.
 10. After the Drive deduplication fix, re-selected and imported the same public PDF in production. The UI reported “新增 0 份，1 份已在项目中，未重复保存”; the source count remained four. “Read imported sources” opened the correct Drive PDF. Reload also confirmed two note items, with the material inventory at v2, and the research plan showed all four steps completed or accepted.

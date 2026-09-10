@@ -1,13 +1,14 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "canwoo",
-  "main": "vinext/server/fetch-handler",
+  "name": "clioforge",
+  "main": "workers/app.ts",
+  "assets": { "binding": "ASSETS", "run_worker_first": true },
   "compatibility_date": "2026-09-04",
   "compatibility_flags": ["nodejs_compat"],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "canwoo",
+      "database_name": "clioforge",
       // Local placeholder. Copy this file to an ignored *.local.jsonc file
       // and set your own database ID before deploying.
       "database_id": "00000000-0000-0000-0000-000000000000",
@@ -17,7 +18,7 @@
   "r2_buckets": [
     {
       "binding": "FILES",
-      "bucket_name": "canwoo-originals",
+      "bucket_name": "clioforge-originals",
     },
   ],
   "observability": {
@@ -41,7 +42,7 @@
     "producers": [
       {
         "binding": "JOB_QUEUE",
-        "queue": "canwoo-research",
+        "queue": "clioforge-research",
       },
     ],
   },
