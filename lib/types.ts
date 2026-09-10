@@ -51,7 +51,12 @@ export type Evidence = {
   region?: import('./workbench-types').Region | null;
   created_at: string;
 };
-export type Provider = 'openai' | 'anthropic' | 'google' | 'openrouter';
+export type Provider =
+  | 'openai'
+  | 'anthropic'
+  | 'google'
+  | 'openrouter'
+  | 'fireworks';
 export type Model = {
   id: string;
   label: string;

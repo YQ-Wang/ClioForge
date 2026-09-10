@@ -143,12 +143,19 @@ export function providerRequest(input: ModelRequest): {
     { type: 'text', text: prompt },
     ...(image ? [{ type: 'image_url', image_url: { url: image } }] : []),
   ];
-  if (provider === 'openai' || provider === 'openrouter')
+  const effort = resolveEffort(provider, model, input.taskKind, input.effort);
+  if (
+    provider === 'openai' ||
+    provider === 'openrouter' ||
+    provider === 'fireworks'
+  )
     return {
       url:
         provider === 'openai'
           ? 'https://api.openai.com/v1/chat/completions'
-          : 'https://openrouter.ai/api/v1/chat/completions',
+          : provider === 'openrouter'
+            ? 'https://openrouter.ai/api/v1/chat/completions'
+            : 'https://api.fireworks.ai/inference/v1/chat/completions',
       headers: {
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
@@ -195,20 +202,18 @@ export function providerRequest(input: ModelRequest): {
                       : undefined),
                 },
               },
-              ...(resolveEffort(provider, model, input.taskKind, input.effort)
+              ...(effort
                 ? {
                     reasoning: {
-                      effort: resolveEffort(
-                        provider,
-                        model,
-                        input.taskKind,
-                        input.effort,
-                      ),
+                      effort,
                       exclude: true,
                     },
                   }
                 : {}),
             }
+          : {}),
+        ...(provider === 'fireworks' && effort
+          ? { reasoning_effort: effort }
           : {}),
         messages: [
           { role: 'system', content: system },

@@ -351,6 +351,18 @@ void test('provider truncation preserves candidate text and stops background pub
       },
     ],
     [
+      'fireworks',
+      {
+        choices: [
+          {
+            message: { content: 'Partial historical text' },
+            finish_reason: 'length',
+          },
+        ],
+        usage: { prompt_tokens: 20, completion_tokens: 30 },
+      },
+    ],
+    [
       'anthropic',
       {
         content: [{ type: 'text', text: 'Partial historical text' }],
@@ -1638,6 +1650,7 @@ void test('provider requests use fixed hosts, native credentials and bounded out
     'anthropic',
     'google',
     'openrouter',
+    'fireworks',
   ] as const) {
     const input = {
       provider,
@@ -1649,6 +1662,33 @@ void test('provider requests use fixed hosts, native credentials and bounded out
     };
     const request = providerRequest(input);
     assert.equal(request.url.includes('private-key'), false);
+    if (provider === 'fireworks') {
+      assert.equal(
+        request.url,
+        'https://api.fireworks.ai/inference/v1/chat/completions',
+      );
+      assert.deepEqual(request.headers, {
+        Authorization: 'Bearer private-key',
+        'Content-Type': 'application/json',
+      });
+      assert.deepEqual(request.body, {
+        model: 'test-model',
+        messages: [
+          { role: 'system', content: 'source instructions' },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'read' },
+              {
+                type: 'image_url',
+                image_url: { url: 'data:image/png;base64,YQ==' },
+              },
+            ],
+          },
+        ],
+        max_tokens: 4096,
+      });
+    }
     let called = false;
     const fake = (async (url, options) => {
       called = true;
@@ -1679,6 +1719,32 @@ void test('provider requests use fixed hosts, native credentials and bounded out
       outputTokens: 2,
     });
   }
+});
+void test('Fireworks requests keep structured outputs without OpenRouter routing controls', () => {
+  const body = providerRequest({
+    provider: 'fireworks',
+    model: 'accounts/fireworks/models/kimi-k3',
+    key: 'synthetic-fireworks-key',
+    system: 'Research',
+    prompt: 'Return a cited section',
+    effort: 'high',
+    outputFormat: 'json',
+    outputSchema: 'manuscript_section_v1',
+  }).body as {
+    response_format: {
+      type: string;
+      json_schema: { name: string; strict: boolean; schema: object };
+    };
+    max_tokens: number;
+    reasoning_effort: string;
+  };
+  assert.equal(body.response_format.type, 'json_schema');
+  assert.equal(body.response_format.json_schema.name, 'manuscript_section_v1');
+  assert.equal(body.response_format.json_schema.strict, true);
+  assert.equal(body.max_tokens, 4096);
+  assert.equal(body.reasoning_effort, 'high');
+  assert.ok(!('provider' in body));
+  assert.ok(!('reasoning' in body));
 });
 void test('Better Auth registers, authenticates and invalidates a cookie session on D1', async () => {
   const auth = createAuth({
@@ -2874,7 +2940,7 @@ void test('cancelled and source-invalidated task leases cannot publish a late re
   }
 });
 
-void test('GLM task routing sets supported efforts and bounds provider price without exposing reasoning text', () => {
+void test('GLM and Kimi task routing set supported efforts without exposing reasoning text', () => {
   const base = {
     provider: 'openrouter' as const,
     model: 'z-ai/glm-5.3-flash',
@@ -2911,6 +2977,29 @@ void test('GLM task routing sets supported efforts and bounds provider price wit
   });
   const direct = providerRequest({ ...base, provider: 'openai' }).body;
   assert.ok(!('reasoning' in direct));
+  const kimi = {
+    ...base,
+    provider: 'fireworks' as const,
+    model: 'accounts/fireworks/models/kimi-k3',
+  };
+  const quick = providerRequest({ ...kimi, taskKind: 'extract' }).body as {
+    reasoning_effort: string;
+  };
+  const careful = providerRequest({ ...kimi, taskKind: 'compare' }).body as {
+    reasoning_effort: string;
+  };
+  const thorough = providerRequest({ ...kimi, taskKind: 'synthesis' }).body as {
+    reasoning_effort: string;
+  };
+  assert.equal(quick.reasoning_effort, 'low');
+  assert.equal(careful.reasoning_effort, 'high');
+  assert.equal(thorough.reasoning_effort, 'max');
+  const selected = providerRequest({
+    ...kimi,
+    taskKind: 'extract',
+    effort: 'max',
+  }).body as { reasoning_effort: string };
+  assert.equal(selected.reasoning_effort, 'max');
 });
 
 void test('Google sign-in uses app credentials, normal identity scopes and protected callback destinations', async () => {
