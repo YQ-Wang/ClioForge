@@ -437,8 +437,8 @@
   border-bottom: 1px solid var(--border);
 }
 .workspace-body {
-  max-width: 1560px;
-  margin-inline: auto;
+  max-width: none;
+  margin: 0;
   width: 100%;
   padding: 28px 36px 48px;
 }
