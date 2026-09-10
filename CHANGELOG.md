@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add direct Fireworks model connections with a Kimi K3 preset, selectable reasoning effort, fixed-host API requests and default standard usage rates.
+
 - Retire the maintainer-operated website and background research service. The retired domain returns HTTP 410; search removal was requested separately.
 - Make self-hosting the primary setup: direct workspace entry, no search indexing or canonical links to a shared service, and per-installation administrator contact.
 - Remove hosted-service links from setup documentation and package metadata. Preserve research features, existing data formats and user-provided model credentials.

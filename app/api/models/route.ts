@@ -14,7 +14,11 @@ export async function POST(request: Request) {
     const { user, store, settings } = await authenticate(request);
     const input = modelInput.parse(await jsonBody(request));
     const provider = textField(input.provider, '厂商', 30);
-    if (!['openai', 'anthropic', 'google', 'openrouter'].includes(provider))
+    if (
+      !['openai', 'anthropic', 'google', 'openrouter', 'fireworks'].includes(
+        provider,
+      )
+    )
       throw new HttpError(400, '不支持的厂商。');
     const model = textField(input.model_id, '模型名称', 150);
     if (!/^[a-zA-Z0-9._:/-]+$/.test(model))

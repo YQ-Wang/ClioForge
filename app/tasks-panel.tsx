@@ -13,6 +13,7 @@ import { Field, Notice } from './workspace';
 import { api } from '@/lib/client-api';
 import type { Model, Source, SourceVersion, Run } from '@/lib/types';
 import type { WorkbenchData, Job } from '@/lib/workbench-types';
+import type { ThinkingEffort } from '@/lib/model-routing';
 import { readableResponse } from '@/lib/readable-response';
 import { sourcePath } from '@/lib/navigation';
 import ResearchResult from './research-result';
@@ -106,6 +107,7 @@ export default function TasksPanel({
     [inputRate, setInputRate] = useState(''),
     [outputRate, setOutputRate] = useState(''),
     [maxOutput, setMaxOutput] = useState('2048'),
+    [effort, setEffort] = useState<ThinkingEffort>('high'),
     [limit, setLimit] = useState(''),
     [inboxFilter, setInboxFilter] = useState('pending');
   const active = data.jobs.some(
@@ -248,6 +250,7 @@ export default function TasksPanel({
                 input_rate: Number(inputRate),
                 output_rate: Number(outputRate),
                 max_output: Number(maxOutput),
+                effort,
               },
             );
             setMessage(
@@ -337,6 +340,24 @@ export default function TasksPanel({
               value={maxOutput}
               onChange={(e) => setMaxOutput(e.target.value)}
             />
+          </Field>
+          <Field label={locale === 'en' ? 'Reasoning effort' : '推理强度'}>
+            <NativeSelect
+              value={effort}
+              onChange={(event) =>
+                setEffort(event.target.value as ThinkingEffort)
+              }
+            >
+              <NativeSelectOption value="low">
+                {locale === 'en' ? 'Low' : '低'}
+              </NativeSelectOption>
+              <NativeSelectOption value="high">
+                {locale === 'en' ? 'High' : '高'}
+              </NativeSelectOption>
+              <NativeSelectOption value="max">
+                {locale === 'en' ? 'Maximum' : '最高'}
+              </NativeSelectOption>
+            </NativeSelect>
           </Field>
         </div>
         <p className="text-xs text-muted-foreground mt-4 leading-6">

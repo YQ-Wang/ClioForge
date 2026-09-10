@@ -5,7 +5,13 @@ import { regionInput } from './workbench-inputs';
 const uuid = z.uuid();
 export const modelInput = z.object({
   label: z.string().min(1).max(100),
-  provider: z.enum(['openai', 'anthropic', 'google', 'openrouter']),
+  provider: z.enum([
+    'openai',
+    'anthropic',
+    'google',
+    'openrouter',
+    'fireworks',
+  ]),
   model_id: z.string().min(1).max(150),
   key: z.string().min(1).max(4000),
   vision: z.boolean().optional(),

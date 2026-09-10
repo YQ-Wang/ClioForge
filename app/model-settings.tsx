@@ -1,5 +1,10 @@
 'use client';
-import { DEFAULT_RESEARCH_MODEL, GLM_PRICE_CEILING } from '@/lib/model-routing';
+import {
+  DEFAULT_RESEARCH_MODEL,
+  FIREWORKS_KIMI_K3_MODEL,
+  FIREWORKS_KIMI_K3_RATES,
+  GLM_PRICE_CEILING,
+} from '@/lib/model-routing';
 import { useI18n } from '@/lib/i18n/provider';
 import { useEffect, useState } from 'react';
 import { KeyRound, Plus, ShieldCheck, Trash2 } from 'lucide-react';
@@ -18,7 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { api } from '@/lib/client-api';
-import type { Model } from '@/lib/types';
+import type { Model, Provider } from '@/lib/types';
 import { Field, Notice } from './workspace';
 import ModelPriceSettings from './model-price-settings';
 export const modelColumns =
@@ -35,7 +40,7 @@ export default function ModelSettings({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [vision, setVision] = useState(true);
-  const [preset, setPreset] = useState(true);
+  const [provider, setProvider] = useState<Provider>('openrouter');
   const [loading, setLoading] = useState(true);
   async function refresh() {
     try {
@@ -66,6 +71,7 @@ export default function ModelSettings({
       });
       form.reset();
       setOpen(false);
+      setProvider('openrouter');
       setVision(true);
       setMessage('已加密保存。首次研究任务会验证厂商连接，并可能产生费用。');
       await refresh();
@@ -87,6 +93,18 @@ export default function ModelSettings({
       setBusy(false);
     }
   }
+  const presetModel =
+    provider === 'openrouter'
+      ? DEFAULT_RESEARCH_MODEL
+      : provider === 'fireworks'
+        ? FIREWORKS_KIMI_K3_MODEL
+        : '';
+  const presetLabel =
+    provider === 'openrouter'
+      ? 'GLM 5.3 Flash'
+      : provider === 'fireworks'
+        ? 'Kimi K3'
+        : '';
   return (
     <>
       <div className={embedded ? 'section-toolbar' : 'page-title'}>
@@ -154,9 +172,11 @@ export default function ModelSettings({
             {t('密钥在服务端加密保存；任务只发送你选中的材料。')}
           </p>
           <div className="provider-list">
-            {['OpenAI', 'Anthropic', 'Google', 'OpenRouter'].map((provider) => (
-              <span key={provider}>{provider}</span>
-            ))}
+            {['OpenAI', 'Anthropic', 'Google', 'OpenRouter', 'Fireworks'].map(
+              (provider) => (
+                <span key={provider}>{provider}</span>
+              ),
+            )}
           </div>
           <Button
             variant="secondary"
@@ -191,28 +211,35 @@ export default function ModelSettings({
           </DialogHeader>
           <form onSubmit={save} className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              {L(
-                '推荐工作模型：GLM 5.3 Flash。简单提取和 OCR 使用 low，材料比较和证据分析使用 high，规划与综合使用 max；关键结论仍需复核。',
-                'Recommended working model: GLM 5.3 Flash. Low for extraction and OCR, high for comparisons and evidence analysis, max for planning and synthesis. Important conclusions require review.',
-              )}
+              {provider === 'fireworks'
+                ? L(
+                    'Fireworks 预设模型：Kimi K3，支持文本、图像和结构化输出。关键结论仍需复核。',
+                    'Fireworks preset: Kimi K3, with text, image and structured-output support. Important conclusions still require review.',
+                  )
+                : L(
+                    '推荐工作模型：GLM 5.3 Flash。简单提取和 OCR 使用 low，材料比较和证据分析使用 high，规划与综合使用 max；关键结论仍需复核。',
+                    'Recommended working model: GLM 5.3 Flash. Low for extraction and OCR, high for comparisons and evidence analysis, max for planning and synthesis. Important conclusions require review.',
+                  )}
             </p>
             <Field label={t('连接名称')}>
               <Input
                 name="label"
+                key={`label-${provider}`}
                 required
                 maxLength={100}
                 placeholder={t('我的阅读模型')}
-                defaultValue="GLM 5.3 Flash"
+                defaultValue={presetLabel}
               />
             </Field>
             <Field label={t('厂商')}>
               <NativeSelect
                 name="provider"
                 className="w-full"
-                defaultValue="openrouter"
+                value={provider}
                 onChange={(event) => {
-                  setPreset(event.target.value === 'openrouter');
-                  setVision(event.target.value === 'openrouter');
+                  const next = event.target.value as Provider;
+                  setProvider(next);
+                  setVision(next === 'openrouter' || next === 'fireworks');
                 }}
               >
                 <NativeSelectOption value="openai">OpenAI</NativeSelectOption>
@@ -225,23 +252,34 @@ export default function ModelSettings({
                 <NativeSelectOption value="openrouter">
                   OpenRouter
                 </NativeSelectOption>
+                <NativeSelectOption value="fireworks">
+                  Fireworks
+                </NativeSelectOption>
               </NativeSelect>
             </Field>
             <Field label={t('模型 ID')}>
               <Input
                 name="model_id"
-                key={preset ? 'glm' : 'custom'}
-                defaultValue={preset ? DEFAULT_RESEARCH_MODEL : ''}
+                key={`model-${provider}`}
+                defaultValue={presetModel}
                 required
                 maxLength={150}
                 placeholder={t('填写厂商提供的模型 ID')}
               />
             </Field>
-            {preset && (
+            {provider === 'openrouter' && (
               <small>
                 {L(
                   `路由价格上限：输入 $${GLM_PRICE_CEILING.input} / 输出 $${GLM_PRICE_CEILING.output} 每百万 token（不依赖限时优惠）。使用你自己的 API key。`,
                   `Routing price ceilings: $${GLM_PRICE_CEILING.input} input / $${GLM_PRICE_CEILING.output} output per million tokens, without relying on temporary discounts. Uses your own API key.`,
+                )}
+              </small>
+            )}
+            {provider === 'fireworks' && (
+              <small>
+                {L(
+                  `Fireworks 标准无服务器费率：输入 $${FIREWORKS_KIMI_K3_RATES.input} / 输出 $${FIREWORKS_KIMI_K3_RATES.output} 每百万 token。请在使用前核对厂商当前费率。`,
+                  `Fireworks standard serverless rates: $${FIREWORKS_KIMI_K3_RATES.input} input / $${FIREWORKS_KIMI_K3_RATES.output} output per million tokens. Confirm the provider's current rates before use.`,
                 )}
               </small>
             )}
