@@ -24,4 +24,10 @@ A failed check prevents deployment. A migration failure stops before either Work
 
 Keep schema changes compatible with the previous Worker revision. Never edit migrations already applied in production. Prefer reverting faulty code with a new commit and letting CI deploy it. For an urgent incident, use Cloudflare's Worker version rollback for both Workers only after checking schema compatibility; D1 restoration requires a separate decision.
 
+### Cloudflare challenges
+
+A `cf-mitigated: challenge` response means Cloudflare intercepted the probe before it could verify the application. The check deliberately fails and prints the Ray ID for correlation in **Security → Events**. A 403 challenge must not count as a successful GitHub access check. A successful check still requires the application's 401 response, GitHub gate content, and `noindex` / `no-store` headers on every tested route.
+
+Cloudflare's free [Bot Fight Mode](https://developers.cloudflare.com/bots/get-started/bot-fight-mode/) can challenge GitHub-hosted runners and cannot be skipped using a WAF custom rule. The site owner must explicitly choose whether to disable that optional feature or use a bot-management plan that supports narrowly scoped exceptions. Do not disable the GitHub allowlist, expose an alternate Worker URL, or broadly allow GitHub's shared IP ranges to make a smoke check pass. After resolving the edge challenge, rerun the failed deployment job.
+
 This is the maintainer's private installation pipeline. Self-hosters should use [deployment.md](deployment.md) and configure their own workflow and resources; cloning this repository does not give access to its production environment.
