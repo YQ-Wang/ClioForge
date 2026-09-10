@@ -1,7 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useI18n } from '@/lib/i18n/provider';
-import { DEFAULT_RESEARCH_MODEL, GLM_PRICE_CEILING } from '@/lib/model-routing';
+import {
+  DEFAULT_RESEARCH_MODEL,
+  FIREWORKS_KIMI_K3_MODEL,
+  FIREWORKS_KIMI_K3_RATES,
+  GLM_PRICE_CEILING,
+} from '@/lib/model-routing';
 import { api } from '@/lib/client-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +16,19 @@ import {
 } from '@/components/ui/native-select';
 import { Field } from './workspace';
 import type { Model } from '@/lib/types';
+function includedRates(model: Model | undefined) {
+  if (
+    model?.provider === 'openrouter' &&
+    model.model_id === DEFAULT_RESEARCH_MODEL
+  )
+    return GLM_PRICE_CEILING;
+  if (
+    model?.provider === 'fireworks' &&
+    model.model_id === FIREWORKS_KIMI_K3_MODEL
+  )
+    return FIREWORKS_KIMI_K3_RATES;
+  return undefined;
+}
 export default function ModelPriceSettings({ models }: { models: Model[] }) {
   const { locale } = useI18n();
   const L = (zh: string, en: string) => (locale === 'en' ? en : zh);
@@ -37,18 +55,15 @@ export default function ModelPriceSettings({ models }: { models: Model[] }) {
   useEffect(() => {
     const model = models.find((m) => m.id === id);
     const price = prices.find((p) => p.model_id === id);
+    const defaults = includedRates(model);
     setInput(
-      price
-        ? String(price.input_rate)
-        : model?.model_id === DEFAULT_RESEARCH_MODEL
-          ? String(GLM_PRICE_CEILING.input)
-          : '',
+      price ? String(price.input_rate) : defaults ? String(defaults.input) : '',
     );
     setOutput(
       price
         ? String(price.output_rate)
-        : model?.model_id === DEFAULT_RESEARCH_MODEL
-          ? String(GLM_PRICE_CEILING.output)
+        : defaults
+          ? String(defaults.output)
           : '',
     );
   }, [id, models, prices]);
@@ -85,8 +100,8 @@ export default function ModelPriceSettings({ models }: { models: Model[] }) {
       </h2>
       <p>
         {L(
-          'GLM 5.3 Flash 可直接使用内置费率。其它模型请填写厂商费率，用于项目预算预留；不会充值，也不会产生模型调用。',
-          'GLM 5.3 Flash includes default rates. For another model, enter provider rates for project budget reservations. Saving does not top up or call a model.',
+          'GLM 5.3 Flash 与 Fireworks Kimi K3 可直接使用内置费率。其它模型请填写厂商费率，用于项目预算预留；不会充值，也不会产生模型调用。',
+          'GLM 5.3 Flash and Fireworks Kimi K3 include default rates. For another model, enter provider rates for project budget reservations. Saving does not top up or call a model.',
         )}
       </p>
       <Field label={L('模型连接', 'Model connection')}>
