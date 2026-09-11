@@ -15,6 +15,8 @@ import type {
   Model,
   Run,
   Note,
+  SourceGroup,
+  SourceOrganization,
 } from './types';
 const now = () => new Date().toISOString();
 type Row = Record<string, unknown>;
@@ -115,7 +117,9 @@ export class ResearchStore {
   }
   async source(id: string, permission: 'read' | 'write' = 'read') {
     const row = await this.db
-      .prepare('SELECT * FROM sources WHERE id=?')
+      .prepare(
+        'SELECT * FROM sources s WHERE id=? AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id=s.id AND o.trashed_at IS NOT NULL)',
+      )
       .bind(id)
       .first<Source>();
     if (!row) throw new HttpError(404, '资料不存在。');
@@ -124,7 +128,9 @@ export class ResearchStore {
   }
   async version(id: string) {
     const row = await this.db
-      .prepare('SELECT * FROM source_versions WHERE id=?')
+      .prepare(
+        'SELECT * FROM source_versions v WHERE id=? AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id=v.source_id AND o.trashed_at IS NOT NULL)',
+      )
       .bind(id)
       .first();
     if (!row) throw new HttpError(404, '资料版本不存在。');
@@ -192,13 +198,13 @@ export class ResearchStore {
     const [sources, counts] = await Promise.all([
       this.db
         .prepare(
-          'SELECT * FROM sources WHERE project_id=? ORDER BY created_at DESC,id DESC LIMIT 6',
+          'SELECT * FROM sources s WHERE project_id=? AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id=s.id AND o.trashed_at IS NOT NULL) ORDER BY created_at DESC,id DESC LIMIT 6',
         )
         .bind(id)
         .all<Source>(),
       this.db
         .prepare(`SELECT
-        (SELECT COUNT(*) FROM sources WHERE project_id=?) AS sources,
+        (SELECT COUNT(*) FROM sources s WHERE project_id=? AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id=s.id AND o.trashed_at IS NOT NULL)) AS sources,
         (SELECT COUNT(*) FROM evidence WHERE project_id=?) AS evidence,
         (SELECT COUNT(*) FROM notes n WHERE n.project_id=? AND n.parent_id IS NULL
           AND NOT EXISTS(SELECT 1 FROM note_state s WHERE s.note_id=n.id AND s.archived=1)) AS notes`)
@@ -206,6 +212,161 @@ export class ResearchStore {
         .first<{ sources: number; evidence: number; notes: number }>(),
     ]);
     return { project, sources: sources.results, counts: counts! };
+  }
+  async sourceManagement(id: string) {
+    await this.project(id);
+    const [sources, groups, organization] = await Promise.all([
+      this.db
+        .prepare(
+          'SELECT * FROM sources WHERE project_id=? ORDER BY created_at DESC,id DESC',
+        )
+        .bind(id)
+        .all<Source>(),
+      this.db
+        .prepare(
+          'SELECT * FROM source_groups WHERE project_id=? ORDER BY name,id',
+        )
+        .bind(id)
+        .all<SourceGroup>(),
+      this.db
+        .prepare(
+          'SELECT * FROM source_organization WHERE project_id=? ORDER BY updated_at DESC',
+        )
+        .bind(id)
+        .all<SourceOrganization>(),
+    ]);
+    return {
+      sources: sources.results,
+      groups: groups.results,
+      organization: organization.results,
+    };
+  }
+  private async managedSources(projectId: string, sourceIds: string[]) {
+    const ids = [...new Set(sourceIds)];
+    if (!ids.length || ids.length > 100)
+      throw new HttpError(400, '每次请选择 1 至 100 份资料。');
+    const rows = await this.db
+      .prepare(
+        `SELECT s.id,s.title,o.trashed_at FROM sources s LEFT JOIN source_organization o ON o.source_id=s.id WHERE s.project_id=? AND s.id IN (${ids.map(() => '?').join(',')})`,
+      )
+      .bind(projectId, ...ids)
+      .all<{ id: string; title: string; trashed_at: string | null }>();
+    if (rows.results.length !== ids.length)
+      throw new HttpError(404, '部分资料不存在或不属于当前项目。');
+    return rows.results;
+  }
+  async createSourceGroup(projectId: string, value: string) {
+    await this.project(projectId, 'write');
+    const group = {
+      id: crypto.randomUUID(),
+      project_id: projectId,
+      name: textField(value, '分组名称', 100),
+      created_at: now(),
+    };
+    try {
+      await this.db
+        .prepare('INSERT INTO source_groups VALUES(?,?,?,?)')
+        .bind(group.id, group.project_id, group.name, group.created_at)
+        .run();
+    } catch {
+      throw new HttpError(409, '已有同名资料分组。');
+    }
+    return group;
+  }
+  async moveSources(
+    projectId: string,
+    sourceIds: string[],
+    groupId: string | null,
+  ) {
+    await this.project(projectId, 'write');
+    const sources = await this.managedSources(projectId, sourceIds);
+    if (sources.some((source) => source.trashed_at))
+      throw new HttpError(409, '请先恢复回收站中的资料，再移动分组。');
+    if (
+      groupId &&
+      !(await this.db
+        .prepare('SELECT 1 FROM source_groups WHERE id=? AND project_id=?')
+        .bind(groupId, projectId)
+        .first())
+    )
+      throw new HttpError(404, '资料分组不存在。');
+    const updated = now();
+    await this.db.batch(
+      sources.map((source) =>
+        this.db
+          .prepare(
+            'INSERT INTO source_organization(source_id,project_id,group_id,trashed_at,updated_at) VALUES(?,?,?,NULL,?) ON CONFLICT(source_id) DO UPDATE SET group_id=excluded.group_id,updated_at=excluded.updated_at',
+          )
+          .bind(source.id, projectId, groupId, updated),
+      ),
+    );
+    return { moved: sources.length };
+  }
+  async deleteSourceGroup(projectId: string, groupId: string) {
+    await this.project(projectId, 'write');
+    const group = await this.db
+      .prepare('SELECT id FROM source_groups WHERE id=? AND project_id=?')
+      .bind(groupId, projectId)
+      .first();
+    if (!group) throw new HttpError(404, '资料分组不存在。');
+    await this.db.batch([
+      this.db
+        .prepare(
+          'UPDATE source_organization SET group_id=NULL,updated_at=? WHERE project_id=? AND group_id=?',
+        )
+        .bind(now(), projectId, groupId),
+      this.db
+        .prepare('DELETE FROM source_groups WHERE id=? AND project_id=?')
+        .bind(groupId, projectId),
+    ]);
+    return { id: groupId };
+  }
+  async trashSources(projectId: string, sourceIds: string[]) {
+    await this.project(projectId, 'admin');
+    const sources = await this.managedSources(projectId, sourceIds);
+    if (sources.some((source) => source.trashed_at))
+      throw new HttpError(409, '选择中包含已在回收站的资料。');
+    const ids = sources.map((source) => source.id);
+    const placeholders = ids.map(() => '?').join(',');
+    const used = await this.db
+      .prepare(
+        `SELECT DISTINCT s.title FROM sources s WHERE s.id IN (${placeholders}) AND (EXISTS(SELECT 1 FROM evidence e WHERE e.source_id=s.id) OR EXISTS(SELECT 1 FROM bibliography_entries b WHERE b.source_id=s.id) OR EXISTS(SELECT 1 FROM source_relations r WHERE r.from_source=s.id OR r.to_source=s.id) OR EXISTS(SELECT 1 FROM task_inputs ti JOIN source_versions v ON v.id=ti.version_id WHERE v.source_id=s.id) OR EXISTS(SELECT 1 FROM research_runs r, json_each(r.source_version_ids) j JOIN source_versions v ON v.id=j.value WHERE r.project_id=? AND v.source_id=s.id) OR EXISTS(SELECT 1 FROM research_jobs j, json_each(j.version_ids) x JOIN source_versions v ON v.id=x.value WHERE j.project_id=? AND v.source_id=s.id) OR EXISTS(SELECT 1 FROM artifacts a, json_each(a.source_versions) x JOIN source_versions v ON v.id=x.value WHERE a.project_id=? AND v.source_id=s.id)) LIMIT 4`,
+      )
+      .bind(...ids, projectId, projectId, projectId)
+      .all<{ title: string }>();
+    if (used.results.length)
+      throw new HttpError(
+        409,
+        `这些资料已用于研究，不能移入回收站：${used.results.map((row) => row.title).join('、')}。请先移除相关证据、书目或任务引用。`,
+      );
+    const updated = now();
+    await this.db.batch(
+      ids.map((id) =>
+        this.db
+          .prepare(
+            'INSERT INTO source_organization(source_id,project_id,group_id,trashed_at,updated_at) VALUES(?,?,NULL,?,?) ON CONFLICT(source_id) DO UPDATE SET group_id=NULL,trashed_at=excluded.trashed_at,updated_at=excluded.updated_at',
+          )
+          .bind(id, projectId, updated, updated),
+      ),
+    );
+    return { trashed: ids.length };
+  }
+  async restoreSources(projectId: string, sourceIds: string[]) {
+    await this.project(projectId, 'admin');
+    const sources = await this.managedSources(projectId, sourceIds);
+    if (sources.some((source) => !source.trashed_at))
+      throw new HttpError(409, '选择中包含不在回收站的资料。');
+    const updated = now();
+    await this.db.batch(
+      sources.map((source) =>
+        this.db
+          .prepare(
+            'UPDATE source_organization SET trashed_at=NULL,updated_at=? WHERE source_id=? AND project_id=?',
+          )
+          .bind(updated, source.id, projectId),
+      ),
+    );
+    return { restored: sources.length };
   }
   async readProject(id: string) {
     const project = await this.project(id);

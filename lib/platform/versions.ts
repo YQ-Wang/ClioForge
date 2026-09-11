@@ -32,7 +32,7 @@ export class VersionStore extends MissionStore {
     const [versions, notes, artifacts] = await Promise.all([
       this.db
         .prepare(
-          'SELECT source_id,id AS version_id,revision FROM source_versions v WHERE project_id=? AND revision=(SELECT MAX(revision) FROM source_versions v2 WHERE v2.source_id=v.source_id) ORDER BY source_id',
+          'SELECT source_id,id AS version_id,revision FROM source_versions v WHERE project_id=? AND revision=(SELECT MAX(revision) FROM source_versions v2 WHERE v2.source_id=v.source_id) AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id=v.source_id AND o.trashed_at IS NOT NULL) ORDER BY source_id',
         )
         .bind(projectId)
         .all(),

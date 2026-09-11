@@ -151,6 +151,9 @@ export async function searchPages(
     .join(' OR ');
   const conditions = ['page_fts MATCH ?', 'sp.project_id=?'],
     bindings: (string | number)[] = [expression, projectId];
+  conditions.push(
+    'NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id=sp.source_id AND o.trashed_at IS NOT NULL)',
+  );
   if (!options.history)
     conditions.push(
       'v.revision=(SELECT MAX(v2.revision) FROM source_versions v2 WHERE v2.source_id=sp.source_id)',

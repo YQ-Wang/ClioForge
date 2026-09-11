@@ -72,6 +72,7 @@ import { draftPrefix, type DraftRecord } from '@/lib/drafts';
 import { noteHeads } from '@/lib/notes';
 import NoteLibrary from './note-library';
 import SourceComparison from './source-comparison';
+import SourceManagement from './source-management';
 import EvidenceLibrary from './evidence-library';
 import BatchTranscription from './batch-transcription';
 import { useLocalDraft } from '@/hooks/use-local-draft';
@@ -221,7 +222,11 @@ export default function ProjectDesk({
       setEvidence(snapshot.evidence);
       setRuns(snapshot.research_runs);
       setModels(snapshot.models);
-      setSourceId((current) => current || snapshot.sources[0]?.id || '');
+      setSourceId((current) =>
+        snapshot.sources.some((source) => source.id === current)
+          ? current
+          : snapshot.sources[0]?.id || '',
+      );
       setDetailsLoaded(true);
       return { ...snapshot, workbench: detail };
     } catch (error) {
@@ -1080,6 +1085,13 @@ export default function ProjectDesk({
             )}
           </div>
         )}
+      </ProjectPanel>
+      <ProjectPanel active={tab} value="source-management">
+        <SourceManagement
+          projectId={project.id}
+          role={role}
+          onSourcesChanged={refresh}
+        />
       </ProjectPanel>
       <ProjectPanel active={tab} value="notes">
         <NoteLibrary

@@ -244,6 +244,13 @@ before(async () => {
   ).split('\n'))
     if (statement.trim() && !statement.trim().startsWith('--'))
       await db.prepare(statement).run();
+  for (const statement of (
+    await fs.readFile(
+      new URL('../drizzle/0023_source_management.sql', import.meta.url),
+      'utf8',
+    )
+  ).split('\n'))
+    if (statement.trim()) await db.prepare(statement).run();
 });
 after(async () => {
   await mf?.dispose();
@@ -6992,5 +6999,73 @@ void test('a second local delivery failure can be explicitly recovered without a
       .bind(f.a.project.id)
       .first(),
     before,
+  );
+});
+
+void test('source management groups, moves, trashes and restores only safe project material', async () => {
+  const owner = await user();
+  const first = await source(owner);
+  const secondId = crypto.randomUUID();
+  const secondPath = `${owner.owner}/${first.project.id}/${secondId}/original.txt`;
+  await owner.recordUpload(
+    secondId,
+    first.project.id,
+    secondPath,
+    'text/plain',
+  );
+  const secondVersion = await owner.importSource({
+    p_id: secondId,
+    p_project: first.project.id,
+    p_title: '第二份港口记录',
+    p_path: secondPath,
+    p_type: 'text/plain',
+    p_pages: [{ page: 1, text: '另一份港口档案。' }],
+  });
+  const group = await owner.createSourceGroup(first.project.id, '地方档案');
+  await owner.moveSources(first.project.id, [first.id, secondId], group.id);
+  let management = await owner.sourceManagement(first.project.id);
+  assert.equal(management.groups[0].name, '地方档案');
+  assert.deepEqual(
+    management.organization.map((item) => item.group_id),
+    [group.id, group.id],
+  );
+
+  await owner.deleteSourceGroup(first.project.id, group.id);
+  management = await owner.sourceManagement(first.project.id);
+  assert.equal(management.groups.length, 0);
+  assert.ok(management.organization.every((item) => item.group_id === null));
+
+  assert.equal((await searchPages(owner, first.project.id, '港口')).length, 2);
+  await owner.trashSources(first.project.id, [secondId]);
+  assert.equal((await searchPages(owner, first.project.id, '港口')).length, 1);
+  await assert.rejects(owner.source(secondId), /资料不存在/);
+  const { readCollection } = await import('../lib/project-collections');
+  assert.deepEqual(
+    (await readCollection(owner, first.project.id, 'sources')).rows.map(
+      (row) => row.id,
+    ),
+    [first.id],
+  );
+
+  await owner.restoreSources(first.project.id, [secondId]);
+  assert.equal((await searchPages(owner, first.project.id, '港口')).length, 2);
+  assert.equal((await owner.version(secondVersion)).source_id, secondId);
+
+  await owner.addEvidence({
+    p_version: first.versionId,
+    p_page: 1,
+    p_quote: '港口',
+    p_question: '何时开放？',
+    p_interpretation: '',
+    p_relation: 'supports',
+  });
+  await assert.rejects(
+    owner.trashSources(first.project.id, [first.id]),
+    /已用于研究/,
+  );
+  const outsider = await user();
+  await assert.rejects(
+    outsider.trashSources(first.project.id, [secondId]),
+    /项目不存在/,
   );
 });

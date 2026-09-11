@@ -8,7 +8,7 @@ import { searchPages, sha256, type SearchHit } from './search';
 export const EMBEDDING_MODEL = 'openai/text-embedding-3-small';
 export const EMBEDDING_DIMENSIONS = 256;
 const current =
-  'v.revision=(SELECT MAX(v2.revision) FROM source_versions v2 WHERE v2.source_id=v.source_id)';
+  'v.revision=(SELECT MAX(v2.revision) FROM source_versions v2 WHERE v2.source_id=v.source_id) AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id=v.source_id AND o.trashed_at IS NOT NULL)';
 export function textChunks(text: string) {
   const chunks: { start: number; text: string }[] = [];
   for (let start = 0; start < text.length; start += 2100) {
