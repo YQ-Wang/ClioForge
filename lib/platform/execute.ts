@@ -11,7 +11,7 @@ import {
 import { sourceSearchTool } from '../harness/source-search-executor';
 import { z } from 'zod';
 import { HttpError } from '../errors';
-import { outputRetryFeedback } from './output-retry';
+import { canRepairOutput, outputRetryFeedback } from './output-retry';
 import { assertManuscriptCurrent, runManuscriptBuiltin } from '../manuscript';
 import { assertConversationContext } from '../task-conversation';
 import { runMaintenanceSteps } from '../background-maintenance';
@@ -494,11 +494,9 @@ export async function executeMissionTask(
           checks: [{ name: 'source_validation', passed: false, detail }],
         })
       : null;
-    const repair =
-      invalidOutput &&
-      claimedTask?.input.parameters.output_repair_attempts === 1 &&
-      claimedTask.input.parameters.recipe === 'dossier' &&
-      claimedTask.attempt === 1;
+    const repair = claimedTask
+      ? canRepairOutput(claimedTask, invalidOutput)
+      : false;
     const hash = await sha256(lease),
       date = now();
     const saved = await env.DB.batch([

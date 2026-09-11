@@ -7187,7 +7187,9 @@ void test('source-search missions persist model-directed catalog operations and 
         (task) =>
           task.input.effort === 'max' &&
           task.input.max_output === 16384 &&
-          task.input.version_ids.length === 0,
+          task.input.version_ids.length === 0 &&
+          task.input.parameters.recipe === 'source_search' &&
+          task.input.parameters.output_repair_attempts === 1,
       ),
   );
   assert.ok(

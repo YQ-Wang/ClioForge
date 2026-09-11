@@ -9,6 +9,7 @@ import {
   sourceSearchContext,
   validateSourceSearchAction,
   type SourceSearchMemory,
+  type SourceSearchAction,
   type SourceCandidate,
 } from '../lib/harness/source-search-tools';
 import { runConnectorSearch } from '../lib/search/connectors';
@@ -44,6 +45,10 @@ const maxSteps = Math.min(
   12,
   Math.max(2, Number(process.env.SOURCE_SEARCH_STEPS || 8)),
 );
+const maxRepairs = Math.min(
+  4,
+  Math.max(0, Number(process.env.SOURCE_SEARCH_REPAIR_ATTEMPTS || 2)),
+);
 const reports = [];
 
 for (const testCase of cases) {
@@ -58,14 +63,27 @@ for (const testCase of cases) {
   };
   let inputTokens = 0;
   let outputTokens = 0;
+  let modelCalls = 0;
+  let operations = 0;
+  let correction = '';
+  const validationErrors: Array<{
+    call: number;
+    detail: string;
+    proposed_tool: string;
+  }> = [];
   const started = performance.now();
-  for (let step = 0; step < maxSteps && !memory.stopped; step++) {
+  while (
+    operations < maxSteps &&
+    modelCalls < maxSteps + maxRepairs &&
+    !memory.stopped
+  ) {
+    modelCalls++;
     const response = await invoke({
       provider: 'fireworks',
       model,
       key: apiKey,
       system: sourceSearchSystem,
-      prompt: `Research request:\n${testCase.request}\n\nResearcher-controlled source selection criteria (mandatory):\n${selectionCriteria}\n\nCurrent source-search ledger:\n${JSON.stringify(sourceSearchContext(memory))}\n\nThis is a read-only evaluation. Do not choose import_source. Choose exactly one next operation and return JSON only.`,
+      prompt: `Research request:\n${testCase.request}\n\nResearcher-controlled source selection criteria (mandatory):\n${selectionCriteria}\n\nCurrent source-search ledger:\n${JSON.stringify(sourceSearchContext(memory))}${correction}\n\nThis is a read-only evaluation. Do not choose import_source. Choose exactly one next operation and return JSON only.`,
       outputFormat: 'json',
       outputSchema: 'source_search_tool_v1',
       maxOutput: 16384,
@@ -74,8 +92,29 @@ for (const testCase of cases) {
     });
     inputTokens += response.inputTokens;
     outputTokens += response.outputTokens;
-    const decision = resultSchema.parse(JSON.parse(response.text));
-    const action = validateSourceSearchAction(decision, memory);
+    let action: SourceSearchAction;
+    let proposedTool = 'unparseable';
+    try {
+      const raw = JSON.parse(response.text) as {
+        data?: { tool?: unknown };
+      };
+      if (typeof raw.data?.tool === 'string') proposedTool = raw.data.tool;
+      const decision = resultSchema.parse(raw);
+      action = validateSourceSearchAction(decision, memory);
+    } catch (error) {
+      const detail =
+        error instanceof Error
+          ? error.message.slice(0, 1000)
+          : 'The response did not satisfy the source-search operation contract.';
+      validationErrors.push({
+        call: modelCalls,
+        detail,
+        proposed_tool: proposedTool,
+      });
+      correction = `\n\nPrevious operation rejected by the deterministic validator: ${JSON.stringify(detail)}. Do not repeat it. Return a corrected action that follows the ledger sequence exactly: inspect_result before resolve_full_text or reject_result; resolve_full_text before import_source or save_source_lead.`;
+      continue;
+    }
+    correction = '';
     let candidates: SourceCandidate[] = [];
     let outcome = '';
     let status: 'completed' | 'unavailable' | 'blocked' = 'completed';
@@ -131,10 +170,14 @@ for (const testCase of cases) {
       candidates,
       status,
     });
+    operations++;
   }
   if (!memory.stopped) {
     memory.stopped = true;
-    memory.stop_reason = 'Evaluation operation limit reached.';
+    memory.stop_reason =
+      operations >= maxSteps
+        ? 'Evaluation operation limit reached.'
+        : `Evaluation model-call limit reached after ${validationErrors.length} rejected operation(s).`;
   }
   const unique = [...sourceCandidates(memory).values()];
   reports.push({
@@ -143,6 +186,9 @@ for (const testCase of cases) {
     effort: 'max',
     selection_criteria: selectionCriteria,
     duration_ms: Math.round(performance.now() - started),
+    model_calls: modelCalls,
+    completed_operations: operations,
+    validation_errors: validationErrors,
     input_tokens: inputTokens,
     output_tokens: outputTokens,
     metrics: evaluateCandidates(testCase, unique),

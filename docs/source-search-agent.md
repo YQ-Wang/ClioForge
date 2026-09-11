@@ -29,6 +29,8 @@ Each model decision must match the strict `source_search_tool_v1` schema and sel
 
 The application rejects invented candidate identifiers, duplicate operations, premature import/lead actions and a finish action before meaningful search. A candidate must be inspected before full-text resolution or rejection, and resolved before import or lead creation. Search records, decisions, normalized candidates, rejection reasons and leads survive page reloads and project backup/restore.
 
+If a model nevertheless proposes an operation out of sequence, the website preserves the rejected paid response and schedules one budget-bounded correction attempt with the validator's exact finding. A second invalid response fails visibly instead of retrying indefinitely.
+
 The agent context retains operation history plus the 60 most recent unique candidates. Candidate snippets are bounded before persistence and again before prompting so a noisy catalog cannot exhaust the model context. Catalog metadata, abstracts, OCR and web text are explicitly marked as untrusted research data and are not treated as historical evidence.
 
 ## Connectors

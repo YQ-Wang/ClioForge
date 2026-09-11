@@ -86,9 +86,11 @@ export function sourceSearchRecipe(raw: SourceSearchOptions): MissionDraft {
       'model',
       [previous],
       {
+        recipe: 'source_search',
         source_agent_stage: 'decision',
         source_agent_round: round + 1,
         output_schema: 'source_search_tool_v1',
+        output_repair_attempts: 1,
       },
       `${sourceSearchSystem}\n\nResearch request:\n${options.request}\n\nResearcher-controlled source selection criteria (mandatory):\n${criteria}\n\nConfigured search mode: ${options.search_provider}. When it is "catalogs", do not choose the web provider. When it is "brave" or "tavily", web search is available in addition to catalogs.\n\nChoose exactly one next operation. The application executes it and returns a new ledger.`,
     );

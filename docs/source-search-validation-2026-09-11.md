@@ -11,6 +11,7 @@ This report covers the local implementation on the feature branch. Tests used sy
 - HTTPS, credential, private/local network, nonstandard port, redirect, type, size and PDF-signature checks cover the automatic-download boundary.
 - Project source management displays leads and permits authorized dismissal. Project purge, account deletion and project package export/restore include the new state. Restore reuses an existing global catalog record by `(provider, external_id)` and remaps project references.
 - A production browser build opens AI search from a non-empty project's Source management screen, submits the default editable source-selection criteria with Max reasoning, polls persisted progress and renders the resulting candidate and source lead without browser console errors.
+- Invalid source-operation ordering is never silently accepted. Website runs receive one budget-bounded correction attempt with deterministic validation feedback; the manual live evaluator allows two extra correction calls by default and records every rejected proposal in its report.
 
 ## Research-quality matrix
 
@@ -52,7 +53,7 @@ npm run eval:source-search:live
 unset FIREWORKS_API_KEY
 ```
 
-The default model is `accounts/fireworks/models/kimi-k3`, reasoning is always Max, and the script performs up to eight read-only operations per case. It never chooses project import. To run one case or override the researcher's criteria:
+The default model is `accounts/fireworks/models/kimi-k3`, reasoning is always Max, and the script performs up to eight valid read-only operations per case. It never chooses project import. If the model proposes an invalid operation sequence, the runner returns the validator finding to the model and permits two extra correction calls by default rather than terminating the entire evaluation. Set `SOURCE_SEARCH_REPAIR_ATTEMPTS=0` to disable those calls or a value up to `4` to change the bound. To run one case or override the researcher's criteria:
 
 ```sh
 npm run eval:source-search:live -- --case=ming-succession-donglin

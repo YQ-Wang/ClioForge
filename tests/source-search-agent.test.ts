@@ -13,6 +13,13 @@ import {
 } from '../lib/search/evaluation';
 import { runConnectorSearch } from '../lib/search/connectors';
 import { safePublicUrl } from '../lib/search/safe-fetch';
+import { sourceSearchSystem } from '../lib/harness/source-search-prompt';
+import {
+  canRepairOutput,
+  outputRetryFeedback,
+} from '../lib/platform/output-retry';
+import type { MissionStore } from '../lib/platform/missions';
+import type { MissionTask } from '../lib/platform/types';
 
 void test('Fireworks Kimi source-search decisions use max reasoning and a strict source tool schema', () => {
   const request = providerRequest({
@@ -113,6 +120,85 @@ void test('source agent must inspect, resolve, and use known IDs before import o
     }).success,
     false,
   );
+  assert.match(
+    sourceSearchSystem,
+    /resolve_full_text before .*save_source_lead/,
+  );
+  assert.match(
+    sourceSearchContext(memory).policy,
+    /resolve before importing or saving a source lead/,
+  );
+});
+
+void test('source-search sequence validation gets exactly one bounded correction attempt', () => {
+  const task = {
+    attempt: 1,
+    input: {
+      parameters: {
+        recipe: 'source_search',
+        source_agent_stage: 'decision',
+        output_repair_attempts: 1,
+      },
+    },
+  } as unknown as MissionTask;
+  assert.equal(canRepairOutput(task, true), true);
+  assert.equal(canRepairOutput({ ...task, attempt: 2 }, true), false);
+  assert.equal(canRepairOutput(task, false), false);
+  assert.equal(
+    canRepairOutput(
+      {
+        ...task,
+        input: {
+          ...task.input,
+          parameters: {
+            ...task.input.parameters,
+            source_agent_stage: 'tool',
+          },
+        },
+      },
+      true,
+    ),
+    false,
+  );
+});
+
+void test('source-search correction prompt includes the rejected sequence and required next order', async () => {
+  const task = {
+    attempt: 2,
+    error: '必须先尝试解析全文，再保存待补资料。',
+    input: {
+      parameters: {
+        recipe: 'source_search',
+        source_agent_stage: 'decision',
+        output_repair_attempts: 1,
+      },
+    },
+    id: 'decision-task',
+    project_id: 'project',
+  } as unknown as MissionTask;
+  const store = {
+    owner: 'test-owner',
+    db: {
+      prepare: () => ({
+        bind: () => ({
+          first: async () => ({
+            response: JSON.stringify({
+              data: {
+                tool: 'save_source_lead',
+                result_id: 'candidate',
+                reason: 'No file listed.',
+              },
+            }),
+            candidate: null,
+          }),
+        }),
+      }),
+    },
+  } as unknown as MissionStore;
+  const feedback = await outputRetryFeedback(store, task);
+  assert.match(feedback, /previous source-search operation was rejected/i);
+  assert.match(feedback, /resolve_full_text before .*save_source_lead/);
+  assert.match(feedback, /必须先尝试解析全文/);
 });
 
 void test('fixed connectors normalize synthetic scholarly records without exposing request credentials', async () => {
