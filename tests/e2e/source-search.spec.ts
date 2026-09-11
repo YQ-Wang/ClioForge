@@ -81,6 +81,13 @@ test('AI source search remains available in source management and renders persis
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text());
   });
+  await page.context().addCookies([
+    {
+      name: 'clioforge_locale',
+      value: 'zh-CN',
+      url: 'http://127.0.0.1:8788',
+    },
+  ]);
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
