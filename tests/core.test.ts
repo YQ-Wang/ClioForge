@@ -3324,7 +3324,11 @@ import {
   extractionCsv,
   interleavePages,
 } from '../lib/platform/research-recipes';
-import { discoverSources, validateShortlist } from '../lib/platform/discovery';
+import {
+  catalogRecordMatches,
+  discoverSources,
+  validateShortlist,
+} from '../lib/platform/discovery';
 import { executeMissionTask } from '../lib/platform/execute';
 import { jobMaterials } from '../lib/jobs';
 async function extractionStudy() {
@@ -3612,7 +3616,7 @@ void test('directed discovery sends only bounded queries to fixed catalogs, reco
               items: [
                 {
                   DOI: '10.1234/record',
-                  title: ['Catalog record'],
+                  title: ['Proclamation catalog record'],
                   publisher: 'Archive',
                 },
               ],
@@ -3706,6 +3710,58 @@ void test('directed discovery sends only bounded queries to fixed catalogs, reco
   );
   assert.ok(
     catalogsOnlyData.searches.every((search) => search.catalog !== 'project'),
+  );
+});
+void test('catalog discovery rejects generic faction and unrelated modern China results', () => {
+  const english =
+    '"Grand Secretary" Wanli succession crisis "Donglin faction" "1593 metropolitan evaluation" Ming court politics scholarly article';
+  assert.equal(
+    catalogRecordMatches(english, 'The Donglin Faction, 1606–1626'),
+    true,
+  );
+  assert.equal(
+    catalogRecordMatches(
+      english,
+      'Opposition to the Donglin Faction in the Late Ming Dynasty: The Case of Tang Binyin',
+    ),
+    true,
+  );
+  assert.equal(catalogRecordMatches(english, 'Faction in the 1590s?'), false);
+  assert.equal(
+    catalogRecordMatches(english, 'Politics at the Safavid Court, 1629–1666'),
+    false,
+  );
+  assert.equal(
+    catalogRecordMatches(english, '1 Corruption, Faction, and Succession'),
+    false,
+  );
+  assert.equal(
+    catalogRecordMatches(
+      english,
+      'European Politics and the Stuart Succession in England, 1593–1603',
+    ),
+    false,
+  );
+  assert.equal(
+    catalogRecordMatches(
+      english,
+      'Indian court deepens AIDMK succession crisis',
+    ),
+    false,
+  );
+  const chinese = '万历 国本之争 东林党 1593 明代政治 研究 论文';
+  assert.equal(
+    catalogRecordMatches(chinese, '万历朝国本之争与东林党形成'),
+    true,
+  );
+  assert.equal(
+    catalogRecordMatches(chinese, '新时代中国共产党进行伟大斗争之复杂形式'),
+    false,
+  );
+  assert.equal(catalogRecordMatches(chinese, '日本的国际竞争战略'), false);
+  assert.equal(
+    catalogRecordMatches(chinese, '明代万历青花瓷器纹饰研究'),
+    false,
   );
 });
 void test('sampling crosses documents, holds out unseen pages and rejects repeated pages', () => {

@@ -24,7 +24,7 @@ const queryPlanSchema = z.object({
 });
 
 const system =
-  'You are a humanities source-search planner. Turn only the researcher-provided search request into one to three concise catalog queries using historically relevant names, aliases, offices, events, dates, and language variants. Do not answer the research question and do not invent results. Return only a JSON object with the shape {"queries":["..."]}.';
+  'You are a humanities source-search planner. Turn only the researcher-provided search request into one to three concise catalog queries. Every query must retain at least one distinctive person, event, office, place, work title, or date from the request; never search generic terms such as faction, politics, history, article, or research by themselves. Use useful aliases and language variants. Do not answer the research question and do not invent results. Return only a JSON object with the shape {"queries":["..."]}.';
 
 function readSavedResult(value: string | null): TaskResult | null {
   if (!value) return null;
