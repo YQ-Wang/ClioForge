@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import SourceDiscovery from './source-discovery';
 
 type ManagementData = {
   sources: Source[];
@@ -141,6 +142,13 @@ export default function SourceManagement({
           </p>
         </div>
         <div className="source-management-tabs">
+          {!showTrash && (
+            <SourceDiscovery
+              projectId={projectId}
+              disabled={busy || !canWrite}
+              variant="default"
+            />
+          )}
           <Button
             variant={showTrash ? 'outline' : 'secondary'}
             onClick={() => {
