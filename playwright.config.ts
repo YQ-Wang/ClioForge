@@ -14,7 +14,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'npm run start -- --port 8788',
+    command:
+      'npm run start -- --port 8788 --var BETTER_AUTH_URL:http://127.0.0.1:8788 --var BETTER_AUTH_SECRET:e2e-only-synthetic-auth-secret-000000',
     url: 'http://127.0.0.1:8788/?workspace=1',
     timeout: 120_000,
     reuseExistingServer: false,
