@@ -60,7 +60,7 @@ export const taskInputSchema = z.object({
   model_id: z.uuid().optional(),
   input_rate: z.number().min(0).max(10000).default(0),
   output_rate: z.number().min(0).max(10000).default(0),
-  max_output: z.number().int().min(64).max(8192).default(2048),
+  max_output: z.number().int().min(64).default(16384),
   parameters: z.record(z.string(), z.unknown()).default({}),
 });
 export const taskDraftSchema = z.object({

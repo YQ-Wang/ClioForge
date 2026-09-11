@@ -6,6 +6,8 @@ import { MAX_FILE_BYTES, mediaExtensions } from './files';
 import type { Source } from './types';
 const projectTables = [
   'sources',
+  'source_groups',
+  'source_organization',
   'source_versions',
   'source_pages',
   'notes',

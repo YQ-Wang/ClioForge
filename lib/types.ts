@@ -14,6 +14,19 @@ export type Source = {
   media_type: string;
   created_at: string;
 };
+export type SourceGroup = {
+  id: string;
+  project_id: string;
+  name: string;
+  created_at: string;
+};
+export type SourceOrganization = {
+  source_id: string;
+  project_id: string;
+  group_id: string | null;
+  trashed_at: string | null;
+  updated_at: string;
+};
 export type SourceVersion = {
   id: string;
   source_id: string;

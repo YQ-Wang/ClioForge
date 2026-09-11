@@ -42,6 +42,8 @@ export type BackupManifest = z.infer<typeof packageManifest>;
 // are never interpolated into SQL without checking this allowlist and schema.
 export const restoreTables = [
   'sources',
+  'source_groups',
+  'source_organization',
   'source_versions',
   'source_pages',
   'notes',

@@ -15,6 +15,29 @@ import {
 } from '../lib/platform/types';
 
 const version = crypto.randomUUID();
+void test('source discovery can begin with a project question before sources are imported', () => {
+  const draft = agentRecipe({
+    method: {
+      title: 'Find sources for a new project',
+      kind: 'discover',
+      instructions: 'Find scholarship about a bounded historical question.',
+      fields: ['Source'],
+    },
+    pages: [],
+    model_id: crypto.randomUUID(),
+    input_rate: 1,
+    output_rate: 2,
+    locale: 'en',
+    external: true,
+  });
+  assert.ok(draft.tasks.every((task) => task.input.page_refs === undefined));
+  const searches = draft.tasks.filter(
+    (task) => task.input.parameters.discovery === true,
+  );
+  assert.equal(searches.length, 2);
+  assert.ok(searches.every((task) => task.executor === 'builtin'));
+  assert.ok(searches.every((task) => task.input.parameters.external === true));
+});
 void test('research handoff retains late caveats and relevant citations within a bounded context', () => {
   const task = {
     id: crypto.randomUUID(),

@@ -24,6 +24,10 @@ export async function GET(request: Request) {
       return Response.json(await store.overview(id), {
         headers: { 'Cache-Control': 'private, no-store' },
       });
+    if (id && params.get('source_management') === '1')
+      return Response.json(await store.sourceManagement(id), {
+        headers: { 'Cache-Control': 'private, no-store' },
+      });
     if (id && params.has('collection'))
       return Response.json(
         await readCollection(
@@ -59,6 +63,28 @@ export async function POST(request: Request) {
         break;
       case 'create_project':
         result = await store.createProject(input.title, input.description);
+        break;
+      case 'create_source_group':
+        result = await store.createSourceGroup(input.project_id, input.name);
+        break;
+      case 'move_sources':
+        result = await store.moveSources(
+          input.project_id,
+          input.source_ids,
+          input.group_id,
+        );
+        break;
+      case 'delete_source_group':
+        result = await store.deleteSourceGroup(
+          input.project_id,
+          input.group_id,
+        );
+        break;
+      case 'trash_sources':
+        result = await store.trashSources(input.project_id, input.source_ids);
+        break;
+      case 'restore_sources':
+        result = await store.restoreSources(input.project_id, input.source_ids);
         break;
       case 'import_source':
         result = await store.importSource(input);

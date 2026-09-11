@@ -158,7 +158,7 @@ export function agentRecipe(options: {
     : undefined;
   const pages = z
     .array(pageRefSchema)
-    .min(1)
+    .min(method.kind === 'discover' ? 0 : 1)
     .max(method.kind === 'extract' ? 1000 : 24)
     .parse(options.pages);
   if (
@@ -191,12 +191,12 @@ export function agentRecipe(options: {
       dependencies,
       input: taskInputSchema.parse({
         version_ids: [...new Set(refs.map((p) => p.version_id))],
-        page_refs: refs,
+        page_refs: refs.length ? refs : undefined,
         locale: options.locale,
         model_id: executor === 'model' ? options.model_id : undefined,
         input_rate: options.input_rate,
         output_rate: options.output_rate,
-        max_output: 4096,
+        max_output: 16384,
         effort: kind === 'extract' ? 'low' : 'high',
         prompt,
         parameters: {

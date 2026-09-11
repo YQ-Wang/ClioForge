@@ -8,7 +8,6 @@ import { saveEvaluation } from '@/lib/platform/evaluation';
 import { citationSchema } from '@/lib/platform/types';
 import { updateMission } from '@/lib/platform/incremental';
 import { TeamStore } from '@/lib/project-team';
-import { importLedSample, sampleBatchSchema } from '@/lib/platform/dataset';
 import { z } from 'zod';
 import { authenticate, failure, jsonBody, HttpError } from '@/lib/server';
 import { MissionStore } from '@/lib/platform/missions';
@@ -43,7 +42,6 @@ const inputSchema = z.object({
     'create_credential',
     'revoke_credential',
     'grant_artifact',
-    'import_dataset',
   ]),
   project_id: z.uuid(),
   id: z.uuid().optional(),
@@ -201,16 +199,6 @@ export async function POST(request: Request) {
           input.project_id,
           requireId(),
           input.value,
-        );
-        break;
-      case 'import_dataset':
-        result = await importLedSample(
-          store,
-          auth.settings.FILES,
-          input.project_id,
-          input.value === undefined
-            ? undefined
-            : sampleBatchSchema.parse(input.value),
         );
         break;
       case 'update_mission': {
