@@ -230,6 +230,8 @@ export const jobInput = z.object({
   prompt: z.string().trim().min(1).max(4000),
   input_rate: z.number().positive().max(10000),
   output_rate: z.number().positive().max(10000),
-  max_output: z.number().int().min(128).max(4096),
+  // The provider/model owns the real completion ceiling. Project budget
+  // reservation still prevents an unbounded value from starting a paid call.
+  max_output: z.number().int().min(128),
 });
 export type WorkbenchInput = z.infer<typeof workbenchInput>;

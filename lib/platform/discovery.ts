@@ -55,12 +55,14 @@ export async function discoverSources(
     searched_at: string;
   }[] = [];
   for (const query of queries) {
-    const hits = await searchPages(store, task.project_id, query, {
-      version_ids: task.input.version_ids,
-      page_refs: task.input.page_refs,
-      history: true,
-      limit: 10,
-    });
+    const hits = task.input.version_ids.length
+      ? await searchPages(store, task.project_id, query, {
+          version_ids: task.input.version_ids,
+          page_refs: task.input.page_refs,
+          history: true,
+          limit: 10,
+        })
+      : [];
     for (const h of hits) {
       const id = `page:${h.version_id}:${h.page}`;
       candidates.set(id, {
@@ -83,14 +85,15 @@ export async function discoverSources(
           start: h.text.indexOf(h.snippet),
         });
     }
-    searches.push({
-      query,
-      catalog: 'project',
-      returned: hits.length,
-      cap: 10,
-      status: 'completed',
-      searched_at: new Date().toISOString(),
-    });
+    if (task.input.version_ids.length)
+      searches.push({
+        query,
+        catalog: 'project',
+        returned: hits.length,
+        cap: 10,
+        status: 'completed',
+        searched_at: new Date().toISOString(),
+      });
     if (task.input.parameters.external !== true) continue;
     // Only public catalog queries leave the project. No originals, API keys,
     // model-generated hostnames or redirects are sent to third-party endpoints.

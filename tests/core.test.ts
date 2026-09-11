@@ -3665,6 +3665,41 @@ void test('directed discovery sends only bounded queries to fixed catalogs, reco
   await discoverSources(f.store, task, [dep], async () => {
     throw new Error('Must not contact an external catalog');
   });
+  task.input.parameters.external = true;
+  task.input.version_ids = [];
+  task.input.page_refs = undefined;
+  const catalogsOnly = await discoverSources(
+    f.store,
+    task,
+    [dep],
+    async (url) => {
+      const target = new URL(url instanceof Request ? url.url : url.toString());
+      return target.hostname === 'api.crossref.org'
+        ? Response.json({
+            message: {
+              items: [
+                {
+                  DOI: '10.1234/external-only',
+                  title: ['External catalog record'],
+                },
+              ],
+            },
+          })
+        : Response.json({ results: [] });
+    },
+  );
+  const catalogsOnlyData = catalogsOnly.data as {
+    candidates: { access: string }[];
+    searches: { catalog: string }[];
+  };
+  assert.ok(
+    catalogsOnlyData.candidates.every(
+      (candidate) => candidate.access === 'catalog_only',
+    ),
+  );
+  assert.ok(
+    catalogsOnlyData.searches.every((search) => search.catalog !== 'project'),
+  );
 });
 void test('sampling crosses documents, holds out unseen pages and rejects repeated pages', () => {
   const a = crypto.randomUUID(),
