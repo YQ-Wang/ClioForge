@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import ResearchBrief from './research-brief';
 import ResearchPath from './research-path';
+import SourceDiscovery from './source-discovery';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/lib/i18n/provider';
 import type { Evidence, Note, Source } from '@/lib/types';
@@ -25,7 +26,7 @@ export default function ProjectOverview({
   onDrive,
   onNavigate,
   onSource,
-  onDiscover,
+  canSearch,
   busy,
 }: {
   projectId: string;
@@ -37,7 +38,7 @@ export default function ProjectOverview({
   onDrive: () => void;
   onNavigate: (tab: string) => void;
   onSource: (id: string) => void;
-  onDiscover: () => void;
+  canSearch: boolean;
   busy: boolean;
 }) {
   const { locale } = useI18n();
@@ -85,6 +86,11 @@ export default function ProjectOverview({
                 ? L('围绕问题比较', 'Explore a question')
                 : L('从 Google Drive 选择', 'Choose from Google Drive')}
             </Button>
+            <SourceDiscovery
+              projectId={projectId}
+              disabled={busy || !canSearch}
+              variant="outline"
+            />
           </div>
         </div>
         <div className="desk-illustration" aria-hidden="true">
@@ -172,14 +178,10 @@ export default function ProjectOverview({
                   'No sources yet. Import relevant material yourself, or ask the search assistant to find candidates first.',
                 )}
               </p>
-              <Button variant="secondary" disabled={busy} onClick={onDiscover}>
-                <Search size={16} />
-                {L('让 AI 寻找候选资料', 'Find candidate sources with AI')}
-              </Button>
               <small>
                 {L(
-                  '搜索助手会根据项目问题生成检索词并调用目录检索；候选结果由你确认，不会自动混入项目。',
-                  'The search assistant derives queries from the project question and calls catalog search. You review candidates before anything is added.',
+                  '搜索助手会根据你输入的搜索目标生成检索词并调用目录检索；候选结果由你确认，不会自动混入项目。',
+                  'The search assistant derives queries from the search goal you enter and calls catalog search. You review candidates before anything is added.',
                 )}
               </small>
             </div>

@@ -209,7 +209,6 @@ export default function ResearchPlatform({
   models,
   budget,
   onNote,
-  discoveryRequest,
   section = 'missions',
 }: {
   userId: string;
@@ -228,7 +227,6 @@ export default function ResearchPlatform({
   models: Model[];
   budget: WorkbenchData['budget'];
   onNote: (title: string, text: string) => void;
-  discoveryRequest: number;
 }) {
   const { L, locale } = useWords();
   const [overview, setOverview] = useState<Overview | null>(null),
@@ -241,8 +239,6 @@ export default function ResearchPlatform({
     [searched, setSearched] = useState(false),
     [hits, setHits] = useState<SearchHit[]>([]),
     [secret, setSecret] = useState('');
-  const [dismissedDiscovery, setDismissedDiscovery] = useState(0);
-  const discoveryOpen = discoveryRequest > dismissedDiscovery;
   const [discussionTargetId, setDiscussionTargetId] = useState('');
   useEffect(() => {
     const target = new URLSearchParams(window.location.search).get(
@@ -1394,13 +1390,7 @@ export default function ResearchPlatform({
           )}
         </>
       )}
-      <Dialog
-        open={create || discoveryOpen}
-        onOpenChange={(open) => {
-          setCreate(open);
-          if (!open) setDismissedDiscovery(discoveryRequest);
-        }}
-      >
+      <Dialog open={create} onOpenChange={setCreate}>
         <DialogContent className="mission-dialog">
           <DialogHeader>
             <DialogTitle>
@@ -1415,12 +1405,10 @@ export default function ResearchPlatform({
           </DialogHeader>
           {message && <output className="platform-notice">{message}</output>}
           <MissionForm
-            key={`${discoveryOpen ? 'discover' : 'default'}:${discoveryRequest}`}
+            key={sources.length ? 'default' : 'discover'}
             projectId={project.id}
             project={project}
-            initialRecipe={
-              discoveryOpen || !sources.length ? 'discover' : undefined
-            }
+            initialRecipe={!sources.length ? 'discover' : undefined}
             models={models}
             budget={budget}
             canBudget={overview?.project.role === 'owner'}
@@ -1437,7 +1425,6 @@ export default function ResearchPlatform({
                   });
                 const id = (await mutate('create_mission', draft)) as string;
                 setCreate(false);
-                setDismissedDiscovery(discoveryRequest);
                 await openMission(id);
                 await onRefresh();
               })

@@ -128,7 +128,6 @@ export default function ProjectDesk({
   const [models, setModels] = useState<Model[]>([]);
   const [preferredModel, setPreferredModel] = useState('');
   const [sourceId, setSourceId] = useState('');
-  const [discoveryRequest, setDiscoveryRequest] = useState(0);
   const sourceItems = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const list = sourceItems.current;
@@ -854,10 +853,7 @@ export default function ProjectDesk({
               setLocation(null);
               navigate('sources');
             }}
-            onDiscover={() => {
-              setDiscoveryRequest((request) => request + 1);
-              navigate('platform');
-            }}
+            canSearch={canWrite}
           />
         )}
       </ProjectPanel>
@@ -891,7 +887,6 @@ export default function ProjectDesk({
                 : tab
           }
           project={project}
-          discoveryRequest={discoveryRequest}
           models={models}
           budget={workbench?.budget || null}
           onNote={(title, text) => {

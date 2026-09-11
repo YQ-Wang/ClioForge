@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { boundedBytes } from '../files';
-import type { MissionStore } from './missions';
+import type { ResearchStore } from '../store';
 import { indexVersion, searchPages } from './search';
 import type { MissionTask, TaskResult } from './types';
 export const candidateSchema = z.object({
@@ -30,19 +30,29 @@ export function plannedQueries(
     .filter(Boolean)
     .slice(0, 3);
 }
-export async function discoverSources(
-  store: MissionStore,
-  task: MissionTask,
-  deps: { result: TaskResult | null }[],
+
+export type SourceDiscoveryInput = {
+  project_id: string;
+  version_ids: string[];
+  page_refs?: { version_id: string; page: number }[];
+  queries: string[];
+  external: boolean;
+  locale: 'zh-CN' | 'en';
+};
+
+// This is the bounded search tool used by both the lightweight search agent
+// and the longer research-plan recipe. Keeping the network search here makes
+// it possible to enrich one search agent without coupling it to mission UI.
+export async function searchSourceCandidates(
+  store: ResearchStore,
+  input: SourceDiscoveryInput,
   request: typeof fetch = fetch,
 ): Promise<TaskResult> {
-  const queries = plannedQueries(
-    deps,
-    task.input.query || task.input.prompt || '',
-  );
-  if (!queries.length)
-    throw new Error('没有可执行的检索词，请检查上一步的检索计划。');
-  for (const id of task.input.version_ids)
+  const queries = [...new Set(input.queries.map((query) => query.trim()))]
+    .filter(Boolean)
+    .slice(0, 3);
+  if (!queries.length) throw new Error('没有可执行的检索词，请检查搜索问题。');
+  for (const id of input.version_ids)
     await indexVersion(store.db, await store.version(id));
   const candidates = new Map<string, Candidate>();
   const citations: TaskResult['citations'] = [];
@@ -55,10 +65,10 @@ export async function discoverSources(
     searched_at: string;
   }[] = [];
   for (const query of queries) {
-    const hits = task.input.version_ids.length
-      ? await searchPages(store, task.project_id, query, {
-          version_ids: task.input.version_ids,
-          page_refs: task.input.page_refs,
+    const hits = input.version_ids.length
+      ? await searchPages(store, input.project_id, query, {
+          version_ids: input.version_ids,
+          page_refs: input.page_refs,
           history: true,
           limit: 10,
         })
@@ -68,7 +78,7 @@ export async function discoverSources(
       candidates.set(id, {
         id,
         title: h.title || 'Project source',
-        url: `/?project=${task.project_id}&tab=sources&version=${h.version_id}&page=${h.page}`,
+        url: `/?project=${input.project_id}&tab=sources&version=${h.version_id}&page=${h.page}`,
         access: 'project_text',
         detail: h.snippet,
       });
@@ -85,7 +95,7 @@ export async function discoverSources(
           start: h.text.indexOf(h.snippet),
         });
     }
-    if (task.input.version_ids.length)
+    if (input.version_ids.length)
       searches.push({
         query,
         catalog: 'project',
@@ -94,7 +104,7 @@ export async function discoverSources(
         status: 'completed',
         searched_at: new Date().toISOString(),
       });
-    if (task.input.parameters.external !== true) continue;
+    if (!input.external) continue;
     // Only public catalog queries leave the project. No originals, API keys,
     // model-generated hostnames or redirects are sent to third-party endpoints.
     for (const catalog of ['crossref', 'loc']) {
@@ -162,17 +172,42 @@ export async function discoverSources(
   }
   return {
     summary:
-      task.input.locale === 'en'
+      input.locale === 'en'
         ? `${candidates.size} candidate passages/catalog records. Catalog records have not been read as full text. See coverage and failures below.`
         : `找到 ${candidates.size} 条候选段落或目录记录。目录记录尚未取得全文；检索范围与失败情况保留在下方。`,
     citations,
     checks: [],
     data: {
+      queries,
       candidates: [...candidates.values()],
       searches,
       engine: 'bounded-discovery-v1',
     },
   };
+}
+
+export async function discoverSources(
+  store: ResearchStore,
+  task: MissionTask,
+  deps: { result: TaskResult | null }[],
+  request: typeof fetch = fetch,
+): Promise<TaskResult> {
+  const queries = plannedQueries(
+    deps,
+    task.input.query || task.input.prompt || '',
+  );
+  return searchSourceCandidates(
+    store,
+    {
+      project_id: task.project_id,
+      version_ids: task.input.version_ids,
+      page_refs: task.input.page_refs,
+      queries,
+      external: task.input.parameters.external === true,
+      locale: task.input.locale,
+    },
+    request,
+  );
 }
 export function validateShortlist(
   result: TaskResult,
