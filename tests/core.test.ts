@@ -2,12 +2,21 @@ import { exportTrace, replayTrace } from '../lib/harness/trace';
 import { saveMethod } from '../lib/harness/methods';
 import { modelEvidence } from '../lib/harness/model-evidence';
 import { researchMemory, researchTool } from '../lib/harness/research-tools';
+import { sourceSearchToolJsonSchema } from '../lib/harness/tool-output';
+import {
+  priorSourceSearch,
+  sourceSearchContext,
+  validateSourceSearchAction,
+} from '../lib/harness/source-search-tools';
+import { sourceSearchTool } from '../lib/harness/source-search-executor';
+import { sourceSearchRecipe } from '../lib/platform/source-search-recipe';
 import { recheckSavedResponse } from '../lib/platform/recover-model-result';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { MissionStore } from '../lib/platform/missions';
+import { resultSchema, taskInputSchema } from '../lib/platform/types';
 import { VersionStore } from '../lib/platform/versions';
 import { searchPages } from '../lib/platform/search';
 import { importLedSample } from '../lib/platform/dataset';
@@ -247,6 +256,13 @@ before(async () => {
   for (const statement of (
     await fs.readFile(
       new URL('../drizzle/0023_source_management.sql', import.meta.url),
+      'utf8',
+    )
+  ).split('\n'))
+    if (statement.trim()) await db.prepare(statement).run();
+  for (const statement of (
+    await fs.readFile(
+      new URL('../drizzle/0024_source_search_agent.sql', import.meta.url),
       'utf8',
     )
   ).split('\n'))
@@ -7124,4 +7140,489 @@ void test('source management groups, moves, trashes and restores only safe proje
     outsider.trashSources(first.project.id, [secondId]),
     /项目不存在/,
   );
+});
+
+void test('source-search missions persist model-directed catalog operations and expose the next bounded ledger', async () => {
+  for (const action of sourceSearchToolJsonSchema.properties.data.anyOf)
+    assert.deepEqual(
+      [...action.required].sort(),
+      Object.keys(action.properties).sort(),
+    );
+  const owner = await user();
+  const project = await owner.createProject(
+    '国本之争与东林党',
+    '研究万历朝立储争议、癸巳京察与东林群体形成。',
+  );
+  const modelId = crypto.randomUUID();
+  await owner.saveModel({
+    id: modelId,
+    label: 'Synthetic Kimi K3',
+    provider: 'fireworks',
+    model_id: 'accounts/fireworks/models/kimi-k3',
+    vision: false,
+    key_hint: 'synthetic',
+    encrypted_key: 'synthetic-test-only',
+  });
+  const missions = new MissionStore(db, owner.owner);
+  const selectionCriteria =
+    '只选择与万历国本之争和癸巳京察直接相关的一手史料或学术研究。';
+  const draft = sourceSearchRecipe({
+    request:
+      '检索万历国本之争、1593 癸巳京察和东林群体形成的一手史料与学术研究，排除现代政党宣传。',
+    model_id: modelId,
+    selection_criteria: selectionCriteria,
+    input_rate: 0.15,
+    output_rate: 0.5,
+    effort: 'max',
+    max_steps: 4,
+  });
+  assert.equal(
+    draft.tasks.filter((task) => task.executor === 'model').length,
+    4,
+  );
+  assert.ok(
+    draft.tasks
+      .filter((task) => task.executor === 'model')
+      .every(
+        (task) =>
+          task.input.effort === 'max' &&
+          task.input.max_output === 16384 &&
+          task.input.version_ids.length === 0,
+      ),
+  );
+  assert.ok(
+    draft.tasks.every(
+      (task) =>
+        task.input.parameters.source_selection_criteria === selectionCriteria,
+    ),
+  );
+  assert.ok(
+    draft.tasks
+      .filter((task) => task.executor === 'model')
+      .every((task) => task.input.prompt.includes(selectionCriteria)),
+  );
+  const missionId = await missions.create(project.id, draft);
+  await db
+    .prepare('INSERT INTO source_search_runs VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(
+      missionId,
+      project.id,
+      owner.owner,
+      draft.question,
+      selectionCriteria,
+      'zh-CN',
+      modelId,
+      'max',
+      4,
+      'catalogs',
+      new Date().toISOString(),
+    )
+    .run();
+  await missions.control(missionId, 'start');
+  let view = await missions.view(missionId);
+  const init = view.tasks.find(
+    (task) => task.input.parameters.source_agent_stage === 'init',
+  )!;
+  const initClaim = await missions.claim(
+    init.id,
+    'clioforge:builtin',
+    'builtin',
+  );
+  await missions.submit(
+    init.id,
+    initClaim.lease,
+    'clioforge:builtin',
+    await builtin(missions, initClaim.task),
+  );
+  view = await missions.view(missionId);
+  const decision = view.tasks.find(
+    (task) =>
+      task.status === 'ready' &&
+      task.input.parameters.source_agent_stage === 'decision',
+  )!;
+  const decisionClaim = await missions.claim(
+    decision.id,
+    'clioforge:model',
+    'model',
+  );
+  await missions.submit(decision.id, decisionClaim.lease, 'clioforge:model', {
+    summary: 'Start with exact event names and a scholarly index.',
+    citations: [],
+    data: {
+      tool: 'search',
+      query: '万历 国本之争 癸巳京察 1593 东林',
+      providers: ['crossref'],
+    },
+  });
+  view = await missions.view(missionId);
+  const tool = view.tasks.find(
+    (task) =>
+      task.status === 'ready' &&
+      task.input.parameters.source_agent_stage === 'tool',
+  )!;
+  const toolClaim = await missions.claim(
+    tool.id,
+    'clioforge:builtin',
+    'builtin',
+  );
+  const request = (async (input: string | URL | Request) => {
+    const href =
+      input instanceof Request
+        ? input.url
+        : input instanceof URL
+          ? input.href
+          : input;
+    if (new URL(href).hostname === 'api.openalex.org')
+      return Response.json({ best_oa_location: null });
+    assert.equal(new URL(href).hostname, 'api.crossref.org');
+    return Response.json({
+      message: {
+        items: [
+          {
+            DOI: '10.1000/donglin-test',
+            title: [
+              'The Donglin Movement and the 1593 Metropolitan Evaluation',
+            ],
+            author: [{ given: 'Synthetic', family: 'Historian' }],
+            published: { 'date-parts': [[2001]] },
+            type: 'journal-article',
+            publisher: 'Test University Press',
+            URL: 'https://doi.org/10.1000/donglin-test',
+            abstract: 'A bounded study of the Wanli succession controversy.',
+          },
+        ],
+      },
+    });
+  }) as typeof fetch;
+  const toolResult = await builtin(missions, toolClaim.task, { request });
+  await missions.submit(
+    tool.id,
+    toolClaim.lease,
+    'clioforge:builtin',
+    toolResult,
+  );
+  const completeStep = async (data: Record<string, unknown>) => {
+    let current = await missions.view(missionId);
+    const nextDecision = current.tasks.find(
+      (task) =>
+        task.status === 'ready' &&
+        task.input.parameters.source_agent_stage === 'decision',
+    )!;
+    const nextDecisionClaim = await missions.claim(
+      nextDecision.id,
+      'clioforge:model',
+      'model',
+    );
+    await missions.submit(
+      nextDecision.id,
+      nextDecisionClaim.lease,
+      'clioforge:model',
+      { summary: 'Synthetic bounded decision.', citations: [], data },
+    );
+    current = await missions.view(missionId);
+    const nextTool = current.tasks.find(
+      (task) =>
+        task.status === 'ready' &&
+        task.input.parameters.source_agent_stage === 'tool',
+    )!;
+    const nextToolClaim = await missions.claim(
+      nextTool.id,
+      'clioforge:builtin',
+      'builtin',
+    );
+    await missions.submit(
+      nextTool.id,
+      nextToolClaim.lease,
+      'clioforge:builtin',
+      await builtin(missions, nextToolClaim.task, { request }),
+    );
+  };
+  await completeStep({
+    tool: 'inspect_result',
+    result_id: 'crossref:10.1000/donglin-test',
+  });
+  await completeStep({
+    tool: 'resolve_full_text',
+    result_id: 'crossref:10.1000/donglin-test',
+  });
+  await completeStep({
+    tool: 'import_source',
+    result_id: 'crossref:10.1000/donglin-test',
+  });
+  const memory = priorSourceSearch([await missions.task(tool.id)]);
+  assert.equal(memory.steps.length, 1);
+  assert.equal(
+    memory.steps[0].candidates[0].id,
+    'crossref:10.1000/donglin-test',
+  );
+  const context = sourceSearchContext(memory);
+  assert.equal(context.candidates.length, 1);
+  assert.ok(JSON.stringify(context).length < 20_000);
+  assert.equal(
+    await db
+      .prepare('SELECT decision FROM source_search_candidates WHERE run_id=?')
+      .bind(missionId)
+      .first('decision'),
+    'needs_file',
+  );
+  const management = await owner.sourceManagement(project.id);
+  assert.equal(management.leads.length, 1);
+  assert.equal(
+    await db
+      .prepare('SELECT status FROM source_leads WHERE run_id=?')
+      .bind(missionId)
+      .first('status'),
+    'needs_file',
+  );
+  await owner.dismissSourceLead(project.id, String(management.leads[0].id));
+  assert.equal((await owner.sourceManagement(project.id)).leads.length, 0);
+  assert.throws(() =>
+    validateSourceSearchAction(
+      {
+        summary: '',
+        citations: [],
+        checks: [],
+        data: { tool: 'finish', reason: 'done' },
+      },
+      { version: 1, stopped: false, stop_reason: '', steps: [] },
+    ),
+  );
+});
+
+void test('source-search import downloads a bounded public original into project storage with provenance', async () => {
+  const owner = await user();
+  const project = await owner.createProject(
+    'Import test',
+    'Safe source import',
+  );
+  const missionId = crypto.randomUUID();
+  const candidate = {
+    id: 'openalex:W123',
+    provider: 'openalex' as const,
+    external_id: 'W123',
+    title: 'Public historical transcript',
+    creators: ['Synthetic Historian'],
+    issued_date: '1900',
+    material_type: 'text',
+    languages: ['en'],
+    institution: 'Test University',
+    collection: 'Test Repository',
+    doi: '',
+    handle: '',
+    ark: '',
+    oclc: '',
+    landing_url: 'https://repository.example.test/items/W123',
+    manifest_url: '',
+    download_url: 'https://repository.example.test/files/W123.txt',
+    rights: 'Public domain',
+    license: 'public-domain',
+    access_status: 'open' as const,
+    snippet: 'A public transcript.',
+    verification_level: 'full_text' as const,
+  };
+  const memory = {
+    version: 1 as const,
+    stopped: false,
+    stop_reason: '',
+    steps: [
+      {
+        action: {
+          tool: 'search' as const,
+          query: 'public historical transcript',
+          providers: ['openalex' as const],
+        },
+        outcome: 'found',
+        candidates: [candidate],
+        status: 'completed' as const,
+      },
+      {
+        action: { tool: 'inspect_result' as const, result_id: candidate.id },
+        outcome: 'inspected',
+        candidates: [candidate],
+        status: 'completed' as const,
+      },
+      {
+        action: { tool: 'resolve_full_text' as const, result_id: candidate.id },
+        outcome: 'resolved',
+        candidates: [candidate],
+        status: 'completed' as const,
+      },
+    ],
+  };
+  const base = {
+    mission_id: missionId,
+    project_id: project.id,
+    title: 'Synthetic source operation',
+    kind: 'search' as const,
+    assignee: '',
+    status: 'running' as const,
+    error: null,
+    attempt: 1,
+    lease_until: null,
+    claimed_by: null,
+    cost_units: 0,
+    revision: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  const prior = {
+    ...base,
+    id: crypto.randomUUID(),
+    executor: 'builtin' as const,
+    input: taskInputSchema.parse({
+      parameters: { source_search: true, source_agent_stage: 'tool' },
+    }),
+    result: resultSchema.parse({
+      summary: 'ledger',
+      citations: [],
+      data: memory,
+    }),
+  };
+  const decision = {
+    ...base,
+    id: crypto.randomUUID(),
+    executor: 'model' as const,
+    input: taskInputSchema.parse({
+      parameters: { source_search: true, source_agent_stage: 'decision' },
+    }),
+    result: resultSchema.parse({
+      summary: 'Import the resolved public file.',
+      citations: [],
+      data: { tool: 'import_source', result_id: candidate.id },
+    }),
+  };
+  const task = {
+    ...base,
+    id: crypto.randomUUID(),
+    executor: 'builtin' as const,
+    input: taskInputSchema.parse({
+      parameters: { source_search: true, source_agent_stage: 'tool' },
+    }),
+    result: null,
+  };
+  const request = (async () =>
+    new Response('Exact public historical transcript.', {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    })) as typeof fetch;
+  const files = (await mf.getR2Bucket('FILES')) as unknown as R2Bucket;
+  const result = await sourceSearchTool(
+    new MissionStore(db, owner.owner),
+    task,
+    [prior, decision],
+    { files, request },
+  );
+  assert.match(result.summary, /Imported source|已导入资料/);
+  const imported = await db
+    .prepare('SELECT id,object_path,media_type FROM sources WHERE project_id=?')
+    .bind(project.id)
+    .first<{ id: string; object_path: string; media_type: string }>();
+  assert.equal(imported?.media_type, 'text/plain');
+  assert.ok(await files.head(imported!.object_path));
+  assert.equal(
+    await db
+      .prepare('SELECT provider FROM source_origins WHERE source_id=?')
+      .bind(imported!.id)
+      .first('provider'),
+    'openalex',
+  );
+});
+
+void test('an early source-search finish short-circuits every remaining model round', async () => {
+  const owner = await user();
+  const project = await owner.createProject('Early stop', 'Bounded search');
+  const modelId = crypto.randomUUID();
+  await owner.saveModel({
+    id: modelId,
+    label: 'Synthetic search model',
+    provider: 'fireworks',
+    model_id: 'accounts/fireworks/models/kimi-k3',
+    vision: false,
+    key_hint: 'synthetic',
+    encrypted_key: 'synthetic-test-only',
+  });
+  const missions = new MissionStore(db, owner.owner);
+  const draft = sourceSearchRecipe({
+    request: 'Find an exact institutional record.',
+    selection_criteria: 'Require exact chronological and topical relevance.',
+    locale: 'en',
+    model_id: modelId,
+    input_rate: 1,
+    output_rate: 1,
+    max_steps: 3,
+  });
+  const missionId = await missions.create(project.id, draft);
+  await db
+    .prepare('INSERT INTO source_search_runs VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(
+      missionId,
+      project.id,
+      owner.owner,
+      draft.question,
+      'Require exact chronological and topical relevance.',
+      'en',
+      modelId,
+      'max',
+      3,
+      'catalogs',
+      new Date().toISOString(),
+    )
+    .run();
+  await missions.control(missionId, 'start');
+  const claimAndRunBuiltin = async () => {
+    const next = (await missions.view(missionId)).tasks.find(
+      (task) => task.status === 'ready' && task.executor === 'builtin',
+    )!;
+    const claim = await missions.claim(next.id, 'clioforge:builtin', 'builtin');
+    const result = await builtin(missions, claim.task);
+    await missions.submit(next.id, claim.lease, 'clioforge:builtin', result);
+    return { result, task: await missions.task(next.id) };
+  };
+  const submitDecision = async (data: Record<string, unknown>) => {
+    const next = (await missions.view(missionId)).tasks.find(
+      (task) => task.status === 'ready' && task.executor === 'model',
+    )!;
+    const claim = await missions.claim(next.id, 'clioforge:model', 'model');
+    await missions.submit(next.id, claim.lease, 'clioforge:model', {
+      summary: 'Synthetic bounded decision.',
+      citations: [],
+      data,
+    });
+  };
+  await claimAndRunBuiltin();
+  await submitDecision({
+    tool: 'search',
+    query: 'exact institutional record',
+    providers: ['oai'],
+  });
+  const unavailable = await claimAndRunBuiltin();
+  assert.equal(
+    priorSourceSearch([unavailable.task]).steps[0].status,
+    'unavailable',
+  );
+  await submitDecision({
+    tool: 'finish',
+    reason: 'The configured connector requires collection context.',
+  });
+  await claimAndRunBuiltin();
+  const stoppedTask = (await missions.view(missionId)).tasks.find(
+    (task) => task.status === 'ready' && task.executor === 'model',
+  )!;
+  const stoppedClaim = await missions.claim(
+    stoppedTask.id,
+    'clioforge:model',
+    'model',
+  );
+  const stoppedResult = await builtin(missions, stoppedClaim.task);
+  await missions.submit(
+    stoppedTask.id,
+    stoppedClaim.lease,
+    'clioforge:model',
+    stoppedResult,
+  );
+  assert.deepEqual(stoppedResult.data, {
+    tool: 'finish',
+    reason: 'The configured connector requires collection context.',
+  });
+  await claimAndRunBuiltin();
+  assert.equal((await missions.mission(missionId)).status, 'completed');
 });

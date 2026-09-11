@@ -60,6 +60,8 @@ const jsonColumns = new Set([
   'aliases',
   'evidence',
   'metadata',
+  'creators',
+  'languages',
   'dependencies',
   'region',
 ]);
@@ -115,6 +117,28 @@ export class ProjectRestore {
     const sourceRows = metadata.records.sources || [];
     if (sourceRows.length > 500)
       throw new HttpError(413, '单次恢复最多 500 份材料。');
+    const libraryRows = metadata.records.library_records || [];
+    const reusedLibraryRecords = new Set<string>();
+    for (let offset = 0; offset < libraryRows.length; offset += 50) {
+      const group = libraryRows.slice(offset, offset + 50);
+      const existing = await this.store.db.batch<{ id: string }>(
+        group.map((row) =>
+          this.store.db
+            .prepare(
+              'SELECT id FROM library_records WHERE provider=? AND external_id=?',
+            )
+            .bind(String(row.provider), String(row.external_id)),
+        ),
+      );
+      for (const [index, result] of existing.entries()) {
+        const oldId = group[index].id;
+        const found = result.results[0]?.id;
+        if (typeof oldId === 'string' && found) {
+          ids.set(oldId, found);
+          reusedLibraryRecords.add(oldId);
+        }
+      }
+    }
     for (const table of restoreTables) {
       const seen = new Set<string>();
       for (const row of metadata.records[table] || []) {
@@ -422,7 +446,11 @@ export class ProjectRestore {
               '备份有指向包外或不一致的引用，无法完整恢复。',
             );
         }
-        plan.push({ table, row });
+        if (
+          table !== 'library_records' ||
+          !reusedLibraryRecords.has(String(original.id))
+        )
+          plan.push({ table, row });
       }
     }
     const indexed = new Set(

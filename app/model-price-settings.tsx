@@ -35,10 +35,16 @@ export default function ModelPriceSettings({ models }: { models: Model[] }) {
   const [id, setId] = useState(''),
     [input, setInput] = useState(''),
     [output, setOutput] = useState(''),
+    [maxOutput, setMaxOutput] = useState('16384'),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState('');
   const [prices, setPrices] = useState<
-    { model_id: string; input_rate: number; output_rate: number }[]
+    {
+      model_id: string;
+      input_rate: number;
+      output_rate: number;
+      max_output: number;
+    }[]
   >([]);
   useEffect(() => {
     void api<{ prices: typeof prices }>('/api/models/pricing')
@@ -66,6 +72,7 @@ export default function ModelPriceSettings({ models }: { models: Model[] }) {
           ? String(defaults.output)
           : '',
     );
+    setMaxOutput(price ? String(price.max_output) : '16384');
   }, [id, models, prices]);
   if (!models.length) return null;
   return (
@@ -79,6 +86,7 @@ export default function ModelPriceSettings({ models }: { models: Model[] }) {
           model_id: id,
           input_rate: Number(input),
           output_rate: Number(output),
+          max_output: Number(maxOutput),
         })
           .then(() =>
             setMessage(
@@ -153,11 +161,23 @@ export default function ModelPriceSettings({ models }: { models: Model[] }) {
             required
           />
         </Field>
+        <Field
+          label={L('输出预留上限（tokens）', 'Output reservation (tokens)')}
+        >
+          <Input
+            type="number"
+            min="128"
+            step="1"
+            value={maxOutput}
+            onChange={(event) => setMaxOutput(event.target.value)}
+            required
+          />
+        </Field>
       </div>
       <p className="settings-hint">
         {L(
-          '费率是估算依据，不能保证厂商最终账单。每个项目的预算单独设置。',
-          'Rates support estimates, not a guarantee of provider billing. Set the budget separately for each project.',
+          '费率与输出预留用于项目预算估算。应用不再固定为 4,096 tokens；厂商和模型仍可能执行自己的上限。',
+          'Rates and the output reservation support project budget estimates. The application no longer fixes output at 4,096 tokens; the provider and model may still enforce their own limit.',
         )}
       </p>
       <Button type="submit" disabled={busy || !id}>

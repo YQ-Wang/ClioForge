@@ -1,4 +1,87 @@
 export const RESEARCH_TOOL_SCHEMA = 'research_tool_v1';
+export const SOURCE_SEARCH_TOOL_SCHEMA = 'source_search_tool_v1';
+
+const sourceResultTool = (tool: string) => ({
+  type: 'object',
+  properties: {
+    tool: { type: 'string', enum: [tool] },
+    result_id: { type: 'string', minLength: 1, maxLength: 1000 },
+  },
+  required: ['tool', 'result_id'],
+  additionalProperties: false,
+});
+
+export const sourceSearchToolJsonSchema = {
+  type: 'object',
+  properties: {
+    summary: { type: 'string', maxLength: 2000 },
+    citations: { type: 'array', maxItems: 0, items: { type: 'string' } },
+    data: {
+      anyOf: [
+        {
+          type: 'object',
+          properties: {
+            tool: { type: 'string', enum: ['search'] },
+            query: { type: 'string', minLength: 2, maxLength: 500 },
+            providers: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 5,
+              items: {
+                type: 'string',
+                enum: [
+                  'web',
+                  'crossref',
+                  'openalex',
+                  'unpaywall',
+                  'dpla',
+                  'loc',
+                  'harvard',
+                  'oai',
+                  'iiif',
+                  'contentdm',
+                  'dspace',
+                ],
+              },
+            },
+          },
+          required: ['tool', 'query', 'providers'],
+          additionalProperties: false,
+        },
+        sourceResultTool('inspect_result'),
+        sourceResultTool('resolve_full_text'),
+        sourceResultTool('import_source'),
+        {
+          ...sourceResultTool('save_source_lead'),
+          properties: {
+            ...sourceResultTool('save_source_lead').properties,
+            reason: { type: 'string', minLength: 1, maxLength: 2000 },
+          },
+          required: ['tool', 'result_id', 'reason'],
+        },
+        {
+          ...sourceResultTool('reject_result'),
+          properties: {
+            ...sourceResultTool('reject_result').properties,
+            reason: { type: 'string', minLength: 1, maxLength: 2000 },
+          },
+          required: ['tool', 'result_id', 'reason'],
+        },
+        {
+          type: 'object',
+          properties: {
+            tool: { type: 'string', enum: ['finish'] },
+            reason: { type: 'string', minLength: 1, maxLength: 2000 },
+          },
+          required: ['tool', 'reason'],
+          additionalProperties: false,
+        },
+      ],
+    },
+  },
+  required: ['summary', 'citations', 'data'],
+  additionalProperties: false,
+} as const;
 export const researchToolJsonSchema = {
   type: 'object',
   properties: {

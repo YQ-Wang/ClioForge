@@ -10,6 +10,7 @@
 - [Development and architecture](development.md)
 - [Maintenance, compatibility and release checks](maintenance.md)
 - [Prepare a source-linked dossier in the background](background-dossier.md)
+- [Agentic source search and institutional connectors](source-search-agent.md)
 - [From reviewed research to a manuscript draft](manuscript-workflow.md)
 - [Deploying your own Cloudflare installation](deployment.md)
 - [Resource naming and migration compatibility](resource-names.md)
@@ -38,3 +39,5 @@ Background preparation: [Adams dossier, saved-response recovery and bounded outp
 Research harness: [bounded investigation, replay and method editions](research-harness.md), with [live Adams validation](research-harness-validation-2026-09-07.md).
 
 Current capability inventory: [implemented agentic/harness capabilities, remaining gaps and validation](agentic-harness-status.md).
+
+Latest source-discovery validation: [agent-directed catalog/web search, safe import fallback and browser coverage](source-search-validation-2026-09-11.md).

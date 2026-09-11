@@ -1,7 +1,9 @@
 import {
   RESEARCH_TOOL_SCHEMA,
+  SOURCE_SEARCH_TOOL_SCHEMA,
   RESEARCH_REPORT_SCHEMA,
   researchToolJsonSchema,
+  sourceSearchToolJsonSchema,
 } from './harness/tool-output';
 import {
   DOSSIER_OUTPUT_SCHEMA,
@@ -71,6 +73,7 @@ export type ModelRequest = {
   outputSchema?:
     | typeof RESEARCH_REPORT_SCHEMA
     | typeof RESEARCH_TOOL_SCHEMA
+    | typeof SOURCE_SEARCH_TOOL_SCHEMA
     | typeof DOSSIER_OUTPUT_SCHEMA
     | typeof COMPARISON_OUTPUT_SCHEMA
     | typeof READING_OUTPUT_SCHEMA
@@ -87,6 +90,8 @@ function constrainedSchema(input: ModelRequest) {
     return dossierOutputJsonSchema;
   if (input.outputSchema === RESEARCH_TOOL_SCHEMA)
     return researchToolJsonSchema;
+  if (input.outputSchema === SOURCE_SEARCH_TOOL_SCHEMA)
+    return sourceSearchToolJsonSchema;
   if (input.outputSchema === DOSSIER_OUTPUT_SCHEMA)
     return dossierOutputJsonSchema;
   if (input.outputSchema === MANUSCRIPT_OUTPUT_SCHEMA)
@@ -167,6 +172,7 @@ export function providerRequest(input: ModelRequest): {
               response_format:
                 input.outputSchema === RESEARCH_REPORT_SCHEMA ||
                 input.outputSchema === RESEARCH_TOOL_SCHEMA ||
+                input.outputSchema === SOURCE_SEARCH_TOOL_SCHEMA ||
                 input.outputSchema === DOSSIER_OUTPUT_SCHEMA ||
                 input.outputSchema === COMPARISON_OUTPUT_SCHEMA ||
                 input.outputSchema === READING_OUTPUT_SCHEMA ||

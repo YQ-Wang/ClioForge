@@ -27,6 +27,9 @@ const projectTables = [
   'research_watches',
   'research_inbox',
   'missions',
+  'source_search_runs',
+  'source_search_candidates',
+  'source_leads',
   'mission_tasks',
   'research_methods',
   'task_corrections',
@@ -43,6 +46,10 @@ const projectTables = [
   'ingestion_items',
 ] as const;
 const relatedTables = [
+  [
+    'library_records',
+    'id IN (SELECT record_id FROM source_search_candidates WHERE project_id=?) OR id IN (SELECT record_id FROM source_leads WHERE project_id=?)',
+  ],
   [
     'mission_boards',
     'mission_id IN (SELECT id FROM missions WHERE project_id=?)',
@@ -103,7 +110,9 @@ export async function projectArchive(
   // login data, model keys, invitations and active lease tokens are excluded.
   const results = await store.db.batch<Record<string, unknown>>(
     queries.map(([table, where]) =>
-      store.db.prepare(`SELECT * FROM ${table} WHERE ${where}`).bind(projectId),
+      store.db
+        .prepare(`SELECT * FROM ${table} WHERE ${where}`)
+        .bind(...Array.from(where.matchAll(/\?/g), () => projectId)),
     ),
   );
   await store.project(projectId);

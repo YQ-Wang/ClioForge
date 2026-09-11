@@ -205,6 +205,76 @@ void test('backup round trip preserves originals, note versions, links and searc
       input: taskInputSchema.parse({ version_ids: [original.version] }),
     })),
   });
+  const recordId = 'crossref:10.1000/backup-test';
+  const leadId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO library_records(id,provider,external_id,title,creators,languages,landing_url,access_status,metadata,harvested_at)
+         VALUES(?,?,?,?,?,?,?,?,?,?)`,
+      )
+      .bind(
+        recordId,
+        'crossref',
+        '10.1000/backup-test',
+        'A relevant source needing its original',
+        JSON.stringify(['Test Researcher']),
+        JSON.stringify(['en']),
+        'https://doi.org/10.1000/backup-test',
+        'metadata',
+        JSON.stringify({ provider: 'crossref' }),
+        createdAt,
+      ),
+    db
+      .prepare(
+        `INSERT INTO source_search_runs(id,project_id,created_by,request,selection_criteria,locale,model_id,reasoning_effort,max_steps,search_provider,created_at)
+         VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
+      )
+      .bind(
+        mission,
+        original.project.id,
+        original.owner.id,
+        'Find exact archival sources.',
+        'Require direct chronological relevance and stable institutional metadata.',
+        'en',
+        'accounts/fireworks/models/kimi-k3',
+        'max',
+        8,
+        'catalogs',
+        createdAt,
+      ),
+    db
+      .prepare(
+        `INSERT INTO source_search_candidates(run_id,project_id,record_id,verification_level,decision,relevance_reason,updated_at)
+         VALUES(?,?,?,?,?,?,?)`,
+      )
+      .bind(
+        mission,
+        original.project.id,
+        recordId,
+        'abstract',
+        'needs_file',
+        'Directly relevant but no public original was resolved.',
+        createdAt,
+      ),
+    db
+      .prepare(
+        `INSERT INTO source_leads(id,project_id,record_id,run_id,status,access_note,relevance_reason,created_at,updated_at)
+         VALUES(?,?,?,?,?,?,?,?,?)`,
+      )
+      .bind(
+        leadId,
+        original.project.id,
+        recordId,
+        mission,
+        'needs_file',
+        'Upload a lawful copy later.',
+        'Directly relevant.',
+        createdAt,
+        createdAt,
+      ),
+  ]);
   await missions.control(mission, 'start');
   await moveBoardTask(missions, original.project.id, mission, {
     task_id: manual,
@@ -298,6 +368,25 @@ void test('backup round trip preserves originals, note versions, links and searc
     )?.limit_units,
     0,
   );
+  const restoredRun = await db
+    .prepare(
+      'SELECT selection_criteria,reasoning_effort FROM source_search_runs WHERE project_id=?',
+    )
+    .bind(start.project_id)
+    .first<{ selection_criteria: string; reasoning_effort: string }>();
+  assert.equal(restoredRun?.reasoning_effort, 'max');
+  assert.match(restoredRun?.selection_criteria || '', /chronological/);
+  const restoredLead = await db
+    .prepare(
+      `SELECT l.status,r.title FROM source_leads l
+       JOIN library_records r ON r.id=l.record_id WHERE l.project_id=?`,
+    )
+    .bind(start.project_id)
+    .first<{ status: string; title: string }>();
+  assert.deepEqual(restoredLead, {
+    status: 'needs_file',
+    title: 'A relevant source needing its original',
+  });
   assert.equal(
     (
       await db

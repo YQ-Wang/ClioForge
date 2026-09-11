@@ -24,6 +24,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Install browser for end-to-end tests
+        run: npx playwright install --with-deps chromium
       - name: Preserve existing migrations
         env:
           BASE_REVISION: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -36,6 +38,7 @@ jobs:
       - run: npm run check
       - run: npm run format:check
       - run: npm test
+      - run: npm run test:e2e
       - run: npm run build:cloudflare
       - run: npm run check:jobs
   secrets:
