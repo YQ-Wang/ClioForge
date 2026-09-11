@@ -13,7 +13,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'npm run start',
+    command: 'npm run start -- --port 8788',
     url: 'http://127.0.0.1:8788/?workspace=1',
     timeout: 120_000,
     reuseExistingServer: false,
