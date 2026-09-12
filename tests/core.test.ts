@@ -7421,6 +7421,9 @@ void test('source-search import downloads a bounded public original into project
     access_status: 'open' as const,
     snippet: 'A public transcript.',
     verification_level: 'full_text' as const,
+    download_status: 'verified' as const,
+    resolved_media_type: 'text/plain',
+    resolution_note: 'Synthetic verified download.',
   };
   const memory = {
     version: 1 as const,

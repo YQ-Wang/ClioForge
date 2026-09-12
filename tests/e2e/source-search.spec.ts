@@ -127,6 +127,7 @@ test('AI source search remains available in source management and renders persis
     ) {
       const body = request.postDataJSON();
       expect(body.effort).toBe('max');
+      expect(body.max_steps).toBe(32);
       expect(body.query).toContain('癸巳京察');
       expect(body.selection_criteria).toContain('一手史料');
       await route.fulfill({

@@ -395,9 +395,12 @@ export async function executeMissionTask(
                   : dep.result,
         ),
       );
-      if (new TextEncoder().encode(dependencyText).length > 100000)
+      const dependencyByteLimit = task.input.parameters.source_agent_stage
+        ? 400_000
+        : 100_000;
+      if (new TextEncoder().encode(dependencyText).length > dependencyByteLimit)
         throw new Error(
-          '上游结果超过单步阅读范围，请拆分研究计划；尚未调用模型。',
+          '上游结果超过当前模型上下文的安全范围，请拆分研究计划；尚未调用模型。',
         );
       const correction = await outputRetryFeedback(store, task);
       await createJob(

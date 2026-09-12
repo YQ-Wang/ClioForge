@@ -49,6 +49,47 @@ export const sourceSearchToolJsonSchema = {
           additionalProperties: false,
         },
         sourceResultTool('inspect_result'),
+        {
+          type: 'object',
+          properties: {
+            tool: { type: 'string', enum: ['triage_results'] },
+            decisions: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 10,
+              items: {
+                type: 'object',
+                properties: {
+                  result_id: {
+                    type: 'string',
+                    minLength: 1,
+                    maxLength: 1000,
+                  },
+                  decision: {
+                    type: 'string',
+                    enum: ['shortlist', 'reject'],
+                  },
+                  reason: {
+                    type: 'string',
+                    minLength: 1,
+                    maxLength: 1000,
+                  },
+                  evidence: {
+                    type: 'string',
+                    minLength: 1,
+                    maxLength: 500,
+                    description:
+                      'Exact short text copied from the displayed candidate title, creator, date, institution, collection, or snippet.',
+                  },
+                },
+                required: ['result_id', 'decision', 'reason', 'evidence'],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ['tool', 'decisions'],
+          additionalProperties: false,
+        },
         sourceResultTool('resolve_full_text'),
         sourceResultTool('import_source'),
         {

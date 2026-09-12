@@ -63,6 +63,7 @@ export default function SourceDiscovery({
     defaultSourceSelectionCriteria(locale),
   );
   const [effort, setEffort] = useState<'low' | 'high' | 'max'>('max');
+  const [maxSteps, setMaxSteps] = useState('32');
   const [provider, setProvider] = useState<'catalogs' | 'brave' | 'tavily'>(
     'catalogs',
   );
@@ -115,7 +116,7 @@ export default function SourceDiscovery({
           selection_criteria: selectionCriteria,
           locale,
           effort,
-          max_steps: 8,
+          max_steps: Number(maxSteps),
           search_provider: provider,
         },
       );
@@ -235,11 +236,28 @@ export default function SourceDiscovery({
                   </NativeSelectOption>
                 </NativeSelect>
               </label>
+              <label>
+                {L('研究深度', 'Research depth')}
+                <NativeSelect
+                  value={maxSteps}
+                  onChange={(event) => setMaxSteps(event.target.value)}
+                >
+                  <NativeSelectOption value="16">
+                    {L('16（快速）', '16 (quick)')}
+                  </NativeSelectOption>
+                  <NativeSelectOption value="32">
+                    {L('32（推荐）', '32 (recommended)')}
+                  </NativeSelectOption>
+                  <NativeSelectOption value="64">
+                    {L('64（持续深入）', '64 (extended)')}
+                  </NativeSelectOption>
+                </NativeSelect>
+              </label>
             </div>
             <small>
               {L(
-                '默认执行最多 8 个代理步骤。可安全取得的公开原件会自动导入；其余相关记录保存为待补资料。',
-                'Runs at most 8 agent operations. Safely retrievable public originals are imported; other relevant records become source leads.',
+                '代理会自行决定何时完成；每轮最多批量核查 10 条，64 步只是防失控的紧急上限。模型输出使用助手设置中的数值，资料检索不另设 1,024/4,096 token 上限。',
+                'The agent decides when it is finished; each triage reviews up to 10 records and 64 operations is only a runaway guard. Output uses Assistant Settings, with no separate 1,024/4,096-token source-search cap.',
               )}
             </small>
             <Button

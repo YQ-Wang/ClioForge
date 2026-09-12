@@ -1,4 +1,8 @@
-import type { SourceCandidate } from '../harness/source-search-tools';
+import {
+  sourceCandidates,
+  type SourceCandidate,
+  type SourceSearchMemory,
+} from '../harness/source-search-tools';
 
 export type SourceSearchCase = {
   id: string;
@@ -6,6 +10,7 @@ export type SourceSearchCase = {
   request: string;
   anchors: string[];
   exclusions: string[];
+  knownRelevantTitles?: string[];
 };
 
 export const sourceSearchCases: SourceSearchCase[] = [
@@ -15,7 +20,31 @@ export const sourceSearchCases: SourceSearchCase[] = [
     request:
       '检索万历国本之争、1593 年癸巳京察、内阁人事与东林群体形成的一手史料和中英文研究；排除古罗马铭文、当代中国政治和只因出现“党争”二字而命中的材料。',
     anchors: ['万历', '国本', '癸巳京察', '1593', 'donglin', 'succession'],
-    exclusions: ['roma', 'roman inscription', 'communist party', '当代中国'],
+    exclusions: [
+      'roma',
+      'roman inscription',
+      'communist party',
+      '中国共产党',
+      '中共',
+      '当代中国',
+      'putin',
+      'russian democracy',
+      '日本产业',
+      'marketing academy',
+      'mechanical engineers',
+      'safavid',
+    ],
+    knownRelevantTitles: [
+      '明代京察访单之研究',
+      'a decade of considerable significance',
+      '东林党与王锡爵内阁',
+      '阁部冲突与明万历朝的党争',
+      '東林黨考',
+      '明代内阁与吏部铨选权之争',
+      '明神宗实录',
+      '万历疏钞',
+      '东林始末',
+    ],
   },
   {
     id: 'han-frontier-governance',
@@ -103,14 +132,84 @@ export function evaluateCandidates(
   const excluded = candidates.filter((_, index) =>
     testCase.exclusions.some((term) => texts[index].includes(normalize(term))),
   );
+  const knownRelevant = candidates.filter((_, index) =>
+    (testCase.knownRelevantTitles || []).some((term) =>
+      texts[index].includes(normalize(term)),
+    ),
+  );
   return {
     candidate_count: candidates.length,
-    anchor_coverage: covered.length / testCase.anchors.length,
-    covered_anchors: covered,
-    exclusion_hits: excluded.map((candidate) => candidate.id),
-    clean_precision_proxy:
-      candidates.length === 0
-        ? 0
-        : (candidates.length - excluded.length) / candidates.length,
+    topic_term_coverage: covered.length / testCase.anchors.length,
+    covered_topic_terms: covered,
+    explicit_noise_hits: excluded.map((candidate) => candidate.id),
+    explicit_noise_hit_rate:
+      candidates.length === 0 ? 0 : excluded.length / candidates.length,
+    known_relevant_title_hits: knownRelevant.map((candidate) => candidate.id),
+    known_relevant_title_hit_count: knownRelevant.length,
+  };
+}
+
+const rate = (numerator: number, denominator: number) =>
+  denominator ? numerator / denominator : 0;
+
+export function evaluateSourceSearchRun(
+  testCase: SourceSearchCase,
+  memory: SourceSearchMemory,
+) {
+  const candidates = sourceCandidates(memory);
+  const inspected = new Set<string>();
+  const resolutionAttempted = new Set<string>();
+  const retained = new Set<string>();
+  const rejected = new Set<string>();
+  const unsupportedClaims: number[] = [];
+  for (const [index, step] of memory.steps.entries()) {
+    const action = step.action;
+    if (action.tool === 'inspect_result') inspected.add(action.result_id);
+    if (action.tool === 'resolve_full_text') {
+      inspected.add(action.result_id);
+      resolutionAttempted.add(action.result_id);
+    }
+    if (action.tool === 'save_source_lead' || action.tool === 'import_source')
+      retained.add(action.result_id);
+    if (action.tool === 'reject_result') rejected.add(action.result_id);
+    if (action.tool === 'triage_results')
+      for (const item of action.decisions) {
+        inspected.add(item.result_id);
+        if (item.decision === 'reject') rejected.add(item.result_id);
+      }
+    if (
+      /(?:已?排除|rejected?|excluded?)/i.test(step.outcome) &&
+      action.tool !== 'reject_result' &&
+      !(
+        action.tool === 'triage_results' &&
+        action.decisions.some((item) => item.decision === 'reject')
+      )
+    )
+      unsupportedClaims.push(index);
+  }
+  const ids = new Set(candidates.keys());
+  const terminal = new Set([...retained, ...rejected]);
+  const contradictory = [...retained].filter((id) => rejected.has(id));
+  const lexical = evaluateCandidates(testCase, [...candidates.values()]);
+  const finished = memory.steps.some((step) => step.action.tool === 'finish');
+  return {
+    ...lexical,
+    inspected_count: inspected.size,
+    resolution_attempted_count: resolutionAttempted.size,
+    retained_count: retained.size,
+    rejected_count: rejected.size,
+    terminal_decision_count: terminal.size,
+    undecided_count: [...ids].filter((id) => !terminal.has(id)).length,
+    unreviewed_count: [...ids].filter((id) => !inspected.has(id)).length,
+    inspection_coverage: rate(inspected.size, ids.size),
+    disposition_coverage: rate(terminal.size, ids.size),
+    unreviewed_rate: rate(
+      [...ids].filter((id) => !inspected.has(id)).length,
+      ids.size,
+    ),
+    contradictory_dispositions: contradictory,
+    finished,
+    budget_exhausted: memory.stopped && !finished,
+    unsupported_workflow_claim_steps: unsupportedClaims,
   };
 }

@@ -8,7 +8,7 @@ import {
   runConnectorSearch,
   type SearchCredentials,
 } from '../search/connectors';
-import { fixedJson, safeDownload } from '../search/safe-fetch';
+import { fixedJson, safeDownload, safePublicUrl } from '../search/safe-fetch';
 import type { MissionTask, TaskResult } from '../platform/types';
 import {
   priorSourceSearch,
@@ -110,30 +110,115 @@ async function markCandidate(
     .run();
 }
 
-async function resolveCandidate(
+function resolutionHint(raw: string) {
+  if (!raw) return '';
+  const upgraded = raw.replace(
+    /^http:\/\/hdl\.handle\.net\//i,
+    'https://hdl.handle.net/',
+  );
+  try {
+    return safePublicUrl(upgraded).href;
+  } catch {
+    return '';
+  }
+}
+
+function htmlDownloadLinks(html: string, base: string) {
+  const values: string[] = [];
+  const pattern = /(?:href|content)\s*=\s*["']([^"']+)["']/gi;
+  for (const match of html.matchAll(pattern)) {
+    const raw = match[1].replaceAll('&amp;', '&');
+    if (
+      !/(?:\.pdf(?:$|[?#])|\/bitstream\/|viewcontent\.cgi|\/download(?:$|[/?#]))/i.test(
+        raw,
+      )
+    )
+      continue;
+    try {
+      values.push(new URL(raw, base).href);
+    } catch {
+      // Ignore malformed links in untrusted repository HTML.
+    }
+  }
+  return values;
+}
+
+export async function resolveSourceCandidate(
   candidate: SourceCandidate,
   request: typeof fetch,
 ) {
-  let resolved = { ...candidate };
-  if (!resolved.download_url && resolved.doi) {
-    const url = `https://api.openalex.org/works/https://doi.org/${encodeURIComponent(resolved.doi)}`;
+  const hints = new Set<string>();
+  const addHint = (raw: string) => {
+    const value = resolutionHint(raw);
+    if (value) hints.add(value);
+  };
+  addHint(candidate.download_url);
+  if (/hdl\.handle\.net/i.test(candidate.landing_url))
+    addHint(candidate.landing_url);
+  if (candidate.doi) {
+    const url = `https://api.openalex.org/works/https://doi.org/${encodeURIComponent(candidate.doi)}`;
     try {
       const raw = (await fixedJson(url, ['api.openalex.org'], request)) as any;
-      const location = raw?.best_oa_location || raw?.primary_location || {};
-      const download = String(location?.pdf_url || '');
-      if (download.startsWith('https://'))
-        resolved = {
-          ...resolved,
-          download_url: download,
-          license: String(location?.license || resolved.license),
-          rights: String(location?.license || resolved.rights),
-          access_status: 'open',
-        };
+      const locations = [
+        raw?.best_oa_location,
+        raw?.primary_location,
+        ...(Array.isArray(raw?.locations) ? raw.locations : []),
+      ].filter(Boolean);
+      for (const location of locations) {
+        addHint(String(location?.pdf_url || ''));
+        if (
+          /repository|digitalcommons|handle|dspace/i.test(
+            String(location?.landing_page_url || ''),
+          )
+        )
+          addHint(String(location?.landing_page_url || ''));
+      }
     } catch {
-      // A failed resolver is represented as a lead, never as evidence of absence.
+      // Resolver sources are best-effort; each concrete hint is still probed below.
     }
   }
-  return sourceCandidate.parse(resolved);
+  if (!hints.size && candidate.landing_url) addHint(candidate.landing_url);
+
+  let probes = 0;
+  let note = 'No safe public full-text URL was advertised.';
+  for (const hint of hints) {
+    if (probes >= 4) break;
+    probes++;
+    try {
+      const downloaded = await safeDownload(hint, request);
+      if (downloaded.mediaType === 'text/html') {
+        note =
+          'An advertised URL returned an HTML landing page, not a verified file.';
+        const html = new TextDecoder().decode(
+          downloaded.bytes.slice(0, 1_000_000),
+        );
+        for (const link of htmlDownloadLinks(html, downloaded.url))
+          addHint(link);
+        continue;
+      }
+      return sourceCandidate.parse({
+        ...candidate,
+        download_url: downloaded.url,
+        download_status: 'verified',
+        resolved_media_type: downloaded.mediaType,
+        resolution_note:
+          'A public file was fetched and its media type was verified.',
+        access_status: candidate.access_status === 'open' ? 'open' : 'public',
+      });
+    } catch (error) {
+      note =
+        error instanceof Error
+          ? `Advertised copy could not be verified: ${error.message.slice(0, 500)}`
+          : 'Advertised copy could not be verified.';
+    }
+  }
+  return sourceCandidate.parse({
+    ...candidate,
+    download_url: '',
+    download_status: 'unavailable',
+    resolved_media_type: '',
+    resolution_note: note,
+  });
 }
 
 function plainText(bytes: Uint8Array, mediaType: string) {
@@ -159,6 +244,8 @@ async function importCandidate(
   if (!runtime.files)
     throw new Error('Original-file storage is not configured');
   if (!candidate.download_url) throw new Error('No resolved download URL');
+  if (candidate.download_status !== 'verified')
+    throw new Error('The advertised download has not been verified');
   if (!['open', 'public'].includes(candidate.access_status))
     throw new Error('The candidate is not marked for public/open access');
   const downloaded = await safeDownload(
@@ -348,6 +435,35 @@ export async function sourceSearchTool(
       `返回 ${candidates.length} 条候选；${unavailable.length} 个连接器不可用。候选元数据尚不是史料证据。`,
       `${candidates.length} candidates returned; ${unavailable.length} connectors unavailable. Candidate metadata is not historical evidence.`,
     );
+  } else if (action.tool === 'triage_results') {
+    for (const item of action.decisions) {
+      const current = known.get(item.result_id);
+      if (!current)
+        throw new Error('Candidate is not in the source-search ledger');
+      const shortlisted = item.decision === 'shortlist';
+      const inspected = sourceCandidate.parse({
+        ...current,
+        verification_level:
+          current.verification_level === 'metadata' && current.snippet
+            ? 'abstract'
+            : current.verification_level,
+      });
+      candidates.push(inspected);
+      await markCandidate(
+        store,
+        task,
+        inspected,
+        shortlisted ? 'verified' : 'rejected',
+        item.reason,
+      );
+    }
+    const shortlisted = action.decisions.filter(
+      (item) => item.decision === 'shortlist',
+    ).length;
+    outcome = L(
+      `已逐项记录批量核查：${shortlisted} 条列入候选，${action.decisions.length - shortlisted} 条排除。`,
+      `Batch triage recorded item by item: ${shortlisted} shortlisted and ${action.decisions.length - shortlisted} rejected.`,
+    );
   } else {
     const current = known.get(action.result_id);
     if (!current)
@@ -373,12 +489,13 @@ export async function sourceSearchTool(
         'Bibliographic metadata and available abstract inspected.',
       );
     } else if (action.tool === 'resolve_full_text') {
-      const resolved = await resolveCandidate(
+      const resolved = await resolveSourceCandidate(
         current,
         runtime.request || fetch,
       );
       candidates = [resolved];
       const downloadable =
+        resolved.download_status === 'verified' &&
         !!resolved.download_url &&
         ['open', 'public'].includes(resolved.access_status);
       await markCandidate(
@@ -408,7 +525,10 @@ export async function sourceSearchTool(
         action.reason,
         'Automatic public full-text resolution did not succeed.',
       );
-      outcome = action.reason;
+      outcome = L(
+        '已在尝试解析全文后保存为待补资料。',
+        'Saved as an actionable source lead after full-text resolution was attempted.',
+      );
     } else {
       try {
         const imported = await importCandidate(store, task, current, runtime);

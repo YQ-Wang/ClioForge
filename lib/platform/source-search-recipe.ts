@@ -10,7 +10,7 @@ const optionsSchema = z.object({
   input_rate: z.number().positive().max(10000),
   output_rate: z.number().positive().max(10000),
   max_output: z.number().int().min(512).default(16384),
-  max_steps: z.number().int().min(2).max(12).default(8),
+  max_steps: z.number().int().min(2).max(64).default(32),
   effort: z.enum(['low', 'high', 'max']).default('max'),
   search_provider: z.enum(['catalogs', 'brave', 'tavily']).default('catalogs'),
 });

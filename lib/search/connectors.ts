@@ -4,7 +4,7 @@ import type {
   SourceSearchAction,
 } from '../harness/source-search-tools';
 import { sourceCandidate } from '../harness/source-search-tools';
-import { fixedJson } from './safe-fetch';
+import { fixedJson, safePublicUrl } from './safe-fetch';
 
 export type SearchCredentials = {
   webProvider?: 'brave' | 'tavily';
@@ -57,8 +57,21 @@ function candidate(
     access_status: 'metadata',
     snippet: '',
     verification_level: 'metadata',
+    download_status: 'unknown',
+    resolved_media_type: '',
+    resolution_note: '',
     ...value,
   };
+}
+
+function publicHttpsHint(raw: unknown) {
+  const value = text(raw);
+  if (!value) return '';
+  try {
+    return safePublicUrl(value).href;
+  } catch {
+    return '';
+  }
 }
 
 function dateParts(value: unknown) {
@@ -89,7 +102,7 @@ async function crossref(query: string, request: typeof fetch) {
       doi,
       license,
       rights: license,
-      access_status: license ? 'open' : 'metadata',
+      access_status: 'metadata',
       snippet: text(item?.abstract)
         .replace(/<[^>]+>/g, ' ')
         .slice(0, 8000),
@@ -118,6 +131,7 @@ async function openalex(query: string, request: typeof fetch) {
   return array(raw?.results).map((item: any) => {
     const id = text(item?.id).split('/').pop() || text(item?.doi);
     const oa = item?.best_oa_location || {};
+    const download = publicHttpsHint(oa?.pdf_url);
     const doi = text(item?.doi).replace(/^https:\/\/doi\.org\//i, '');
     const snippet = openAlexAbstract(item?.abstract_inverted_index);
     return candidate('openalex', id, {
@@ -140,10 +154,11 @@ async function openalex(query: string, request: typeof fetch) {
         ),
       ).join(' · '),
       doi,
-      download_url: text(oa?.pdf_url),
+      download_url: download,
       rights: text(oa?.license),
       license: text(oa?.license),
       access_status: oa?.is_oa ? 'open' : 'metadata',
+      download_status: download ? 'candidate' : 'unknown',
       snippet: snippet.slice(0, 8000),
       verification_level: snippet ? 'abstract' : 'metadata',
     });
@@ -175,6 +190,7 @@ async function loc(query: string, request: typeof fetch) {
       download_url: downloads[0] || '',
       rights: text(item?.rights || item?.rights_advisory),
       access_status: item?.online_format ? 'public' : 'metadata',
+      download_status: downloads[0] ? 'candidate' : 'unknown',
       snippet: strings(item?.description).join(' ').slice(0, 8000),
     });
   });
@@ -247,6 +263,7 @@ async function harvard(query: string, request: typeof fetch) {
         new Set(['accessCondition', 'rights']),
       ).join(' · '),
       access_status: rawObject ? 'public' : 'metadata',
+      download_status: rawObject ? 'candidate' : 'unknown',
       snippet: recursiveStrings(
         item,
         new Set(['abstract', 'note', 'tableOfContents']),
