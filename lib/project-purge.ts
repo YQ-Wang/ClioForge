@@ -72,6 +72,8 @@ export async function purgeProject(
     'DELETE FROM bibliography_history WHERE entry_id IN (SELECT id FROM bibliography_entries WHERE project_id=?)',
     'DELETE FROM source_origins WHERE source_id IN (SELECT id FROM sources WHERE project_id=?)',
     ...[
+      'source_derivations',
+      'ocr_batches',
       'agent_credentials',
       'project_invitations',
       'claim_evidence',

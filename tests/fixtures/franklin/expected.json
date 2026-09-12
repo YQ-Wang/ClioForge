@@ -1,0 +1,108 @@
+{
+  "dataset": "https://purl.stanford.edu/wb524rz2367",
+  "rights_metadata": "https://purl.stanford.edu/wb524rz2367.mods",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "attribution": "Claire Rydell Arcenas and Caroline Winterer, Correspondence Network of Benjamin Franklin During the London Years: Letters, People, Places (2016), Stanford Digital Repository",
+  "inputs": [
+    {
+      "file": "Papers.csv",
+      "url": "https://stacks.stanford.edu/file/druid:wb524rz2367/Papers.csv",
+      "bytes": 1030240,
+      "sha256": "1bd045d85276117bcf6ea8bed2a98a70d3375d73cd712fce7e5585f18b03f653",
+      "rows": 3443
+    },
+    {
+      "file": "People.csv",
+      "url": "https://stacks.stanford.edu/file/druid:wb524rz2367/People.csv",
+      "bytes": 52487,
+      "sha256": "04435bbcb4a0ab851ec75a1c48fa84321edccb0a59a3ed1da30a47c652607f53",
+      "rows": 774
+    },
+    {
+      "file": "Places.csv",
+      "url": "https://stacks.stanford.edu/file/druid:wb524rz2367/Places.csv",
+      "bytes": 18603,
+      "sha256": "d7be88c251f7da11b3fae566349dd225b44d6c45e05b9bb53c168ef098025aa9",
+      "rows": 339
+    }
+  ],
+  "distinct_document_ids": 3443,
+  "date_string_precision": {
+    "day_shaped_string": {
+      "count": 3258,
+      "denominator": 3443,
+      "percent": 94.6268
+    },
+    "year_only": {
+      "count": 185,
+      "denominator": 3443,
+      "percent": 5.3732
+    }
+  },
+  "empty_fields": {
+    "Letter Date": {
+      "count": 0,
+      "denominator": 3443,
+      "percent": 0.0
+    },
+    "SourceCity": {
+      "count": 66,
+      "denominator": 3443,
+      "percent": 1.9169
+    },
+    "DestinationCity": {
+      "count": 480,
+      "denominator": 3443,
+      "percent": 13.9413
+    },
+    "Source": {
+      "count": 35,
+      "denominator": 3443,
+      "percent": 1.0166
+    },
+    "Destination": {
+      "count": 438,
+      "denominator": 3443,
+      "percent": 12.7215
+    }
+  },
+  "both_city_fields_present": {
+    "count": 2934,
+    "denominator": 3443,
+    "percent": 85.2164
+  },
+  "either_city_field_absent": {
+    "count": 509,
+    "denominator": 3443,
+    "percent": 14.7836
+  },
+  "both_location_fields_present": {
+    "count": 2998,
+    "denominator": 3443,
+    "percent": 87.0752
+  },
+  "either_location_field_absent": {
+    "count": 445,
+    "denominator": 3443,
+    "percent": 12.9248
+  },
+  "both_locations_present_but_city_pair_incomplete": {
+    "count": 64,
+    "denominator": 3443,
+    "percent": 1.8588
+  },
+  "franklin_author_exact_string": 1520,
+  "franklin_author_including_colon_delimited_coauthors": 1557,
+  "recipient_unspecified_literal": {
+    "count": 365,
+    "denominator": 3443,
+    "percent": 10.6012
+  },
+  "limitations": [
+    "Counts describe the downloaded release, not all surviving letters or the whole Republic of Letters.",
+    "The corpus includes documents other than letters. Empty places may be unknown or inapplicable; the script does not distinguish them.",
+    "A day-shaped date does not prove exact dating: the schema describes replacing some date ranges with their beginning.",
+    "Colon-delimited author tokens are counted as released; identities have not been independently adjudicated.",
+    "No modern Yale letter texts or linked images were fetched; no LLM calls, productivity measurement, or historical discovery is claimed."
+  ]
+}

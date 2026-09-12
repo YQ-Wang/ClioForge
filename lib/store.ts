@@ -1,3 +1,4 @@
+import { unchangedOcrPage } from './ocr-candidates';
 import { indexVersion } from './platform/search';
 import { parseRichDocument, richMarkdown } from './rich-document';
 import { withNoteState, type NoteState } from './notes';
@@ -31,6 +32,9 @@ type RevisionInput = {
   p_expected: number;
   p_pages: unknown;
   p_method: string;
+  p_ocr_run?: string;
+  p_page?: number;
+  p_reason?: string;
 };
 type NoteInput = {
   p_id?: string;
@@ -255,7 +259,7 @@ export class ResearchStore {
       throw new HttpError(400, '上传大小无效。');
     const result = await this.db
       .prepare(
-        'INSERT INTO upload_reservations(id,owner_id,project_id,bytes,created_at) SELECT ?,?,?,?,? WHERE COALESCE((SELECT SUM(bytes) FROM upload_reservations WHERE owner_id=?),0)+?<=? AND COALESCE((SELECT SUM(bytes) FROM upload_reservations),0)+?<=?',
+        'INSERT INTO upload_reservations(id,owner_id,project_id,bytes,created_at) SELECT ?,?,?,?,? WHERE COALESCE((SELECT SUM(bytes) FROM upload_reservations WHERE owner_id=?),0)+COALESCE((SELECT SUM(storage_reserved) FROM ocr_batches WHERE owner_id=?),0)+?<=? AND COALESCE((SELECT SUM(bytes) FROM upload_reservations),0)+COALESCE((SELECT SUM(storage_reserved) FROM ocr_batches),0)+?<=?',
       )
       .bind(
         id,
@@ -263,6 +267,7 @@ export class ResearchStore {
         projectId,
         bytes,
         now(),
+        this.owner,
         this.owner,
         bytes,
         USER_STORAGE_BYTES,
@@ -345,25 +350,89 @@ export class ResearchStore {
       !Number.isSafeInteger(input.p_expected)
     )
       throw new HttpError(400, '版本参数无效。');
+    const parent = await this.db
+      .prepare(
+        'SELECT id,pages FROM source_versions WHERE source_id=? AND revision=?',
+      )
+      .bind(source.id, input.p_expected)
+      .first<{ id: string; pages: string }>();
+    if (!parent) throw new HttpError(409, '资料版本已变化，请刷新。');
+    if (input.p_ocr_run) {
+      const run = await this.run(input.p_ocr_run);
+      if (
+        input.p_method !== 'ocr-reviewed' ||
+        !run ||
+        run.project_id !== source.project_id ||
+        run.kind !== 'ocr' ||
+        run.status !== 'succeeded' ||
+        !run.result ||
+        run.source_version_ids.length !== 1 ||
+        run.model_snapshot.page !== input.p_page
+      )
+        throw new HttpError(400, '转录候选与所保存的页面版本不匹配。');
+      const previous = JSON.parse(parent.pages) as PageText[];
+      const candidate = await this.version(run.source_version_ids[0]);
+      if (
+        !unchangedOcrPage(
+          candidate,
+          {
+            source_id: source.id,
+            project_id: source.project_id,
+            revision: input.p_expected,
+            pages: previous,
+          },
+          input.p_page!,
+        )
+      )
+        throw new HttpError(409, '该页原文已变化，请核查最新版本后重新转录。');
+      if (
+        input.p_pages.length !== previous.length ||
+        input.p_pages.some(
+          (p) =>
+            !previous.some(
+              (old) =>
+                old.page === p.page &&
+                (p.page === input.p_page || old.text === p.text),
+            ),
+        )
+      )
+        throw new HttpError(400, '转录核查只能修改对应页面。');
+    }
     const id = crypto.randomUUID();
     // One SQL statement makes the expected-version check and append atomic in D1.
-    const result = await this.db
-      .prepare(
-        'INSERT INTO source_versions(id,source_id,project_id,revision,pages,method,created_at) SELECT ?,?,?,?+1,?,?,? WHERE (SELECT MAX(revision) FROM source_versions WHERE source_id=?)=?',
-      )
-      .bind(
-        id,
-        source.id,
-        source.project_id,
-        input.p_expected,
-        JSON.stringify(input.p_pages),
-        input.p_method,
-        now(),
-        source.id,
-        input.p_expected,
-      )
-      .run();
-    if (!result.meta.changes)
+    const results = await this.db.batch([
+      this.db
+        .prepare(
+          'INSERT INTO source_versions(id,source_id,project_id,revision,pages,method,created_at) SELECT ?,?,?,?+1,?,?,? WHERE (SELECT MAX(revision) FROM source_versions WHERE source_id=?)=?',
+        )
+        .bind(
+          id,
+          source.id,
+          source.project_id,
+          input.p_expected,
+          JSON.stringify(input.p_pages),
+          input.p_method,
+          now(),
+          source.id,
+          input.p_expected,
+        ),
+      this.db
+        .prepare(
+          'INSERT INTO source_derivations(version_id,project_id,parent_version_id,run_id,page,reviewer,reason,created_at) SELECT ?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM source_versions WHERE id=?)',
+        )
+        .bind(
+          id,
+          source.project_id,
+          parent.id,
+          input.p_ocr_run || null,
+          input.p_page || null,
+          this.owner,
+          input.p_reason || input.p_method,
+          now(),
+          id,
+        ),
+    ]);
+    if (!results[0].meta.changes)
       throw new HttpError(409, '资料已有新版本，请刷新后再保存。');
     await indexVersion(this.db, await this.version(id));
     return id;

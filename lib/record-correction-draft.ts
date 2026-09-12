@@ -5,6 +5,10 @@ import { citationSchema } from './platform/types';
 // Drafts can contain temporarily empty labels and coverage while being edited.
 const correctionDataSchema = extractionSchema.extend({
   coverage: z.string().max(2000),
+  completeness: extractionSchema.shape.completeness
+    .unwrap()
+    .extend({ reason: z.string().max(2000) })
+    .optional(),
   records: z
     .array(
       extractionSchema.shape.records.element.extend({

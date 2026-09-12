@@ -244,6 +244,14 @@ before(async () => {
   ).split('\n'))
     if (statement.trim() && !statement.trim().startsWith('--'))
       await db.prepare(statement).run();
+  for (const statement of (
+    await fs.readFile(
+      new URL('../drizzle/0024_research_scale.sql', import.meta.url),
+      'utf8',
+    )
+  ).split('\n'))
+    if (statement.trim() && !statement.trim().startsWith('--'))
+      await db.prepare(statement).run();
 });
 after(async () => {
   await mf?.dispose();
@@ -3383,6 +3391,11 @@ function extracted(version: string, page: number, quote: string) {
         },
       ],
       coverage: 'Read the designated page only.',
+      completeness: {
+        status: 'complete',
+        remaining_records: 0,
+        reason: 'Synthetic fixture declares its whole page.',
+      },
     },
   };
 }
@@ -6958,4 +6971,38 @@ void test('a second local delivery failure can be explicitly recovered without a
       .first(),
     before,
   );
+});
+void test('partial extraction stops before downstream review until the researcher explicitly accepts its limitation', async () => {
+  const f = await extractionStudy();
+  await f.store.control(f.id, 'start');
+  const samples = f.draft.tasks.filter(
+    (t) => t.input.parameters.phase === 'sample',
+  );
+  for (const [index, t] of samples.entries()) {
+    const claim = await f.store.claim(t.id, 'test-model', 'model');
+    const page = t.input.page_refs![0].page;
+    const result = extracted(
+      f.version,
+      page,
+      (await f.owner.version(f.version)).pages[page - 1].text,
+    );
+    if (index === 0)
+      result.data.completeness = {
+        status: 'partial',
+        remaining_records: 5,
+        reason: 'Known output overflow; not a complete page.',
+      };
+    await f.store.submit(t.id, claim.lease, 'test-model', result);
+  }
+  const gate = f.draft.tasks.find((t) => t.input.parameters.gate === 'sample')!;
+  assert.equal((await f.store.task(samples[0].id)).status, 'review');
+  assert.equal((await f.store.task(gate.id)).status, 'blocked');
+  const partial = await f.store.task(samples[0].id);
+  await f.store.review(
+    partial.id,
+    'accepted',
+    'Accept only as a partial record; five records still require work.',
+    partial.revision,
+  );
+  assert.equal((await f.store.task(gate.id)).status, 'ready');
 });

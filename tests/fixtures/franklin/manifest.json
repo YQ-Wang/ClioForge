@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://stacks.stanford.edu/file/druid:wb524rz2367/Papers.csv",
+    "file": "Papers.csv",
+    "bytes": 1030240,
+    "sha256": "1bd045d85276117bcf6ea8bed2a98a70d3375d73cd712fce7e5585f18b03f653",
+    "data_rows": 3443,
+    "columns": [
+      "DocumentID",
+      "DocumentTitle",
+      "DocumentURL",
+      "Letter Date",
+      "Letter Year",
+      "PrimaryLanguage",
+      "AdditionalLanguage",
+      "Author",
+      "Recipient",
+      "SourceSmallest",
+      "SourceCity",
+      "SourceState",
+      "SourceCountry",
+      "Source",
+      "DestinationSmallest",
+      "DestinationCity",
+      "DestinationState",
+      "DestinationCountry",
+      "Destination"
+    ]
+  },
+  {
+    "url": "https://stacks.stanford.edu/file/druid:wb524rz2367/People.csv",
+    "file": "People.csv",
+    "bytes": 52487,
+    "sha256": "04435bbcb4a0ab851ec75a1c48fa84321edccb0a59a3ed1da30a47c652607f53",
+    "data_rows": 774,
+    "columns": [
+      "Name",
+      "Gender",
+      "Kin?",
+      "BirthYear",
+      "DeathYear",
+      "BirthPlace",
+      "Smallest Birth Place",
+      "Birth State",
+      "Birth Country"
+    ]
+  },
+  {
+    "url": "https://stacks.stanford.edu/file/druid:wb524rz2367/Places.csv",
+    "file": "Places.csv",
+    "bytes": 18603,
+    "sha256": "d7be88c251f7da11b3fae566349dd225b44d6c45e05b9bb53c168ef098025aa9",
+    "data_rows": 339,
+    "columns": ["Place Name", "Coordinates"]
+  }
+]

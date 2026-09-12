@@ -144,8 +144,8 @@ export default function MethodReportPanel({
       </p>
       <p className="muted">
         {L(
-          '仅汇总仍适用的人工评估，旧评估已排除；错误类别可能重叠，未核查页不视为正确。时间不含模型等待和资料准备。',
-          'Only applicable manual evaluations are included. Error categories can overlap; unreviewed pages are not presumed correct. Timing excludes model waits and preparation.',
+          '仅汇总仍适用的人工评估，旧评估已排除；错误类别可能重叠，未核查页不视为正确。上方仅比较审读时间；完整耗时请查看逐页评估或下载报告。',
+          'Only applicable manual evaluations are included. Error categories can overlap; unreviewed pages are not presumed correct. The summary compares review time only; see page evaluations or the downloaded report for complete timing.',
         )}
       </p>
       {!!report.pages.length && (

@@ -78,6 +78,7 @@ import StudyRecords from './study-records';
 import SeminarTranscript from './seminar-transcript';
 import ReviewDashboard from './review-dashboard';
 import MethodEvaluation from './method-evaluation';
+import MethodPackage from './method-package';
 import MethodReportPanel from './method-report';
 import EvidenceDiscussion from './evidence-discussion';
 import SemanticSearch from './semantic-search';
@@ -1602,6 +1603,11 @@ function MissionForm({
   const [synthesisInput, setSynthesisInput] = useState('');
   const [synthesisOutput, setSynthesisOutput] = useState('');
   const [methodText, setMethodText] = useState('');
+  const [methodTitle, setMethodTitle] = useState(
+    L('资料摘录与核查', 'Source extraction and review'),
+  );
+  const [methodProtocol, setMethodProtocol] =
+    useState<ResearchMethod['protocol']>();
   const selectedVersions = selected.flatMap((id) => {
     const version = versions
       .filter((v) => v.source_id === id)
@@ -1616,6 +1622,8 @@ function MissionForm({
   );
   const [pageLimit, setPageLimit] = useState(1000);
   const [pageOffset, setPageOffset] = useState(0);
+  const [calibrationPage, setCalibrationPage] = useState('');
+  const [validationPage, setValidationPage] = useState('');
   useEffect(() => {
     let active = true;
     void api<{ methods: typeof methods }>(
@@ -1677,6 +1685,7 @@ function MissionForm({
               method: {
                 title: formText(data, 'title'),
                 kind: recipe,
+                protocol: methodProtocol,
                 instructions:
                   formText(data, 'question') +
                   '\n' +
@@ -1694,6 +1703,16 @@ function MissionForm({
                 pageOffset +
                   Math.min(pageLimit, recipe === 'extract' ? 1000 : 24),
               ),
+              ...(recipe === 'extract' && (calibrationPage || validationPage)
+                ? {
+                    calibration_page: calibrationPage
+                      ? Number(calibrationPage) - 1
+                      : undefined,
+                    validation_page: validationPage
+                      ? Number(validationPage) - 1
+                      : undefined,
+                  }
+                : {}),
               model_id: modelId,
               input_rate: Number(inputRate),
               output_rate: Number(outputRate),
@@ -1818,6 +1837,8 @@ function MissionForm({
                     )?.body;
                     if (m) {
                       setRecipe(m.kind);
+                      setMethodProtocol(m.protocol);
+                      setMethodTitle(m.title);
                       setFields(m.fields.join(', '));
                       setMethodText(m.instructions);
                     }
@@ -2163,7 +2184,8 @@ function MissionForm({
         <Input
           name="title"
           required
-          defaultValue={L('资料摘录与核查', 'Source extraction and review')}
+          value={methodTitle}
+          onChange={(e) => setMethodTitle(e.target.value)}
         />
       </label>
       <label>
@@ -2271,6 +2293,77 @@ function MissionForm({
               `Selected sources contain ${pages.length} readable pages. After skipping ${pageOffset}, this round uses ${Math.min(pageLimit, recipe === 'extract' ? 1000 : 24, Math.max(0, pages.length - pageOffset))} pages, interleaved across sources; the workflow preserves each page selection.`,
             )}
           </p>
+          <MethodPackage
+            method={{
+              title: methodTitle,
+              kind: recipe,
+              instructions: methodText,
+              fields: fields
+                .split(/[,，、\n]+/)
+                .map((v) => v.trim())
+                .filter(Boolean),
+              protocol: methodProtocol,
+              version: methods.find((m) => m.id === saved)?.body.version || 1,
+            }}
+            onProtocol={setMethodProtocol}
+            onApply={(m) => {
+              setSaved('');
+              setMethodTitle(m.title);
+              setRecipe(m.kind);
+              setMethodText(m.instructions);
+              setFields(m.fields.join(', '));
+              setMethodProtocol(m.protocol);
+            }}
+          />
+          {recipe === 'extract' && (
+            <details>
+              <summary>
+                {L(
+                  '指定校准与独立核查页（可选）',
+                  'Choose calibration and held-out pages (optional)',
+                )}
+              </summary>
+              <p>
+                {L(
+                  '选择两页不同材料：一页用于纠正规则，一页检查规则是否适用。其余页仍保留在本轮。留空使用默认交错取样。',
+                  'Choose distinct pages: one to refine the rules, one to test them. Remaining pages stay in the run. Leave both blank for default interleaved sampling.',
+                )}
+              </p>
+              {[
+                ['calibration', calibrationPage, setCalibrationPage],
+                ['validation', validationPage, setValidationPage],
+              ].map(([kind, value, setter]) => (
+                <label key={String(kind)}>
+                  {kind === 'calibration'
+                    ? L('校准页', 'Calibration page')
+                    : L('独立核查页', 'Held-out page')}
+                  <NativeSelect
+                    value={value as string}
+                    onChange={(e) =>
+                      (setter as (v: string) => void)(e.target.value)
+                    }
+                  >
+                    <option value="">{L('自动', 'Automatic')}</option>
+                    {pages
+                      .slice(pageOffset, pageOffset + Math.min(pageLimit, 1000))
+                      .map((p, i) => (
+                        <option key={`${p.version_id}:${p.page}`} value={i + 1}>
+                          {
+                            sources.find(
+                              (s) =>
+                                s.id ===
+                                versions.find((v) => v.id === p.version_id)
+                                  ?.source_id,
+                            )?.title
+                          }{' '}
+                          · {L('页', 'p.')} {p.page}
+                        </option>
+                      ))}
+                  </NativeSelect>
+                </label>
+              ))}
+            </details>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -2282,6 +2375,7 @@ function MissionForm({
                 const method = {
                   title: formText(data, 'title'),
                   kind: recipe,
+                  protocol: methodProtocol,
                   instructions: formText(data, 'question'),
                   version:
                     methods.find((m) => m.id === saved)?.body.version || 1,

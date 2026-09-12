@@ -12,6 +12,17 @@ export const evaluationInput = z.object({
   review_minutes: z.number().min(0).max(100000),
   manual_minutes: z.number().min(0).max(100000).nullable(),
   notes: z.string().trim().min(1).max(4000),
+  scope_checked: z.enum(['whole', 'partial']).optional(),
+  chatgpt_minutes: z.number().min(0).max(100000).nullable().optional(),
+  timing: z
+    .object({
+      preparation_minutes: z.number().min(0).max(100000).nullable(),
+      configuration_minutes: z.number().min(0).max(100000).nullable(),
+      analysis_minutes: z.number().min(0).max(100000).nullable(),
+      writing_minutes: z.number().min(0).max(100000).nullable(),
+      waiting_minutes: z.number().min(0).max(100000).nullable(),
+    })
+    .optional(),
 });
 export type Evaluation = {
   id: string;
@@ -29,6 +40,8 @@ export type Evaluation = {
   metrics: z.infer<typeof evaluationInput> & {
     records: number;
     fields: number;
+    missing_fields?: number;
+    inferred_fields?: number;
   };
   created_at: string;
   created_by: string;
@@ -99,7 +112,25 @@ export async function saveEvaluation(
       id,
       task.mission_id,
       JSON.stringify(config),
-      JSON.stringify({ ...value, records, fields: investigation ? 0 : fields }),
+      JSON.stringify({
+        ...value,
+        records,
+        fields: investigation ? 0 : fields,
+        ...(!investigation && data.success
+          ? {
+              missing_fields: data.data.records.reduce(
+                (n, r) =>
+                  n + r.cells.filter((c) => c.status === 'missing').length,
+                0,
+              ),
+              inferred_fields: data.data.records.reduce(
+                (n, r) =>
+                  n + r.cells.filter((c) => c.status === 'inferred').length,
+                0,
+              ),
+            }
+          : {}),
+      }),
       JSON.stringify({ result: task.result, pages: task.input.page_refs }),
       store.owner,
       new Date().toISOString(),

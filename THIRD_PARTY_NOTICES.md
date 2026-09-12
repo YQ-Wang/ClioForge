@@ -20,3 +20,7 @@ The current ClioForge fan is original vector artwork. The Latin wordmark uses Ge
 References to Cloudflare, Google, Zotero and other services describe interoperability, not sponsorship. ClioForge does not incorporate Prove2Me code. When redistributing dependency bundles or font assets, retain the notices supplied with them.
 
 The public Adams example includes three historical paragraphs from Charles Francis Adams's 1876 edition, digitized as Project Gutenberg ebook 34123 by Carla Foust and the Online Distributed Proofreading team. It is public domain in the USA; [digital edition terms](public/examples/adams/GUTENBERG-LICENSE.txt) are retained with the downloads. See [Adams source rights](docs/adams-source-rights.md) for edition details and exclusions. This is not an openly licensed dump of the separate research pilot's modern archive sources.
+
+## Franklin research benchmark metadata
+
+`tests/fixtures/franklin/{Papers,People,Places}.csv`: Claire Rydell Arcenas and Caroline Winterer (2016), _Correspondence Network of Benjamin Franklin During the London Years: Letters, People, Places_, Stanford Digital Repository. [Source and citation](https://purl.stanford.edu/wb524rz2367). Licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); CSV files are unmodified. The accompanying counts are derived audits. No linked letter transcriptions or images are included. See the fixture README for scope and hashes.

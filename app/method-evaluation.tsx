@@ -1,4 +1,5 @@
 'use client';
+import { evaluationMetrics } from '@/lib/platform/evaluation-metrics';
 import { formText } from '@/lib/form-values';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -66,6 +67,20 @@ export default function MethodEvaluation({
                   ? Number(f.get('manual_minutes'))
                   : null,
                 notes: formText(f, 'notes'),
+                scope_checked:
+                  f.get('scope_checked') === 'on' ? 'whole' : 'partial',
+                chatgpt_minutes: f.get('chatgpt_minutes')
+                  ? Number(f.get('chatgpt_minutes'))
+                  : null,
+                timing: Object.fromEntries(
+                  [
+                    'preparation_minutes',
+                    'configuration_minutes',
+                    'analysis_minutes',
+                    'writing_minutes',
+                    'waiting_minutes',
+                  ].map((k) => [k, f.get(k) ? Number(f.get(k)) : null]),
+                ),
               })) !== false
             )
               setSaved(true);
@@ -125,6 +140,68 @@ export default function MethodEvaluation({
               </label>
             ))}
           </div>
+          <details>
+            <summary>
+              {L(
+                '完整耗时与 ChatGPT 对照（可选）',
+                'Full timing and ChatGPT baseline (optional)',
+              )}
+            </summary>
+            <p>
+              {L(
+                '填写本页应分摊的时间，避免每页重复计入全项目准备时间。未测量的项留空，确认为零则填 0。对照须完成同范围、同质量要求的任务。',
+                'Allocate shared preparation time across pages instead of repeating project totals. Leave unmeasured entries blank; enter 0 only when measured as zero. Baselines must use the same scope and quality requirement.',
+              )}
+            </p>
+            <div className="form-pair">
+              {[
+                [
+                  'preparation_minutes',
+                  '查找、导入与整理资料分钟',
+                  'Finding and preparing sources',
+                ],
+                [
+                  'configuration_minutes',
+                  '配置与纠正规则分钟',
+                  'Configuration and rule refinement',
+                ],
+                [
+                  'analysis_minutes',
+                  '分析与比较分钟',
+                  'Analysis and comparison',
+                ],
+                ['writing_minutes', '写作与导出分钟', 'Writing and export'],
+                [
+                  'waiting_minutes',
+                  '模型等待分钟（单独记录）',
+                  'Model wait (separate from human effort)',
+                ],
+                [
+                  'chatgpt_minutes',
+                  '只用 ChatGPT 完成同任务的分钟',
+                  'ChatGPT-only baseline minutes',
+                ],
+              ].map(([key, zh, en]) => (
+                <label key={key}>
+                  {L(zh, en)}
+                  <Input
+                    name={key}
+                    type="number"
+                    min={0}
+                    max={100000}
+                    step="0.1"
+                  />
+                </label>
+              ))}
+            </div>
+          </details>
+          <label>
+            <input type="checkbox" name="scope_checked" />
+            {L(
+              '已检查全部指定材料和遗漏；同范围评估',
+              'I checked all designated material, including omissions',
+            )}
+          </label>
           <label>
             {L('判断标准与局限', 'Criteria and limitations')}
             <Textarea name="notes" required maxLength={4000} />
@@ -149,6 +226,43 @@ export default function MethodEvaluation({
             {L('分类错误', 'Wrong categories')}: {e.metrics.wrong_categories} ·{' '}
             {e.metrics.review_minutes} min
           </p>
+          {e.config.kind !== 'investigation' && (
+            <p>
+              {(() => {
+                const m = evaluationMetrics(e.metrics);
+                const percent = (v: number | null) =>
+                  v === null
+                    ? L('未测量', 'Not measured')
+                    : `${(v * 100).toFixed(1)}%`;
+                return L(
+                  `记录收录精确率 ${percent(m.precision)} · 召回率 ${percent(m.recall)}；不等于解释正确率。`,
+                  `Record inclusion precision ${percent(m.precision)} · recall ${percent(m.recall)}; these do not measure interpretation quality.`,
+                );
+              })()}
+            </p>
+          )}
+          <p>
+            {(() => {
+              const m = evaluationMetrics(e.metrics);
+              return m.human_minutes === null
+                ? L(
+                    '完整人工耗时未测量，不计算端到端提速。',
+                    'Full human effort is unmeasured; no end-to-end speedup is calculated.',
+                  )
+                : L(
+                    `总人工 ${m.human_minutes.toFixed(1)} 分钟；等待 ${(m.waiting_minutes || 0).toFixed(1)} 分钟（另计）。${m.manual_speedup ? `人工对照比 ${m.manual_speedup.toFixed(2)}×。` : ''}${m.chatgpt_speedup ? `ChatGPT 对照比 ${m.chatgpt_speedup.toFixed(2)}×。` : ''}`,
+                    `Human effort ${m.human_minutes.toFixed(1)} min; wait ${(m.waiting_minutes || 0).toFixed(1)} min (separate). ${m.manual_speedup ? `Manual comparison ${m.manual_speedup.toFixed(2)}×.` : ''} ${m.chatgpt_speedup ? `ChatGPT comparison ${m.chatgpt_speedup.toFixed(2)}×.` : ''}`,
+                  );
+            })()}
+          </p>
+          {e.metrics.missing_fields !== undefined && (
+            <p>
+              {L(
+                `缺失栏目 ${e.metrics.missing_fields}/${e.metrics.fields}；推测栏目 ${e.metrics.inferred_fields || 0}/${e.metrics.fields}。缺失可能来自原文或模型遗漏，需对照判断。`,
+                `Missing fields ${e.metrics.missing_fields}/${e.metrics.fields}; inferred fields ${e.metrics.inferred_fields || 0}/${e.metrics.fields}. Missing data may reflect the source or model omissions; inspect the original.`,
+              )}
+            </p>
+          )}
           <p>{e.metrics.notes}</p>
           <small>{new Date(e.created_at).toLocaleString(locale)}</small>
         </article>

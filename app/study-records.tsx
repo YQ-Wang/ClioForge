@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import StudyComparison from './study-comparison';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,15 @@ export default function StudyRecords({
       t.result &&
       extractionSchema.safeParse(t.result.data).success,
   );
-  if (!items.length) return null;
+  const planned = tasks.filter((t) => t.input.parameters.extraction === true);
+  if (!planned.length) return null;
+  const incomplete = items.filter(
+    (t) =>
+      extractionSchema.parse(t.result!.data).completeness?.status !==
+      'complete',
+  );
+  const waiting = planned.filter((t) => !items.includes(t));
+  const accepted = items.filter((t) => t.status === 'accepted');
   const count = items.reduce(
     (n, t) => n + extractionSchema.parse(t.result!.data).records.length,
     0,
@@ -35,6 +44,49 @@ export default function StudyRecords({
       <summary>
         {L('本次研究的摘录记录', 'Records in this study')} · {count}
       </summary>
+      <ol
+        className="quality-stats"
+        aria-label={L('本轮材料处理进度', 'Study processing progress')}
+      >
+        <li>
+          {L('计划页步骤', 'Planned page steps')} <b>{planned.length}</b>
+        </li>
+        <li>
+          {L('已有输出', 'Outputs available')} <b>{items.length}</b>
+        </li>
+        <li>
+          {L('已采纳', 'Accepted')} <b>{accepted.length}</b>
+        </li>
+      </ol>
+      <p>
+        {L(
+          '按顺序检查：等待完成的页 → 核查不完整输出 → 比较摘录 → 记录评估 → 导出复算。已采纳也不等于史实得到证明。',
+          'Review in order: pending pages → incomplete outputs → record comparison → evaluation → reproducible export. Acceptance does not establish historical truth.',
+        )}
+      </p>
+      {(waiting.length > 0 || incomplete.length > 0) && (
+        <div className="flow-actions">
+          {waiting[0] && (
+            <Button variant="outline" onClick={() => onSelect(waiting[0].id)}>
+              {L(
+                `查看未完成步骤（${waiting.length}）`,
+                `Inspect unfinished steps (${waiting.length})`,
+              )}
+            </Button>
+          )}
+          {incomplete[0] && (
+            <Button
+              variant="outline"
+              onClick={() => onSelect(incomplete[0].id)}
+            >
+              {L(
+                `核查完整性（${incomplete.length}）`,
+                `Check completeness (${incomplete.length})`,
+              )}
+            </Button>
+          )}
+        </div>
+      )}
       <div className="flow-actions">
         <Input
           aria-label={L('查找摘录', 'Find a record')}
@@ -47,6 +99,7 @@ export default function StudyRecords({
         />
         <Button
           variant="outline"
+          disabled={!items.length}
           onClick={() => {
             const parts = items.map((t) =>
               extractionCsv(t.result!, t.input.parameters.fields as string[]),
@@ -74,6 +127,7 @@ export default function StudyRecords({
           'Includes assistant output and saved corrections. Matching quotations do not establish correct classification or interpretation; review each record.',
         )}
       </p>
+      <StudyComparison tasks={tasks} onSelect={onSelect} />
       <div className="study-record-list">
         {items.flatMap((t) =>
           extractionSchema

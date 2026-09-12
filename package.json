@@ -25,7 +25,9 @@
     "check:comments": "node scripts/check-comments.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
     "audit:dependencies": "npm audit --audit-level=moderate",
-    "check": "npm run check:comments && npm run typecheck && npm run lint"
+    "check": "npm run check:comments && npm run typecheck && npm run lint",
+    "research:replay": "tsx scripts/replay-comparison.ts",
+    "research:benchmark": "python3 scripts/benchmark-franklin.py --check"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

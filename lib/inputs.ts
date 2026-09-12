@@ -67,6 +67,9 @@ export const workspaceInput = z.discriminatedUnion('action', [
     p_expected: z.number().int().positive(),
     p_pages: z.unknown(),
     p_method: z.enum(['manual', 'ocr-reviewed', 'restore']),
+    p_ocr_run: uuid.optional(),
+    p_page: z.number().int().positive().max(500).optional(),
+    p_reason: z.string().trim().max(2000).optional(),
   }),
   z.object({
     action: z.literal('save_note'),

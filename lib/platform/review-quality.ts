@@ -65,6 +65,7 @@ export function reviewCoverage(tasks: MissionTask[]) {
         records: parsed.success ? parsed.data.records.length : 0,
         needsAttention:
           !!uncertain ||
+          (parsed.success && parsed.data.completeness?.status !== 'complete') ||
           (parsed.success &&
             (parsed.data.records.length === 0 ||
               parsed.data.records.length === 20)) ||

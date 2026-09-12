@@ -56,6 +56,7 @@ export const restoreTables = [
   'search_logs',
   'evidence_reviews',
   'research_runs',
+  'source_derivations',
   'direct_run_costs',
   'research_jobs',
   'project_budgets',
