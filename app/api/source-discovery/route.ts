@@ -1,162 +1,132 @@
 import { z } from 'zod';
 import { authenticate, failure, HttpError, jsonBody } from '@/lib/server';
-import { decrypt } from '@/lib/crypto';
+import { directPrice } from '@/lib/direct-research';
+import { dispatchMission } from '@/lib/platform/execute';
+import { MissionStore } from '@/lib/platform/missions';
 import {
-  directPrice,
-  finishDirectRun,
-  reserveDirectRun,
-} from '@/lib/direct-research';
-import { invoke, safeProviderFailure } from '@/lib/providers';
-import { resultSchema, type TaskResult } from '@/lib/platform/types';
-import { searchSourceCandidates } from '@/lib/platform/discovery';
+  defaultSourceSelectionCriteria,
+  sourceSearchRecipe,
+} from '@/lib/platform/source-search-recipe';
 
 export const dynamic = 'force-dynamic';
 
 const inputSchema = z.object({
-  id: z.uuid(),
   project_id: z.uuid(),
-  query: z.string().trim().min(1).max(2_000),
+  query: z.string().trim().min(1).max(12_000),
+  selection_criteria: z.string().trim().min(1).max(6_000).optional(),
   locale: z.enum(['zh-CN', 'en']).default('zh-CN'),
+  effort: z.enum(['low', 'high', 'max']).default('max'),
+  max_steps: z.number().int().min(2).max(64).default(32),
+  search_provider: z.enum(['catalogs', 'brave', 'tavily']).default('catalogs'),
 });
-
-const queryPlanSchema = z.object({
-  queries: z.array(z.string().trim().min(1).max(200)).min(1).max(3),
-});
-
-const system =
-  'You are a humanities source-search planner. Turn only the researcher-provided search request into one to three concise catalog queries using historically relevant names, aliases, offices, events, dates, and language variants. Do not answer the research question and do not invent results. Return only a JSON object with the shape {"queries":["..."]}.';
-
-function readSavedResult(value: string | null): TaskResult | null {
-  if (!value) return null;
-  try {
-    return resultSchema.parse(JSON.parse(value));
-  } catch {
-    return null;
-  }
-}
 
 export async function POST(request: Request) {
   try {
-    const { user, store, settings } = await authenticate(request);
+    const auth = await authenticate(request);
     const input = inputSchema.parse(await jsonBody(request));
-    await store.project(input.project_id, 'write');
-    const previous = await store.run(input.id);
-    if (previous) {
-      if (previous.project_id !== input.project_id)
-        throw new HttpError(409, '搜索请求不属于当前项目。');
-      const result = readSavedResult(previous.result);
-      if (previous.status === 'succeeded' && result)
-        return Response.json({ result, run: previous });
-      throw new HttpError(
-        409,
-        previous.error || '这次搜索已经结束，请发起新的搜索。',
-      );
-    }
-
-    const policy = await store.db
+    await auth.store.project(input.project_id, 'write');
+    const policy = await auth.store.db
       .prepare(
         "SELECT model_id FROM model_policies WHERE owner_id=? AND task_kind='analysis'",
       )
-      .bind(user.id)
+      .bind(auth.user.id)
       .first<{ model_id: string }>();
     if (!policy)
       throw new HttpError(
         409,
         '请先在「助手设置」中保存默认模型与费率，再运行 AI 资料搜索。',
       );
-    const secret = settings.FOLIOTRACE_ENCRYPTION_KEY;
-    if (!secret) throw new HttpError(503, '尚未配置模型服务。');
-    const model = await store.model(policy.model_id);
-    const price = await directPrice(store, model.id, 'analysis');
-    const apiKey = await decrypt(
-      model.encrypted_key,
-      secret,
-      `${user.id}:${model.id}`,
-    );
-    const started = await reserveDirectRun(
-      store,
-      {
-        id: input.id,
-        project_id: input.project_id,
-        kind: 'analysis',
-        prompt: input.query,
-        source_version_ids: [],
-        model_snapshot: {
-          provider: model.provider,
-          model_id: model.model_id,
-          prompt_version: 1,
-          feature: 'source_discovery',
-          effort: 'high',
-        },
-      },
-      price,
-      new TextEncoder().encode(system + input.query).length + 4096,
-      input.locale,
-    );
-    if (!started) {
-      const run = await store.run(input.id);
-      const result = readSavedResult(run?.result || null);
-      if (run?.status === 'succeeded' && result)
-        return Response.json({ result, run });
-      throw new HttpError(409, run?.error || '这次搜索无法继续。');
-    }
-
-    let called = false;
-    try {
-      // Recheck access immediately before the cost-bearing model call.
-      await store.project(input.project_id, 'write');
-      called = true;
-      const response = await invoke({
-        provider: model.provider,
-        model: model.model_id,
-        key: apiKey,
-        system,
-        prompt: input.query,
-        outputFormat: 'json',
-        maxOutput: price.max_output,
-        effort: 'high',
-        taskKind: 'search',
-        priceCeiling: {
-          input: price.input_rate,
-          output: price.output_rate,
-        },
-      });
-      const plan = queryPlanSchema.parse(JSON.parse(response.text));
-      const result = await searchSourceCandidates(store, {
-        project_id: input.project_id,
-        version_ids: [],
-        queries: plan.queries,
-        external: true,
+    const model = await auth.store.model(policy.model_id);
+    const price = await directPrice(auth.store, model.id, 'analysis');
+    const selectionCriteria =
+      input.selection_criteria || defaultSourceSelectionCriteria(input.locale);
+    const store = new MissionStore(auth.store.db, auth.user.id);
+    const id = await store.create(
+      input.project_id,
+      sourceSearchRecipe({
+        request: input.query,
+        selection_criteria: selectionCriteria,
         locale: input.locale,
-      });
-      const run = await finishDirectRun(
-        store,
-        input.id,
-        {
-          status: 'succeeded',
-          result: JSON.stringify(result),
-          error: response.truncated
-            ? '检索词规划达到模型输出上限，候选结果可能不完整。'
-            : undefined,
-          input_tokens: response.inputTokens,
-          output_tokens: response.outputTokens,
-        },
-        called,
-      );
-      return Response.json({ result, run });
-    } catch (error) {
-      const message =
-        error instanceof SyntaxError || error instanceof z.ZodError
-          ? '搜索助手未返回可执行的检索词。请查看用量记录后再决定是否重试。'
-          : safeProviderFailure(error);
-      await finishDirectRun(
-        store,
-        input.id,
-        { status: 'failed', error: message },
-        called,
-      );
-      throw new HttpError(502, message);
-    }
+        model_id: model.id,
+        input_rate: price.input_rate,
+        output_rate: price.output_rate,
+        max_output: price.max_output,
+        max_steps: input.max_steps,
+        effort: input.effort,
+        search_provider: input.search_provider,
+      }),
+    );
+    await auth.store.db
+      .prepare(
+        'INSERT INTO source_search_runs(id,project_id,created_by,request,selection_criteria,locale,model_id,reasoning_effort,max_steps,search_provider,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+      )
+      .bind(
+        id,
+        input.project_id,
+        auth.user.id,
+        input.query,
+        selectionCriteria,
+        input.locale,
+        model.id,
+        input.effort,
+        input.max_steps,
+        input.search_provider,
+        new Date().toISOString(),
+      )
+      .run();
+    await store.control(id, 'start');
+    await dispatchMission(auth.settings, id);
+    return Response.json(
+      { id, mission: await store.view(id) },
+      { status: 202 },
+    );
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const auth = await authenticate(request);
+    const id = z.uuid().parse(new URL(request.url).searchParams.get('id'));
+    const store = new MissionStore(auth.store.db, auth.user.id);
+    const mission = await store.view(id);
+    const run = await auth.store.db
+      .prepare(
+        'SELECT id,project_id,request,selection_criteria,locale,model_id,reasoning_effort,max_steps,search_provider,created_at FROM source_search_runs WHERE id=?',
+      )
+      .bind(id)
+      .first();
+    if (!run) throw new HttpError(404, '资料搜索不存在。');
+    const candidates = (
+      await auth.store.db
+        .prepare(
+          `SELECT r.*,c.verification_level,c.decision,c.relevance_reason,c.rejection_reason,c.limitations,c.updated_at
+           FROM source_search_candidates c JOIN library_records r ON r.id=c.record_id
+           WHERE c.run_id=? ORDER BY c.updated_at DESC,r.title LIMIT 200`,
+        )
+        .bind(id)
+        .all<Record<string, unknown>>()
+    ).results.map((row) => ({
+      ...row,
+      creators: JSON.parse(String(row.creators)),
+      languages: JSON.parse(String(row.languages)),
+      metadata: JSON.parse(String(row.metadata)),
+    }));
+    const leads = (
+      await auth.store.db
+        .prepare(
+          `SELECT l.*,r.title,r.creators,r.issued_date,r.institution,r.landing_url,r.rights,r.license
+           FROM source_leads l JOIN library_records r ON r.id=l.record_id
+           WHERE l.run_id=? ORDER BY l.updated_at DESC`,
+        )
+        .bind(id)
+        .all<Record<string, unknown>>()
+    ).results.map((row) => ({
+      ...row,
+      creators: JSON.parse(String(row.creators)),
+    }));
+    return Response.json({ run, mission, candidates, leads });
   } catch (error) {
     return failure(error);
   }

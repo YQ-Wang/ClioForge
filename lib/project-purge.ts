@@ -73,6 +73,9 @@ export async function purgeProject(
     'DELETE FROM source_origins WHERE source_id IN (SELECT id FROM sources WHERE project_id=?)',
     'DELETE FROM source_organization WHERE project_id=?',
     'DELETE FROM source_groups WHERE project_id=?',
+    'DELETE FROM source_leads WHERE project_id=?',
+    'DELETE FROM source_search_candidates WHERE project_id=?',
+    'DELETE FROM source_search_runs WHERE project_id=?',
     ...[
       'agent_credentials',
       'project_invitations',
@@ -112,6 +115,7 @@ export async function purgeProject(
       'upload_receipts',
       'upload_reservations',
     ].map((t) => `DELETE FROM ${t} WHERE project_id=?`),
+    'DELETE FROM library_records WHERE NOT EXISTS(SELECT 1 FROM source_search_candidates c WHERE c.record_id=library_records.id) AND NOT EXISTS(SELECT 1 FROM source_leads l WHERE l.record_id=library_records.id)',
     "UPDATE user SET name='Imported contributor',email='closed-'||id||'@clioforge.invalid',image=NULL WHERE id IN (SELECT user_id FROM restore_people WHERE project_id=?)",
     'DELETE FROM restore_people WHERE project_id=?',
     'DELETE FROM restore_files WHERE restore_id IN (SELECT id FROM project_restores WHERE project_id=?)',

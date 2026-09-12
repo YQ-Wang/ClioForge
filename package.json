@@ -13,6 +13,8 @@
     "format": "oxfmt",
     "db:generate": "drizzle-kit generate",
     "test": "tsx --test tests/*.test.ts",
+    "pretest:e2e": "npm run build",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "build:cloudflare": "FOLIOTRACE_DEPLOY_TARGET=cloudflare vinext build",
     "dev:cloudflare": "FOLIOTRACE_DEPLOY_TARGET=cloudflare vinext dev --hostname 127.0.0.1",
@@ -25,6 +27,7 @@
     "check:comments": "node scripts/check-comments.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
     "audit:dependencies": "npm audit --audit-level=moderate",
+    "eval:source-search:live": "tsx scripts/evaluate-source-search.mts",
     "check": "npm run check:comments && npm run typecheck && npm run lint"
   },
   "dependencies": {
@@ -77,6 +80,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.54.4",
     "@cloudflare/workers-types": "5.20260905.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "22.19.19",
     "@types/react": "19.2.18",

@@ -14,6 +14,7 @@ export default function ResearchCandidates({ result }: { result: TaskResult }) {
           query: z.string(),
           catalog: z.string(),
           returned: z.number(),
+          filtered: z.number().optional().default(0),
           cap: z.number(),
           status: z.string(),
         }),
@@ -32,8 +33,8 @@ export default function ResearchCandidates({ result }: { result: TaskResult }) {
           <br />
           {s.status === 'completed'
             ? L(
-                `返回 ${s.returned} 条，上限 ${s.cap} 条；不是全部结果。`,
-                `Returned ${s.returned}, capped at ${s.cap}; not exhaustive.`,
+                `保留 ${s.returned} 条，过滤 ${s.filtered} 条低相关结果，上限 ${s.cap} 条；不是全部结果。`,
+                `Kept ${s.returned}, filtered ${s.filtered} low-relevance results, capped at ${s.cap}; not exhaustive.`,
               )
             : L(
                 '本次检索失败，不能据此判断没有材料。',

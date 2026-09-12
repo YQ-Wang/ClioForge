@@ -14,6 +14,7 @@ ClioForge is a personal open-source research experiment. There is no maintainer-
 ## What you can do
 
 - Import PDFs, images and text, or select files from Google Drive. Keep originals private and preserve transcription versions.
+- Use a bounded [source-search agent](docs/source-search-agent.md) to query scholarly and institutional catalogs, inspect and refine candidates, import safe public originals, and retain actionable leads for files that require researcher access.
 - Read, highlight and annotate a page; turn passages into evidence with stable source, version and page references.
 - Write with a rich editor, tables, drawings and LaTeX; compare versions and export writing with citations.
 - Turn reviewed claims and evidence into a [bounded manuscript draft](docs/manuscript-workflow.md), with chapter progress, source references, coverage checks and a final human review.

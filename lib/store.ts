@@ -215,7 +215,7 @@ export class ResearchStore {
   }
   async sourceManagement(id: string) {
     await this.project(id);
-    const [sources, groups, organization] = await Promise.all([
+    const [sources, groups, organization, leads] = await Promise.all([
       this.db
         .prepare(
           'SELECT * FROM sources WHERE project_id=? ORDER BY created_at DESC,id DESC',
@@ -234,12 +234,39 @@ export class ResearchStore {
         )
         .bind(id)
         .all<SourceOrganization>(),
+      this.db
+        .prepare(
+          `SELECT l.id,l.status,l.access_note,l.relevance_reason,l.created_at,l.updated_at,r.title,r.creators,r.issued_date,r.institution,r.landing_url,r.rights,r.license
+           FROM source_leads l JOIN library_records r ON r.id=l.record_id
+           WHERE l.project_id=? AND l.status IN ('needs_file','access_restricted','ready')
+           ORDER BY l.updated_at DESC LIMIT 100`,
+        )
+        .bind(id)
+        .all<Record<string, unknown>>(),
     ]);
     return {
       sources: sources.results,
       groups: groups.results,
       organization: organization.results,
+      leads: leads.results.map(
+        (lead) =>
+          ({
+            ...lead,
+            creators: JSON.parse(String(lead.creators)) as string[],
+          }) as Record<string, unknown> & { creators: string[] },
+      ),
     };
+  }
+  async dismissSourceLead(projectId: string, id: string) {
+    await this.project(projectId, 'write');
+    const changed = await this.db
+      .prepare(
+        "UPDATE source_leads SET status='dismissed',updated_at=? WHERE id=? AND project_id=? AND status IN ('needs_file','access_restricted','ready')",
+      )
+      .bind(now(), id, projectId)
+      .run();
+    if (!changed.meta.changes) throw new HttpError(404, '待补资料不存在。');
+    return { id };
   }
   private async managedSources(projectId: string, sourceIds: string[]) {
     const ids = [...new Set(sourceIds)];

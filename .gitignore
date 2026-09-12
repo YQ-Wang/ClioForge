@@ -10,6 +10,9 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
+/artifacts/source-search-evaluations/
 
 # next.js
 /.next/
