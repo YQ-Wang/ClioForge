@@ -22,7 +22,7 @@ export async function GET(request: Request) {
         .all(),
       store.db
         .prepare(
-          'SELECT s.id,s.title,v.id AS version_id,v.revision,v.created_at FROM sources s JOIN source_versions v ON v.source_id=s.id WHERE s.project_id=? AND v.revision=(SELECT MAX(v2.revision) FROM source_versions v2 WHERE v2.source_id=s.id) ORDER BY v.created_at DESC LIMIT 3',
+          'SELECT s.id,s.title,v.id AS version_id,v.revision,v.created_at FROM sources s JOIN source_versions v ON v.source_id=s.id WHERE s.project_id=? AND v.revision=(SELECT MAX(v2.revision) FROM source_versions v2 WHERE v2.source_id=s.id) AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id=s.id AND o.trashed_at IS NOT NULL) ORDER BY v.created_at DESC LIMIT 3',
         )
         .bind(projectId)
         .all(),

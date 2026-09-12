@@ -142,6 +142,10 @@ void test('other tasks and native providers retain their prior format; arbitrary
       .output_schema,
     READING_OUTPUT_SCHEMA,
   );
+  assert.equal(
+    jobInput.parse({ ...base, max_output: 131072 }).max_output,
+    131072,
+  );
   assert.throws(() =>
     jobInput.parse({ ...base, output_schema: 'arbitrary_schema' }),
   );

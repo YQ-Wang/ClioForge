@@ -106,7 +106,7 @@ export default function TasksPanel({
     [selected, setSelected] = useState<string[]>([]),
     [inputRate, setInputRate] = useState(''),
     [outputRate, setOutputRate] = useState(''),
-    [maxOutput, setMaxOutput] = useState('2048'),
+    [maxOutput, setMaxOutput] = useState('16384'),
     [effort, setEffort] = useState<ThinkingEffort>('high'),
     [limit, setLimit] = useState(''),
     [inboxFilter, setInboxFilter] = useState('pending');
@@ -335,7 +335,6 @@ export default function TasksPanel({
             <Input
               type="number"
               min={128}
-              max={4096}
               required
               value={maxOutput}
               onChange={(e) => setMaxOutput(e.target.value)}
@@ -361,9 +360,9 @@ export default function TasksPanel({
           </Field>
         </div>
         <p className="text-xs text-muted-foreground mt-4 leading-6">
-          {t(
-            '运行会把所选材料发送给这个模型。请按厂商当前价格填写费率；任务不会自动切换厂商。结果未确认时保留预算，不自动再次调用。',
-          )}
+          {locale === 'en'
+            ? 'The selected sources are sent to this model. The 4,096-token application cap has been removed; the provider and model may still enforce their own output or context limit. A larger output value reserves more project budget. Tasks never switch providers or retry model calls automatically.'
+            : '运行会把所选材料发送给这个模型。应用原有的 4,096-token 上限已移除；厂商和模型仍可能执行各自的输出或上下文限制。更大的输出值会预留更多项目预算。任务不会自动切换厂商或重试模型调用。'}
         </p>
         <Button
           className="mt-5"

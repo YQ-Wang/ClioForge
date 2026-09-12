@@ -31,7 +31,7 @@ async function snapshot(store: ResearchStore, project: string) {
   const rows = (
     await store.db
       .prepare(
-        'SELECT source_id,MAX(revision) revision FROM source_versions WHERE project_id=? GROUP BY source_id ORDER BY source_id',
+        'SELECT source_id,MAX(revision) revision FROM source_versions v WHERE project_id=? AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id=v.source_id AND o.trashed_at IS NOT NULL) GROUP BY source_id ORDER BY source_id',
       )
       .bind(project)
       .all()
@@ -49,7 +49,7 @@ export async function preparationStatus(store: ResearchStore, project: string) {
   const sources = (
     await store.db
       .prepare(
-        `SELECT s.id,s.title,v.id version_id,COUNT(p.page) pages,SUM(CASE WHEN trim(p.text)<>'' THEN 1 ELSE 0 END) readable FROM sources s JOIN source_versions v ON v.source_id=s.id AND v.revision=(SELECT MAX(v2.revision) FROM source_versions v2 WHERE v2.source_id=s.id) LEFT JOIN source_pages p ON p.version_id=v.id WHERE s.project_id=? GROUP BY s.id ORDER BY s.created_at DESC LIMIT 500`,
+        `SELECT s.id,s.title,v.id version_id,COUNT(p.page) pages,SUM(CASE WHEN trim(p.text)<>'' THEN 1 ELSE 0 END) readable FROM sources s JOIN source_versions v ON v.source_id=s.id AND v.revision=(SELECT MAX(v2.revision) FROM source_versions v2 WHERE v2.source_id=s.id) LEFT JOIN source_pages p ON p.version_id=v.id WHERE s.project_id=? AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id=s.id AND o.trashed_at IS NOT NULL) GROUP BY s.id ORDER BY s.created_at DESC LIMIT 500`,
       )
       .bind(project)
       .all<{

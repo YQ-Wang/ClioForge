@@ -3,7 +3,6 @@ import { unchangedOcrPage } from '@/lib/ocr-candidates';
 import SourceDerivation from './source-derivation';
 import { citationSpan, validCitationSpan } from '@/lib/citation-location';
 import { useI18n } from '@/lib/i18n/provider';
-import { importSampleBatches, type SampleBatch } from '@/lib/sample-import';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -75,6 +74,7 @@ import { draftPrefix, type DraftRecord } from '@/lib/drafts';
 import { noteHeads } from '@/lib/notes';
 import NoteLibrary from './note-library';
 import SourceComparison from './source-comparison';
+import SourceManagement from './source-management';
 import EvidenceLibrary from './evidence-library';
 import BatchTranscription from './batch-transcription';
 import { useLocalDraft } from '@/hooks/use-local-draft';
@@ -223,7 +223,11 @@ export default function ProjectDesk({
       setEvidence(snapshot.evidence);
       setRuns(snapshot.research_runs);
       setModels(snapshot.models);
-      setSourceId((current) => current || snapshot.sources[0]?.id || '');
+      setSourceId((current) =>
+        snapshot.sources.some((source) => source.id === current)
+          ? current
+          : snapshot.sources[0]?.id || '',
+      );
       setDetailsLoaded(true);
       return { ...snapshot, workbench: detail };
     } catch (error) {
@@ -851,26 +855,7 @@ export default function ProjectDesk({
               setLocation(null);
               navigate('sources');
             }}
-            onSample={() =>
-              void action(async () => {
-                await importSampleBatches(
-                  (value) =>
-                    api<{ result: SampleBatch }>('/api/platform', {
-                      action: 'import_dataset',
-                      project_id: project.id,
-                      value,
-                    }).then((response) => response.result),
-                  (completed, total) =>
-                    setMessage(
-                      locale === 'en'
-                        ? `Preparing public sources: ${completed} / ${total}. Keep this page open; completed sources are preserved if interrupted.`
-                        : `正在准备公开史料：${completed} / ${total}。请保持页面打开；中断后已保存的材料会保留。`,
-                    ),
-                );
-                await refresh();
-                setMessage('公开史料已保存，可以开始阅读。');
-              })
-            }
+            canSearch={canWrite}
           />
         )}
       </ProjectPanel>
@@ -1097,6 +1082,13 @@ export default function ProjectDesk({
             )}
           </div>
         )}
+      </ProjectPanel>
+      <ProjectPanel active={tab} value="source-management">
+        <SourceManagement
+          projectId={project.id}
+          role={role}
+          onSourcesChanged={refresh}
+        />
       </ProjectPanel>
       <ProjectPanel active={tab} value="notes">
         <NoteLibrary

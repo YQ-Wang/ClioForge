@@ -15,9 +15,22 @@ const app = {
     const blocked = await privateAccessGate(request, env);
     if (blocked) return blocked;
     // Worker-first assets need explicit delivery after the access gate.
-    const staticAsset = new URL(request.url).pathname.startsWith(
-      '/_next/static/',
-    );
+    const pathname = new URL(request.url).pathname;
+    const developmentModule =
+      import.meta.env?.DEV === true &&
+      [
+        '/@react-refresh',
+        '/@id/',
+        '/@vite/',
+        '/@fs/',
+        '/node_modules/',
+        '/app/',
+        '/components/',
+        '/hooks/',
+        '/lib/',
+      ].some((prefix) => pathname.startsWith(prefix));
+    const staticAsset =
+      pathname.startsWith('/_next/static/') || developmentModule;
     const response = staticAsset
       ? await env.ASSETS.fetch(request)
       : await handler.fetch(request, env, ctx);

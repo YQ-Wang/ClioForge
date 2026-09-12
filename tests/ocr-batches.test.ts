@@ -330,3 +330,26 @@ void test('batch allowance and foreign ownership prevent spending or tampering',
     0,
   );
 });
+
+void test('source trash respects active OCR batches and cancelled preparation can be discarded', async () => {
+  const s = await setup();
+  await assert.rejects(
+    s.store.trashSources(s.project.id, [s.source]),
+    /不能移入回收站/,
+  );
+  await controlOcrBatch(s.store, s.env, s.input.id, 'cancel');
+  assert.deepEqual(await s.store.trashSources(s.project.id, [s.source]), {
+    trashed: 1,
+  });
+  let calls = 0;
+  await executeOcrBatch(s.env, s.input.id, async () => {
+    calls++;
+    return {
+      text: 'must not run',
+      inputTokens: 1,
+      outputTokens: 1,
+      truncated: false,
+    };
+  });
+  assert.equal(calls, 0);
+});

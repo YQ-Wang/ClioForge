@@ -43,6 +43,12 @@ export async function readCollection(
   )
     throw new HttpError(400, '分页位置无效，请刷新重试。');
   const upper = before === null ? Number.MAX_SAFE_INTEGER : Number(before);
+  const visibleSources =
+    collection === 'sources'
+      ? ' AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id="sources".id AND o.trashed_at IS NOT NULL)'
+      : collection === 'source_versions'
+        ? ' AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id="source_versions".source_id AND o.trashed_at IS NOT NULL)'
+        : '';
   // Table names are allowlisted. Schema-derived identifiers are quoted; callers
   // cannot request arbitrary columns or inject a SQL expression.
   const columns = (
@@ -70,7 +76,7 @@ export async function readCollection(
     await store.db
       .prepare(
         `SELECT rowid AS position,(${sizeExpression}) AS bytes
-     FROM "${collection}" WHERE project_id=? AND rowid<? ORDER BY rowid DESC LIMIT 51`,
+     FROM "${collection}" WHERE project_id=? AND rowid<?${visibleSources} ORDER BY rowid DESC LIMIT 51`,
       )
       .bind(projectId, upper)
       .all<{ position: number; bytes: number }>()
@@ -94,7 +100,7 @@ export async function readCollection(
   const rows = (
     await store.db
       .prepare(
-        `SELECT * FROM "${collection}" WHERE project_id=? AND rowid IN (${selected.map(() => '?').join(',')}) ORDER BY rowid DESC`,
+        `SELECT * FROM "${collection}" WHERE project_id=? AND rowid IN (${selected.map(() => '?').join(',')})${visibleSources} ORDER BY rowid DESC`,
       )
       .bind(projectId, ...selected.map((row) => row.position))
       .all()
@@ -126,7 +132,13 @@ export async function collectionCheckpoint(
       `SELECT ${projectCollections
         .map(
           (table) =>
-            `(SELECT COALESCE(MAX(rowid),0)+1 FROM "${table}" WHERE project_id=?) AS "${table}"`,
+            `(SELECT COALESCE(MAX(rowid),0)+1 FROM "${table}" WHERE project_id=?${
+              table === 'sources'
+                ? ' AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id="sources".id AND o.trashed_at IS NOT NULL)'
+                : table === 'source_versions'
+                  ? ' AND NOT EXISTS(SELECT 1 FROM source_organization o WHERE o.source_id="source_versions".source_id AND o.trashed_at IS NOT NULL)'
+                  : ''
+            }) AS "${table}"`,
         )
         .join(',')}`,
     )

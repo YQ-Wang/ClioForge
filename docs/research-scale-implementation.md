@@ -92,3 +92,9 @@ Software tests and synthetic provider runs establish application behavior only. 
 - UI: adjusted comparison controls, explanatory text, action spacing, bilingual error messages and page-step count labels. Checked the generated workflow visually.
 - Browser validation found missing development-module routing at the private Worker entry. The fix remains after the access gate and is compiled out of production; private-access runtime tests pass.
 - The local Wrangler production-preview proxy exited with `Network connection lost` during browser checks. Production rendering was inspected; final write/read checks ran successfully against a freshly started Vite/Cloudflare development server. A development hot-reload theme-context mismatch was not reproduced after that clean restart; the production page showed the correct theme. These local-tool limits are not reported as a completed remote deployment check.
+
+## Main-branch integration validation
+
+Before publication, integrated main revision `d44e4d8`, preserving source discovery and source management. The new migration is `0024_research_scale.sql`; the 24 already-published migrations remain unchanged. Active OCR batches prevent source trashing, and execution rechecks source availability. Cancelled, unexecuted preparation can be discarded.
+
+The combined tree passed all 323 tests, type checking, lint, formatting, both Worker builds, the frozen benchmark and Gitleaks scans of staged changes and all repository history.

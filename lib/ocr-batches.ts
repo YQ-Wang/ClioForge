@@ -349,6 +349,7 @@ export async function executeOcrBatch(
     reserved = false;
   try {
     await store.project(batch.project_id, 'write');
+    await store.version(batch.version_id);
     const current = await env.DB.prepare(
       'SELECT id FROM source_versions WHERE source_id=(SELECT source_id FROM source_versions WHERE id=?) ORDER BY revision DESC LIMIT 1',
     )

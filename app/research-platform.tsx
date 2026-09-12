@@ -10,7 +10,6 @@ import {
   reviewDraftSource,
   unresolvedReviewCitations,
 } from '@/lib/review-citations';
-import { importSampleBatches, type SampleBatch } from '@/lib/sample-import';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
@@ -485,41 +484,6 @@ export default function ResearchPlatform({
                   </div>
                   <div className="flow-actions">
                     <Button
-                      variant="outline"
-                      disabled={!canWrite || busy}
-                      onClick={() =>
-                        void action(async () => {
-                          const result = await importSampleBatches(
-                            async (value) =>
-                              (await mutate(
-                                'import_dataset',
-                                value,
-                              )) as SampleBatch,
-                            (completed, total) =>
-                              setMessage(
-                                L(
-                                  `正在准备公开史料：${completed} / ${total}。中断后可重新点击，已保存的条目会跳过。`,
-                                  `Preparing public sources: ${completed} / ${total}. If interrupted, start again; saved records are skipped.`,
-                                ),
-                              ),
-                          );
-                          await onRefresh();
-                          setMessage(
-                            L(
-                              'LED 公开铭文已导入：',
-                              'LED inscriptions imported: ',
-                            ) +
-                              result.imported +
-                              L('，跳过重复：', ', duplicates skipped: ') +
-                              result.skipped,
-                          );
-                        })
-                      }
-                    >
-                      <Download size={16} />
-                      {L('试读公开史料', 'Explore public sources')}
-                    </Button>
-                    <Button
                       disabled={!canWrite || busy}
                       onClick={() => setCreate(true)}
                     >
@@ -535,8 +499,8 @@ export default function ResearchPlatform({
                       <h3>{L('先选一批材料', 'Begin with your sources')}</h3>
                       <p>
                         {L(
-                          '导入你的资料，或者试读上方的公开史料，再围绕一个问题展开比较。',
-                          'Import your sources or explore the public sample above, then compare them around a question.',
+                          '导入与当前研究问题相关的资料，再围绕明确的材料范围展开比较。',
+                          'Import sources relevant to the current research question, then compare them within an explicit source scope.',
                         )}
                       </p>
                     </div>
@@ -1442,7 +1406,10 @@ export default function ResearchPlatform({
           </DialogHeader>
           {message && <output className="platform-notice">{message}</output>}
           <MissionForm
+            key={sources.length ? 'default' : 'discover'}
             projectId={project.id}
+            project={project}
+            initialRecipe={!sources.length ? 'discover' : undefined}
             models={models}
             budget={budget}
             canBudget={overview?.project.role === 'owner'}
@@ -1551,6 +1518,8 @@ function Metric({ title, value }: { title: string; value: number }) {
 }
 function MissionForm({
   projectId,
+  project,
+  initialRecipe,
   models,
   budget,
   canBudget,
@@ -1566,6 +1535,8 @@ function MissionForm({
   versions: SourceVersion[];
   busy: boolean;
   projectId: string;
+  project: Project;
+  initialRecipe?: RecipeKind;
   onSubmit: (draft: MissionDraft, limit?: number) => Promise<unknown>;
 }) {
   const { L, locale } = useWords();
@@ -1586,7 +1557,9 @@ function MissionForm({
   const [advanced, setAdvanced] = useState('');
   const [formError, setFormError] = useState('');
   const [outputLocale, setOutputLocale] = useState<'zh-CN' | 'en'>(locale);
-  const [recipe, setRecipe] = useState<RecipeKind | ''>('extract');
+  const [recipe, setRecipe] = useState<RecipeKind | ''>(
+    initialRecipe || 'extract',
+  );
   const [fields, setFields] = useState(
     locale === 'en' ? 'Person, Date, Place, Event' : '人物，日期，地点，事件',
   );
@@ -1594,7 +1567,7 @@ function MissionForm({
     { id: string; title: string; body: ResearchMethod }[]
   >([]);
   const [saved, setSaved] = useState('');
-  const [external, setExternal] = useState(false);
+  const [external, setExternal] = useState(initialRecipe === 'discover');
   const [synthesisId, setSynthesisId] = useState('');
   const [modelEvidence, setModelEvidence] = useState<
     import('@/lib/harness/model-evidence').ModelEvidence[] | null
@@ -1602,9 +1575,13 @@ function MissionForm({
   const [evidenceError, setEvidenceError] = useState('');
   const [synthesisInput, setSynthesisInput] = useState('');
   const [synthesisOutput, setSynthesisOutput] = useState('');
-  const [methodText, setMethodText] = useState('');
+  const [methodText, setMethodText] = useState(
+    initialRecipe === 'discover' ? project.description : '',
+  );
   const [methodTitle, setMethodTitle] = useState(
-    L('资料摘录与核查', 'Source extraction and review'),
+    initialRecipe === 'discover'
+      ? L(`寻找资料：${project.title}`, `Find sources: ${project.title}`)
+      : L('资料摘录与核查', 'Source extraction and review'),
   );
   const [methodProtocol, setMethodProtocol] =
     useState<ResearchMethod['protocol']>();
@@ -1624,6 +1601,8 @@ function MissionForm({
   const [pageOffset, setPageOffset] = useState(0);
   const [calibrationPage, setCalibrationPage] = useState('');
   const [validationPage, setValidationPage] = useState('');
+  const showRecipeScope =
+    mode === 'model' && recipe && (recipe !== 'discover' || pages.length > 0);
   useEffect(() => {
     let active = true;
     void api<{ methods: typeof methods }>(
@@ -1717,7 +1696,7 @@ function MissionForm({
               input_rate: Number(inputRate),
               output_rate: Number(outputRate),
               locale: outputLocale,
-              external,
+              external: recipe === 'discover' && (!sources.length || external),
               comparisonText: formText(data, 'comparison'),
               synthesis:
                 recipe === 'investigate' && synthesisId
@@ -1891,7 +1870,8 @@ function MissionForm({
                 <label className="checkbox-row">
                   <input
                     type="checkbox"
-                    checked={external}
+                    checked={!sources.length || external}
+                    disabled={!sources.length}
                     onChange={(e) => setExternal(e.target.checked)}
                   />
                   <span>
@@ -1901,8 +1881,8 @@ function MissionForm({
                     )}
                     <small>
                       {L(
-                        '只向这两个目录发送检索词；最多两轮，每轮 3 个词。不会自动导入全文。',
-                        'Only search terms are sent to these catalogs. At most two rounds of three queries; full text is not automatically imported.',
+                        '只向这两个目录发送检索词；最多两轮，每轮 3 个词。候选结果由你确认，不会自动导入全文。',
+                        'Only search terms are sent to these catalogs. At most two rounds of three queries. You review candidates; full text is not automatically imported.',
                       )}
                     </small>
                   </span>
@@ -2208,8 +2188,12 @@ function MissionForm({
             name="scope"
             required
             defaultValue={L(
-              '仅限本次所选材料；保留未知日期与缺失记录。',
-              'Selected sources only; preserve unknown dates and missing records.',
+              initialRecipe === 'discover'
+                ? '根据项目问题检索公开目录；目录记录不是已读全文，也不能直接证明历史结论。'
+                : '仅限本次所选材料；保留未知日期与缺失记录。',
+              initialRecipe === 'discover'
+                ? 'Search public catalogs from the project question. Catalog records are not read full text and cannot establish historical claims.'
+                : 'Selected sources only; preserve unknown dates and missing records.',
             )}
           />
         </label>
@@ -2260,9 +2244,17 @@ function MissionForm({
               {source.title}
             </label>
           ))}
+          {!sources.length && recipe === 'discover' && (
+            <p>
+              {L(
+                '当前没有项目材料；搜索助手将只查询已启用的公开目录。',
+                'There are no project sources yet; the search assistant will query only the enabled public catalogs.',
+              )}
+            </p>
+          )}
         </div>
       </fieldset>
-      {mode === 'model' && recipe && (
+      {showRecipeScope && (
         <div className="recipe-scope">
           <label>
             {L('跳过前面已读过的页数', 'Skip pages already read')}
@@ -2443,7 +2435,13 @@ function MissionForm({
         )}
       </p>
       {formError && <output className="platform-notice">{formError}</output>}
-      <Button type="submit" disabled={busy || !selected.length}>
+      <Button
+        type="submit"
+        disabled={
+          busy ||
+          (!selected.length && !(mode === 'model' && recipe === 'discover'))
+        }
+      >
         <GitBranch size={16} />
         {L('保存计划草案', 'Save mission draft')}
       </Button>

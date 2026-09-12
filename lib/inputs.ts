@@ -33,6 +33,33 @@ export const researchInput = z.object({
 });
 export const workspaceInput = z.discriminatedUnion('action', [
   z.object({
+    action: z.literal('create_source_group'),
+    project_id: uuid,
+    name: z.string().trim().min(1).max(100),
+  }),
+  z.object({
+    action: z.literal('move_sources'),
+    project_id: uuid,
+    source_ids: z.array(uuid).min(1).max(100),
+    group_id: uuid.nullable(),
+  }),
+  z.object({
+    action: z.literal('delete_source_group'),
+    project_id: uuid,
+    group_id: uuid,
+  }),
+  z.object({
+    action: z.literal('trash_sources'),
+    project_id: uuid,
+    source_ids: z.array(uuid).min(1).max(100),
+    confirm: z.literal('DELETE'),
+  }),
+  z.object({
+    action: z.literal('restore_sources'),
+    project_id: uuid,
+    source_ids: z.array(uuid).min(1).max(100),
+  }),
+  z.object({
     action: z.literal('update_project'),
     id: uuid,
     title: z.string().trim().min(1).max(200),

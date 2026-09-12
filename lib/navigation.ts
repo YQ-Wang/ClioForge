@@ -15,6 +15,12 @@ export const projectSections = [
     en: 'Sources & reading',
     group: 'sources',
   },
+  {
+    id: 'source-management',
+    zh: '资料管理',
+    en: 'Source management',
+    group: 'sources',
+  },
   { id: 'drive', zh: 'Google Drive', en: 'Google Drive', group: 'sources' },
   { id: 'search', zh: '检索材料', en: 'Search sources', group: 'sources' },
   { id: 'bibliography', zh: '书目', en: 'Bibliography', group: 'sources' },
