@@ -50,7 +50,52 @@ const maxRepairs = Math.min(
   4,
   Math.max(0, Number(process.env.SOURCE_SEARCH_REPAIR_ATTEMPTS || 2)),
 );
-const reports = [];
+const stamp = new Date()
+  .toISOString()
+  .replaceAll(':', '-')
+  .replaceAll('.', '-');
+const directory = path.resolve('artifacts/source-search-evaluations');
+const target = path.join(directory, `kimi-k3-max-${stamp}.json`);
+const checkpointTarget = path.join(
+  directory,
+  `kimi-k3-max-${stamp}.partial.json`,
+);
+const checkpointTemporary = `${checkpointTarget}.tmp`;
+const startedAt = new Date().toISOString();
+const reports: Array<Record<string, unknown>> = [];
+let activeCheckpoint: Record<string, unknown> | null = null;
+
+await fs.mkdir(directory, { recursive: true });
+
+async function writeCheckpoint() {
+  await fs.writeFile(
+    checkpointTemporary,
+    JSON.stringify(
+      {
+        started_at: startedAt,
+        updated_at: new Date().toISOString(),
+        model,
+        effort: 'max',
+        max_steps: maxSteps,
+        credential_policy:
+          'Credentials came from process environment and are never stored in logs or artifacts.',
+        completed_reports: reports,
+        active_report: activeCheckpoint,
+      },
+      null,
+      2,
+    ),
+  );
+  await fs.rename(checkpointTemporary, checkpointTarget);
+}
+
+function emit(event: Record<string, unknown>) {
+  console.log(`[source-search] ${JSON.stringify(event, null, 2)}`);
+}
+
+console.log(
+  `Live source-search evaluation started.\nCheckpoint: ${checkpointTarget}`,
+);
 
 for (const testCase of cases) {
   const selectionCriteria =
@@ -72,13 +117,45 @@ for (const testCase of cases) {
     detail: string;
     proposed_tool: string;
   }> = [];
+  const trace: Array<Record<string, unknown>> = [];
   const started = performance.now();
+  const caseStartedAt = new Date().toISOString();
+  const snapshot = async () => {
+    activeCheckpoint = {
+      case: testCase,
+      selection_criteria: selectionCriteria,
+      started_at: caseStartedAt,
+      duration_ms: Math.round(performance.now() - started),
+      model_calls: modelCalls,
+      completed_operations: operations,
+      validation_errors: validationErrors,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      metrics: evaluateSourceSearchRun(testCase, memory),
+      trace,
+      memory,
+    };
+    await writeCheckpoint();
+  };
+  emit({ event: 'case_started', case: testCase.id, max_steps: maxSteps });
+  await snapshot();
   while (
     operations < maxSteps &&
     modelCalls < maxSteps + maxRepairs &&
     !memory.stopped
   ) {
     modelCalls++;
+    const callStarted = performance.now();
+    const callTrace: Record<string, unknown> = {
+      event: 'model_call',
+      case: testCase.id,
+      call: modelCalls,
+      status: 'waiting',
+      started_at: new Date().toISOString(),
+    };
+    trace.push(callTrace);
+    emit(callTrace);
+    await snapshot();
     const response = await invoke({
       provider: 'fireworks',
       model,
@@ -93,6 +170,15 @@ for (const testCase of cases) {
     });
     inputTokens += response.inputTokens;
     outputTokens += response.outputTokens;
+    Object.assign(callTrace, {
+      status: 'model_completed',
+      model_latency_ms: Math.round(performance.now() - callStarted),
+      input_tokens: response.inputTokens,
+      output_tokens: response.outputTokens,
+      response_text: response.text,
+    });
+    emit(callTrace);
+    await snapshot();
     let action: SourceSearchAction;
     let proposedTool = 'unparseable';
     try {
@@ -112,7 +198,14 @@ for (const testCase of cases) {
         detail,
         proposed_tool: proposedTool,
       });
+      Object.assign(callTrace, {
+        status: 'validation_rejected',
+        proposed_tool: proposedTool,
+        validation_error: detail,
+      });
+      emit(callTrace);
       correction = `\n\nPrevious operation rejected by the deterministic validator: ${JSON.stringify(detail)}. Do not repeat it. Return a corrected action that follows the ledger sequence exactly: triage_results shortlist or inspect_result before resolve_full_text; resolve_full_text before import_source or save_source_lead.`;
+      await snapshot();
       continue;
     }
     correction = '';
@@ -197,6 +290,27 @@ for (const testCase of cases) {
       status,
     });
     operations++;
+    Object.assign(callTrace, {
+      status: 'operation_completed',
+      action,
+      operation_status: status,
+      outcome,
+      candidates: candidates.map((candidate) => ({
+        id: candidate.id,
+        provider: candidate.provider,
+        title: candidate.title,
+        issued_date: candidate.issued_date,
+        institution: candidate.institution,
+        verification_level: candidate.verification_level,
+        download_status: candidate.download_status,
+        resolution_note: candidate.resolution_note,
+      })),
+      cumulative_input_tokens: inputTokens,
+      cumulative_output_tokens: outputTokens,
+      elapsed_ms: Math.round(performance.now() - started),
+    });
+    emit(callTrace);
+    await snapshot();
   }
   if (!memory.stopped) {
     memory.stopped = true;
@@ -205,7 +319,7 @@ for (const testCase of cases) {
         ? 'Evaluation operation limit reached.'
         : `Evaluation model-call limit reached after ${validationErrors.length} rejected operation(s).`;
   }
-  reports.push({
+  const report = {
     case: testCase,
     model,
     effort: 'max',
@@ -217,17 +331,23 @@ for (const testCase of cases) {
     input_tokens: inputTokens,
     output_tokens: outputTokens,
     metrics: evaluateSourceSearchRun(testCase, memory),
+    trace,
     memory,
+  };
+  reports.push(report);
+  activeCheckpoint = null;
+  emit({
+    event: 'case_completed',
+    case: testCase.id,
+    duration_ms: report.duration_ms,
+    model_calls: modelCalls,
+    completed_operations: operations,
+    stop_reason: memory.stop_reason,
+    metrics: report.metrics,
   });
+  await writeCheckpoint();
 }
 
-const stamp = new Date()
-  .toISOString()
-  .replaceAll(':', '-')
-  .replaceAll('.', '-');
-const directory = path.resolve('artifacts/source-search-evaluations');
-await fs.mkdir(directory, { recursive: true });
-const target = path.join(directory, `kimi-k3-max-${stamp}.json`);
 await fs.writeFile(
   target,
   JSON.stringify(
@@ -243,6 +363,7 @@ await fs.writeFile(
     2,
   ),
 );
+await fs.rm(checkpointTarget, { force: true });
 console.log(
   `Saved ${reports.length} live source-search evaluations to ${target}`,
 );

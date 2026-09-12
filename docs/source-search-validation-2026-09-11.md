@@ -70,7 +70,7 @@ SOURCE_SEARCH_STEPS=64 npm run eval:source-search:live -- --case=ming-succession
 SOURCE_SELECTION_CRITERIA='Require primary sources and university-press scholarship; exclude material after 1912.' npm run eval:source-search:live -- --case=ming-succession-donglin
 ```
 
-Optional `BRAVE_SEARCH_API_KEY`, `TAVILY_API_KEY` and `DPLA_API_KEY` environment variables enable those connectors for this manual process. Reports are written under ignored `artifacts/source-search-evaluations/`. A report stores the model name, criteria, timings, token counts, decisions, candidates and metrics; it does not store provider credentials.
+Optional `BRAVE_SEARCH_API_KEY`, `TAVILY_API_KEY` and `DPLA_API_KEY` environment variables enable those connectors for this manual process. The runner immediately prints a `.partial.json` path, streams a structured event before and after every model/tool call, and atomically refreshes that checkpoint after model completion, validation rejection and operation completion. The checkpoint contains raw model output, actions, candidate IDs/titles, resolver results, cumulative usage, metrics and the complete current ledger; it never stores credentials, request headers or prompts containing credentials. On success the complete trace moves into the final JSON report and the partial checkpoint is removed. Reports are written under ignored `artifacts/source-search-evaluations/`.
 
 Review every report for query refinement, false positives, unexplained rejection, access claims and institution diversity. Feed failures back into selection criteria, connector normalization and the deterministic evaluation cases before changing the agent prompt.
 
