@@ -26,6 +26,11 @@ if (!apiKey)
   throw new Error(
     'Set FIREWORKS_API_KEY in this shell before running the live evaluation.',
   );
+const exaKey = process.env.EXA_API_KEY;
+if (!exaKey)
+  throw new Error(
+    'Set EXA_API_KEY in this shell before running the Kimi + Exa evaluation.',
+  );
 const selected = process.argv
   .find((value) => value.startsWith('--case='))
   ?.slice(7);
@@ -34,12 +39,8 @@ const cases = selected
   : sourceSearchCases;
 if (!cases.length) throw new Error(`Unknown source-search case: ${selected}`);
 
-const webProvider = process.env.BRAVE_SEARCH_API_KEY
-  ? ('brave' as const)
-  : process.env.TAVILY_API_KEY
-    ? ('tavily' as const)
-    : undefined;
-const webKey = process.env.BRAVE_SEARCH_API_KEY || process.env.TAVILY_API_KEY;
+const webProvider = 'exa' as const;
+const webKey = exaKey;
 const model =
   process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/kimi-k3';
 const maxSteps = Math.min(
@@ -55,10 +56,10 @@ const stamp = new Date()
   .replaceAll(':', '-')
   .replaceAll('.', '-');
 const directory = path.resolve('artifacts/source-search-evaluations');
-const target = path.join(directory, `kimi-k3-max-${stamp}.json`);
+const target = path.join(directory, `kimi-k3-exa-max-${stamp}.json`);
 const checkpointTarget = path.join(
   directory,
-  `kimi-k3-max-${stamp}.partial.json`,
+  `kimi-k3-exa-max-${stamp}.partial.json`,
 );
 const checkpointTemporary = `${checkpointTarget}.tmp`;
 const startedAt = new Date().toISOString();
@@ -76,6 +77,7 @@ async function writeCheckpoint() {
         updated_at: new Date().toISOString(),
         model,
         effort: 'max',
+        web_provider: webProvider,
         max_steps: maxSteps,
         credential_policy:
           'Credentials came from process environment and are never stored in logs or artifacts.',
@@ -355,6 +357,7 @@ await fs.writeFile(
       generated_at: new Date().toISOString(),
       model,
       effort: 'max',
+      web_provider: webProvider,
       credential_policy:
         'Credentials came from process environment and are not stored in this artifact.',
       reports,

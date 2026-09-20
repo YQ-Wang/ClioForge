@@ -244,6 +244,58 @@ void test('fixed connectors normalize synthetic scholarly records without exposi
   );
 });
 
+void test('Exa web search keeps its key in a header and returns highlights for Kimi triage', async () => {
+  const request = (async (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ) => {
+    const href =
+      input instanceof Request
+        ? input.url
+        : input instanceof URL
+          ? input.href
+          : input;
+    assert.equal(href, 'https://api.exa.ai/search');
+    assert.equal(new Headers(init?.headers).get('x-api-key'), 'synthetic-exa');
+    assert.equal(href.includes('synthetic-exa'), false);
+    assert.deepEqual(
+      JSON.parse(typeof init?.body === 'string' ? init.body : '{}'),
+      {
+        query: '万历 癸巳京察 东林',
+        type: 'auto',
+        numResults: 10,
+        includeDomains: ['zjujournals.com'],
+        contents: { highlights: true },
+      },
+    );
+    return Response.json({
+      results: [
+        {
+          title: "从'癸巳大计'看明末东林党与内阁之对立",
+          url: 'https://www.zjujournals.com/soc/CN/Y2010/V40/I6/60',
+          author: 'Synthetic Historian',
+          publishedDate: '2010-11-10',
+          highlights: ['癸巳京察导致东林核心人物遭到贬斥。'],
+        },
+      ],
+    });
+  }) as typeof fetch;
+  const result = await runConnectorSearch(
+    {
+      tool: 'search',
+      query: '万历 癸巳京察 东林',
+      providers: ['web'],
+      domains: ['zjujournals.com'],
+    },
+    { webProvider: 'exa', webKey: 'synthetic-exa' },
+    request,
+  );
+  assert.equal(result.searches[0].status, 'completed');
+  assert.equal(result.candidates[0].institution, 'www.zjujournals.com');
+  assert.match(result.candidates[0].snippet, /癸巳京察/);
+  assert.equal(result.candidates[0].verification_level, 'abstract');
+});
+
 void test('download URL policy blocks credentials, local networks, unsafe ports, and connector escapes', () => {
   for (const url of [
     'http://example.com/file.pdf',

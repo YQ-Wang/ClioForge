@@ -7,7 +7,7 @@ import { sourceCandidate } from '../harness/source-search-tools';
 import { fixedJson, safePublicUrl } from './safe-fetch';
 
 export type SearchCredentials = {
-  webProvider?: 'brave' | 'tavily';
+  webProvider?: 'brave' | 'tavily' | 'exa';
   webKey?: string;
   dplaKey?: string;
 };
@@ -377,6 +377,52 @@ async function tavily(
   );
 }
 
+async function exa(
+  action: Extract<SourceSearchAction, { tool: 'search' }>,
+  key: string,
+  request: typeof fetch,
+) {
+  const raw = (await fixedJson(
+    'https://api.exa.ai/search',
+    ['api.exa.ai'],
+    request,
+    {
+      method: 'POST',
+      headers: {
+        'x-api-key': key,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: action.query,
+        type: 'auto',
+        numResults: 10,
+        ...(action.domains?.length ? { includeDomains: action.domains } : {}),
+        contents: { highlights: true },
+      }),
+    },
+  )) as any;
+  return array(raw?.results).flatMap((item: any) => {
+    const landing = publicHttpsHint(item?.url);
+    if (!landing) return [];
+    const highlights = strings(item?.highlights).join(' ');
+    return [
+      candidate('web', landing, {
+        title: text(item?.title) || 'Untitled Exa result',
+        landing_url: landing,
+        creators: strings(item?.author),
+        issued_date: text(item?.publishedDate),
+        institution: new URL(landing).hostname,
+        snippet: [text(item?.summary), highlights]
+          .filter(Boolean)
+          .join(' ')
+          .slice(0, 8000),
+        access_status: 'public',
+        verification_level: highlights ? 'abstract' : 'metadata',
+      }),
+    ];
+  });
+}
+
 async function contentdm(query: string, request: typeof fetch) {
   const encoded = encodeURIComponent(query).replaceAll('%2F', '');
   const url = `https://digitalcollections.lib.washington.edu/digital/api/search/searchterm/${encoded}/field/all/maxRecords/10`;
@@ -512,7 +558,9 @@ export async function runConnectorSearch(
         values =
           credentials.webProvider === 'brave'
             ? await brave(action, credentials.webKey, request)
-            : await tavily(action, credentials.webKey, request);
+            : credentials.webProvider === 'tavily'
+              ? await tavily(action, credentials.webKey, request)
+              : await exa(action, credentials.webKey, request);
       } else {
         throw new Error('Connector requires a collection or inspected record');
       }

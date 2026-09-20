@@ -58,8 +58,11 @@ Run this only after rotating any credential that has been pasted into chat or an
 ```sh
 read -s FIREWORKS_API_KEY
 export FIREWORKS_API_KEY
+read -s EXA_API_KEY
+export EXA_API_KEY
 npm run eval:source-search:live
 unset FIREWORKS_API_KEY
+unset EXA_API_KEY
 ```
 
 The default model is `accounts/fireworks/models/kimi-k3`, reasoning is always Max, and the script performs up to 32 valid read-only operations per case by default. `SOURCE_SEARCH_STEPS` can select 2–64 operations. The agent may finish earlier; 64 is an emergency loop guard. A simulated `import_source` records whether a verified file would be imported but never writes project data. If the model proposes an invalid operation sequence, the runner returns the validator finding and permits two extra correction calls by default rather than terminating the evaluation. Set `SOURCE_SEARCH_REPAIR_ATTEMPTS=0` to disable those calls or a value up to `4` to change the bound. To run one case or override the researcher's criteria:
@@ -70,7 +73,7 @@ SOURCE_SEARCH_STEPS=64 npm run eval:source-search:live -- --case=ming-succession
 SOURCE_SELECTION_CRITERIA='Require primary sources and university-press scholarship; exclude material after 1912.' npm run eval:source-search:live -- --case=ming-succession-donglin
 ```
 
-Optional `BRAVE_SEARCH_API_KEY`, `TAVILY_API_KEY` and `DPLA_API_KEY` environment variables enable those connectors for this manual process. The runner immediately prints a `.partial.json` path, streams a structured event before and after every model/tool call, and atomically refreshes that checkpoint after model completion, validation rejection and operation completion. The checkpoint contains raw model output, actions, candidate IDs/titles, resolver results, cumulative usage, metrics and the complete current ledger; it never stores credentials, request headers or prompts containing credentials. On success the complete trace moves into the final JSON report and the partial checkpoint is removed. Reports are written under ignored `artifacts/source-search-evaluations/`.
+`EXA_API_KEY` is required by this live evaluator. Kimi controls the search sequence while Exa provides up to ten highlighted web results per web query; Crossref, OpenAlex and the institutional connectors remain available in the same loop. `DPLA_API_KEY` optionally enables DPLA. The runner immediately prints a `.partial.json` path, streams a structured event before and after every model/tool call, and atomically refreshes that checkpoint after model completion, validation rejection and operation completion. The checkpoint records `web_provider: "exa"`, raw model output, actions, candidate IDs/titles, resolver results, cumulative usage, metrics and the complete current ledger; it never stores credentials, request headers or prompts containing credentials. On success the complete trace moves into a `kimi-k3-exa-max-*.json` report and the partial checkpoint is removed. Reports are written under ignored `artifacts/source-search-evaluations/`.
 
 Review every report for query refinement, false positives, unexplained rejection, access claims and institution diversity. Feed failures back into selection criteria, connector normalization and the deterministic evaluation cases before changing the agent prompt.
 
