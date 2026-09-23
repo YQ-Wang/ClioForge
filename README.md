@@ -86,3 +86,7 @@ Some internal `foliotrace` identifiers remain for compatibility with stored data
 Original application code is licensed under **AGPL-3.0-only**. See [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md) for the separately licensed libraries, fonts, citation style and sample inscriptions. The ClioForge name and logo identify this project; forks should identify their own operator and avoid implying affiliation.
 
 Report reproducible bugs or propose a concrete research workflow through [GitHub issues](https://github.com/YQ-Wang/ClioForge/issues). For vulnerabilities, follow [SECURITY.md](SECURITY.md). Please follow the [code of conduct](CODE_OF_CONDUCT.md).
+
+### Find sources for a research question
+
+Use **Find more sources** from the project overview, source management, or a research question. Search Crossref, OpenAlex and Library of Congress metadata without a model; optionally use your model to plan multilingual queries. Simplified/traditional Chinese variants, title-match sorting, saved search history, DOI deduplication and one-click bibliography import keep discovery connected to reading and writing. Exa is opt-in with your own encrypted key and a monthly request limit. Full-text leads are not reviewed evidence. See [literature discovery](docs/literature-discovery.md) for setup, costs, coverage and validation limits.

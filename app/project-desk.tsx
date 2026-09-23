@@ -1,4 +1,6 @@
 'use client';
+import { unchangedOcrPage } from '@/lib/ocr-candidates';
+import SourceDerivation from './source-derivation';
 import { citationSpan, validCitationSpan } from '@/lib/citation-location';
 import { useI18n } from '@/lib/i18n/provider';
 import Link from 'next/link';
@@ -1568,7 +1570,10 @@ function SourceReader({
       (run) =>
         run.kind === 'ocr' &&
         run.model_snapshot.page === page &&
-        run.source_version_ids.includes(version.id),
+        run.source_version_ids.some((id) => {
+          const candidate = versions.find((v) => v.id === id);
+          return !!candidate && unchangedOcrPage(candidate, version, page);
+        }),
     )
     .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
   useEffect(() => {
@@ -1607,27 +1612,31 @@ function SourceReader({
   const [quote, setQuote] = useState<string | null>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
-    let active = true;
+    if (!active) return;
+    setUrl('');
+    setBlob(null);
+    setOriginalText(null);
+    let current = true;
     let objectUrl = '';
     void readOriginal(source.id)
       .then(async (data) => {
         const text = source.media_type.startsWith('text/')
           ? await data.text()
           : null;
-        if (!active) return;
+        if (!current) return;
         objectUrl = URL.createObjectURL(data);
         setBlob(data);
         setUrl(objectUrl);
         setOriginalText(text);
       })
       .catch(() => {
-        if (active) report('无法载入原件，请刷新重试。');
+        if (current) report('无法载入原件，请刷新重试。');
       });
     return () => {
-      active = false;
+      current = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [source.id, source.object_path, source.media_type, report]);
+  }, [active, source.id, source.object_path, source.media_type, report]);
   useEffect(() => {
     setRegion(null);
   }, [versionId, page, location]);
@@ -1666,6 +1675,9 @@ function SourceReader({
         p_expected: current.revision,
         p_pages: pages,
         p_method: method,
+        ...(method === 'ocr-reviewed'
+          ? { p_ocr_run: ocrLocal.value.ocrRunId || undefined, p_page: page }
+          : {}),
       });
       if (error) throw new Error(error.message);
       localDraft.clear();
@@ -1903,6 +1915,14 @@ function SourceReader({
           )}
         </div>
       </div>
+      <SourceDerivation
+        versionId={version.id}
+        disabled={busy || dirty}
+        onVersion={(id) => {
+          setVersionId(id);
+          setPage(1);
+        }}
+      />
       <div
         className={`reader-columns ${source.media_type.startsWith('text/') ? 'text-source' : ''}`}
       >
@@ -2349,9 +2369,15 @@ function SourceReader({
         <BatchTranscription
           version={current}
           currentPage={page}
-          runs={runs}
-          onRequest={(page) => requestOcr(page, true)}
-          onClose={() => setBatchOpen(false)}
+          modelId={modelId}
+          imageForPage={async (page) => {
+            if (!blob) throw new Error(t('无法载入原件，请刷新重试。'));
+            return pageImage(blob, source.media_type, page);
+          }}
+          onClose={() => {
+            setBatchOpen(false);
+            void onSaved();
+          }}
           onPage={setPage}
         />
       )}

@@ -77,6 +77,14 @@ export async function requestAccountDeletion(
       .bind(owner, email),
     db.prepare('DELETE FROM oauth_states WHERE owner_id=?').bind(owner),
     db.prepare('DELETE FROM cloud_connections WHERE owner_id=?').bind(owner),
+    ...[
+      'search_connections',
+      'search_allowances',
+      'discovery_sessions',
+      'catalog_cache',
+    ].map((table) =>
+      db.prepare(`DELETE FROM ${table} WHERE owner_id=?`).bind(owner),
+    ),
     db.prepare('DELETE FROM model_checks WHERE owner_id=?').bind(owner),
     db.prepare('DELETE FROM model_policies WHERE owner_id=?').bind(owner),
     db.prepare('DELETE FROM model_connections WHERE owner_id=?').bind(owner),

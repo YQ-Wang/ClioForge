@@ -1,0 +1,5 @@
+CREATE TABLE search_connections (owner_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,provider TEXT NOT NULL CHECK(provider IN ('exa','openalex')),encrypted_key TEXT NOT NULL,monthly_limit INTEGER NOT NULL CHECK(monthly_limit BETWEEN 0 AND 10000),PRIMARY KEY(owner_id,provider));
+CREATE TABLE search_allowances (owner_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,provider TEXT NOT NULL,month TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(owner_id,provider,month));
+CREATE TABLE discovery_sessions (id TEXT PRIMARY KEY,owner_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,query TEXT NOT NULL,result TEXT,status TEXT NOT NULL DEFAULT 'running',created_at TEXT NOT NULL);
+CREATE INDEX discovery_session_project ON discovery_sessions(project_id,owner_id,created_at);
+CREATE TABLE catalog_cache (owner_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,cache_key TEXT NOT NULL,result TEXT NOT NULL,expires_at INTEGER NOT NULL,PRIMARY KEY(owner_id,project_id,cache_key));

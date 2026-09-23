@@ -39,6 +39,8 @@ jobs:
       - run: npm run format:check
       - run: npm test
       - run: npm run test:e2e
+      - name: Verify frozen research benchmark
+        run: npm run research:benchmark
       - run: npm run build:cloudflare
       - run: npm run check:jobs
   secrets:

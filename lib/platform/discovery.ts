@@ -1,21 +1,21 @@
 import { z } from 'zod';
-import { boundedBytes } from '../files';
 import type { ResearchStore } from '../store';
 import { indexVersion, searchPages } from './search';
 import type { MissionTask, TaskResult } from './types';
-export const candidateSchema = z.object({
-  id: z.string().max(1000),
-  title: z.string().max(2000),
-  url: z
-    .string()
-    .max(2000)
-    .refine(
-      (value) => value.startsWith('/?project=') || /^https:\/\//i.test(value),
-    ),
-  access: z.enum(['project_text', 'catalog_only']),
-  detail: z.string().max(4000),
-});
-export type Candidate = z.infer<typeof candidateSchema>;
+import {
+  candidateSchema,
+  type Candidate,
+  type Catalog,
+  type CatalogResult,
+} from '../literature-types';
+import {
+  literatureQueries,
+  mergeCandidates,
+  rankCandidates,
+  searchCatalog,
+} from '../literature-catalogs';
+export { candidateSchema } from '../literature-types';
+export type { Candidate } from '../literature-types';
 export function plannedQueries(
   deps: { result: TaskResult | null }[],
   fallback: string,
@@ -37,6 +37,9 @@ export type SourceDiscoveryInput = {
   page_refs?: { version_id: string; page: number }[];
   queries: string[];
   external: boolean;
+  expand_chinese?: boolean;
+  use_exa?: boolean;
+  catalog_search?: (catalog: Catalog, query: string) => Promise<CatalogResult>;
   locale: 'zh-CN' | 'en';
 };
 
@@ -120,9 +123,10 @@ export async function searchSourceCandidates(
   input: SourceDiscoveryInput,
   request: typeof fetch = fetch,
 ): Promise<TaskResult> {
-  const queries = [...new Set(input.queries.map((query) => query.trim()))]
-    .filter(Boolean)
-    .slice(0, 3);
+  const queries = literatureQueries(
+    input.queries,
+    input.expand_chinese !== false,
+  );
   if (!queries.length) throw new Error('没有可执行的检索词，请检查搜索问题。');
   for (const id of input.version_ids)
     await indexVersion(store.db, await store.version(id));
@@ -136,6 +140,7 @@ export async function searchSourceCandidates(
     cap: number;
     status: string;
     searched_at: string;
+    cached?: boolean;
   }[] = [];
   for (const query of queries) {
     const hits = input.version_ids.length
@@ -179,90 +184,52 @@ export async function searchSourceCandidates(
         searched_at: new Date().toISOString(),
       });
     if (!input.external) continue;
-    // Only public catalog queries leave the project. No originals, API keys,
-    // model-generated hostnames or redirects are sent to third-party endpoints.
-    for (const catalog of ['crossref', 'loc']) {
-      const url =
-        catalog === 'crossref'
-          ? new URL('https://api.crossref.org/works')
-          : new URL('https://www.loc.gov/search/');
-      url.searchParams.set(catalog === 'crossref' ? 'query' : 'q', query);
-      if (catalog === 'crossref') {
-        url.searchParams.delete('query');
-        url.searchParams.set('query.title', query);
+    // Only explicitly supplied search queries are sent to fixed catalog hosts.
+    const catalogs: Catalog[] = [
+      'crossref',
+      'openalex',
+      'loc',
+      ...(input.use_exa ? ['exa' as const] : []),
+    ];
+    const results = await Promise.all(
+      catalogs.map(async (catalog) => ({
+        catalog,
+        result: await (input.catalog_search
+          ? input.catalog_search(catalog, query)
+          : searchCatalog(catalog, query, request)),
+      })),
+    );
+    for (const { catalog, result } of results) {
+      for (const item of result.candidates) {
+        const merged = mergeCandidates([
+          ...(candidates.has(item.id) ? [candidates.get(item.id)!] : []),
+          item,
+        ]);
+        candidates.set(item.id, merged[0]);
       }
-      url.searchParams.set(catalog === 'crossref' ? 'rows' : 'c', '5');
-      if (catalog === 'loc') url.searchParams.set('fo', 'json');
-      const log = {
+      searches.push({
         query,
         catalog,
-        returned: 0,
+        returned: result.candidates.length,
         filtered: 0,
         cap: 5,
-        status: 'completed',
+        status: result.status,
         searched_at: new Date().toISOString(),
-      };
-      try {
-        const response = await request(url, {
-          headers: { Accept: 'application/json' },
-          redirect: 'manual',
-          signal: AbortSignal.timeout(15000),
-        });
-        if (!response.ok) throw new Error('Catalog unavailable');
-        const raw = JSON.parse(
-          new TextDecoder().decode(await boundedBytes(response, 2_000_000)),
-        );
-        const records =
-          catalog === 'crossref' ? raw.message?.items : raw.results;
-        if (!Array.isArray(records))
-          throw new Error('Invalid catalog response');
-        for (const item of records.slice(0, 5)) {
-          const doi = typeof item.DOI === 'string' ? item.DOI : '';
-          const urlText =
-            catalog === 'crossref'
-              ? `https://doi.org/${doi}`
-              : typeof item.id === 'string'
-                ? item.id
-                : '';
-          if (
-            !urlText.startsWith('https://') ||
-            (catalog === 'loc' && new URL(urlText).hostname !== 'www.loc.gov')
-          )
-            continue;
-          const id =
-            catalog === 'crossref' ? `doi:${doi.toLowerCase()}` : urlText;
-          const title = Array.isArray(item.title)
-            ? item.title.join(' · ')
-            : String(item.title || 'Untitled');
-          if (!catalogRecordMatches(query, title)) {
-            log.filtered++;
-            continue;
-          }
-          candidates.set(id, {
-            id,
-            title: title.slice(0, 500),
-            url: urlText.slice(0, 2000),
-            access: 'catalog_only',
-            detail: String(item.date || item.publisher || '').slice(0, 4000),
-          });
-          log.returned++;
-        }
-      } catch {
-        log.status = 'unavailable';
-      }
-      searches.push(log);
+        cached: result.cached,
+      });
     }
   }
+  const failed = searches.filter((s) => s.status !== 'completed').length;
   return {
     summary:
       input.locale === 'en'
-        ? `${candidates.size} candidate passages/catalog records. Catalog records have not been read as full text. See coverage and failures below.`
-        : `找到 ${candidates.size} 条候选段落或目录记录。目录记录尚未取得全文；检索范围与失败情况保留在下方。`,
+        ? `${candidates.size} candidate passages/catalog records. Catalog records have not been read as full text. ${failed ? `${failed} searches could not complete. ` : ''}See coverage and failures below.`
+        : `找到 ${candidates.size} 条候选段落或目录记录。目录记录尚未取得全文；${failed ? `${failed} 次检索未完成。` : ''}检索范围与失败情况保留在下方。`,
     citations,
     checks: [],
     data: {
       queries,
-      candidates: [...candidates.values()],
+      candidates: rankCandidates([...candidates.values()]),
       searches,
       engine: 'bounded-discovery-v2',
     },

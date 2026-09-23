@@ -298,6 +298,101 @@ export default function ResearchRecords({
           ) : (
             <p>{data.coverage}</p>
           )}
+          <div className="platform-notice">
+            <strong>
+              {L('本页完整性', 'Page completeness')}:{' '}
+              {data.completeness?.status === 'complete'
+                ? L(
+                    '已报告完整，仍需核查',
+                    'Reported complete; review required',
+                  )
+                : data.completeness?.status === 'illegible'
+                  ? L('有无法辨认的部分', 'Illegible areas')
+                  : L('未确认完整', 'Completeness unconfirmed')}
+            </strong>
+            <p>
+              {data.completeness?.reason ||
+                L(
+                  '旧输出没有完整性记录，请通读原页检查遗漏。',
+                  'This older output has no completeness record. Read the entire original page for omissions.',
+                )}
+            </p>
+            {editing && (
+              <>
+                <label>
+                  {L('核查后状态', 'Status after review')}
+                  <NativeSelect
+                    value={data.completeness?.status || 'partial'}
+                    onChange={(e) =>
+                      setDraft({
+                        ...data,
+                        completeness: {
+                          status: e.target.value as
+                            | 'complete'
+                            | 'partial'
+                            | 'illegible',
+                          remaining_records:
+                            e.target.value === 'complete' ? 0 : null,
+                          reason: data.completeness?.reason || data.coverage,
+                        },
+                      })
+                    }
+                  >
+                    <option value="partial">{L('尚未完整', 'Partial')}</option>
+                    <option value="illegible">
+                      {L('有难辨文字', 'Illegible')}
+                    </option>
+                    <option value="complete">
+                      {L('整页已核查完整', 'Entire page checked')}
+                    </option>
+                  </NativeSelect>
+                </label>
+                <label>
+                  {L(
+                    '尚未摘录的记录数（未知可留空）',
+                    'Remaining records (blank if unknown)',
+                  )}
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100000}
+                    value={data.completeness?.remaining_records ?? ''}
+                    onChange={(e) =>
+                      setDraft({
+                        ...data,
+                        completeness: {
+                          status: data.completeness?.status || 'partial',
+                          remaining_records:
+                            e.target.value === ''
+                              ? null
+                              : Number(e.target.value),
+                          reason: data.completeness?.reason || data.coverage,
+                        },
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  {L('完整性判断依据与局限', 'Basis and limitations')}
+                  <Textarea
+                    value={data.completeness?.reason || ''}
+                    maxLength={2000}
+                    onChange={(e) =>
+                      setDraft({
+                        ...data,
+                        completeness: {
+                          status: data.completeness?.status || 'partial',
+                          remaining_records:
+                            data.completeness?.remaining_records ?? null,
+                          reason: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </label>
+              </>
+            )}
+          </div>
           {!data.records.length && (
             <p>
               {L(

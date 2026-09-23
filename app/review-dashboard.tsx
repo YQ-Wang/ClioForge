@@ -70,7 +70,8 @@ export default function ReviewDashboard({
           </p>
         </div>
         <strong>
-          {done} / {pages.length} {L('页已处理', 'pages processed')}
+          {done} / {pages.length}{' '}
+          {L('页步骤已有输出', 'page steps have outputs')}
         </strong>
       </header>
       <progress

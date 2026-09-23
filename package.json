@@ -28,7 +28,9 @@
     "check:migrations": "node scripts/check-migrations.mjs",
     "audit:dependencies": "npm audit --audit-level=moderate",
     "eval:source-search:live": "tsx scripts/evaluate-source-search.mts",
-    "check": "npm run check:comments && npm run typecheck && npm run lint"
+    "check": "npm run check:comments && npm run typecheck && npm run lint",
+    "research:replay": "tsx scripts/replay-comparison.ts",
+    "research:benchmark": "python3 scripts/benchmark-franklin.py --check"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
@@ -64,6 +66,7 @@
     "input-otp": "1.5.0",
     "katex": "^0.18.6",
     "lucide-react": "1.40.0",
+    "opencc-js": "1.4.2",
     "pdfjs-dist": "^5.4.624",
     "react": "19.2.8",
     "react-day-picker": "9.8.1",

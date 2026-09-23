@@ -1,9 +1,11 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Play, Square, CheckCircle2, Loader2 } from 'lucide-react';
+import { Play, Pause, Square, RefreshCw, Loader2 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/provider';
 import { selectedPages } from '@/lib/page-selection';
-import type { Run, SourceVersion } from '@/lib/types';
+import { api } from '@/lib/client-api';
+import { OCR_BATCH_PAGES, type OcrBatchView } from '@/lib/ocr-batch-types';
+import type { SourceVersion } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,248 +16,318 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Field } from './workspace';
-type Checkpoint = {
-  page: number;
-  status: 'waiting' | 'running' | 'review' | 'failed';
-  detail?: string;
-};
 export default function BatchTranscription({
   version,
   currentPage,
-  runs,
-  onRequest,
+  modelId,
+  imageForPage,
   onClose,
   onPage,
 }: {
   version: SourceVersion;
   currentPage: number;
-  runs: Run[];
-  onRequest: (page: number) => Promise<Run>;
+  modelId: string;
+  imageForPage: (page: number) => Promise<string>;
   onClose: () => void;
   onPage: (page: number) => void;
 }) {
-  const { locale, t } = useI18n();
-  const L = (zh: string, en: string) => (locale === 'en' ? en : zh);
-  const blank = version.pages
-    .filter((page) => !page.text.trim())
-    .slice(0, 10)
-    .map((page) => page.page);
-  const [selection, setSelection] = useState(
-      (blank.length ? blank : [currentPage]).join(', '),
-    ),
-    [busy, setBusy] = useState(false),
-    [stopping, setStopping] = useState(false),
+  const { locale, t } = useI18n(),
+    L = (zh: string, en: string) => (locale === 'en' ? en : zh);
+  const [view, setView] = useState<OcrBatchView | null>(null),
     [error, setError] = useState(''),
-    [rows, setRows] = useState<Checkpoint[]>([]);
-  const stop = useRef(false),
-    alive = useRef(true);
-  const completed = useRef(new Map<number, Run>());
+    [busy, setBusy] = useState(false);
+  const [selection, setSelection] = useState(
+    version.pages
+      .filter((p) => !p.text.trim())
+      .slice(0, OCR_BATCH_PAGES)
+      .map((p) => p.page)
+      .join(', ') || String(currentPage),
+  );
+  const [budget, setBudget] = useState('1'),
+    [uploading, setUploading] = useState(0);
+  const alive = useRef(true),
+    requestId = useRef(crypto.randomUUID());
+  const state = view?.batch?.status;
   useEffect(() => {
     alive.current = true;
+    let inFlight = false;
+    async function read() {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const next = await api<OcrBatchView>(
+          `/api/ocr-batches?project_id=${version.project_id}&version_id=${version.id}`,
+        );
+        if (alive.current) setView(next);
+      } catch (e) {
+        if (alive.current)
+          setError(
+            e instanceof Error ? e.message : 'Unable to load transcription',
+          );
+      } finally {
+        inFlight = false;
+      }
+    }
+    void read();
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') void read();
+    }, 6000);
     return () => {
       alive.current = false;
-      stop.current = true;
+      clearInterval(timer);
     };
-  }, []);
-  async function start() {
-    let pages: number[];
-    try {
-      pages = selectedPages(
-        selection,
-        version.pages.map((page) => page.page),
-      );
-    } catch (e) {
-      setError(
-        e instanceof Error ? t(e.message) : L('页码无效。', 'Invalid pages.'),
-      );
-      return;
-    }
-    stop.current = false;
-    setStopping(false);
+  }, [version.id, version.project_id]);
+  async function control(action: 'pause' | 'resume' | 'cancel') {
+    if (!view?.batch) return;
     setBusy(true);
     setError('');
-    setRows(pages.map((page) => ({ page, status: 'waiting' })));
     try {
-      for (const page of pages) {
-        if (stop.current || !alive.current) break;
-        setRows((current) =>
-          current.map((row) =>
-            row.page === page ? { ...row, status: 'running' } : row,
-          ),
-        );
-        try {
-          const saved =
-            completed.current.get(page) ||
-            runs.find(
-              (run) =>
-                run.kind === 'ocr' &&
-                !run.model_snapshot.region &&
-                run.status === 'succeeded' &&
-                run.result &&
-                run.model_snapshot.page === page &&
-                run.source_version_ids.includes(version.id),
-            );
-          const run = saved || (await onRequest(page));
-          if (!alive.current) break;
-          if (run.status !== 'succeeded' || !run.result)
-            throw new Error(
-              run.error || L('结果尚未完成。', 'The result is not complete.'),
-            );
-          completed.current.set(page, run);
-          setRows((current) =>
-            current.map((row) =>
-              row.page === page
-                ? {
-                    page,
-                    status: 'review',
-                    detail:
-                      run.error ||
-                      (saved
-                        ? L(
-                            '已复用候选，没有再次调用模型。',
-                            'Reused the saved candidate without another model call.',
-                          )
-                        : undefined),
-                  }
-                : row,
-            ),
-          );
-        } catch (e) {
-          if (!alive.current) break;
-          const message =
-            e instanceof Error
-              ? e.message
-              : L('本页转录未完成。', 'This page could not be transcribed.');
-          setRows((current) =>
-            current.map((row) =>
-              row.page === page
-                ? { page, status: 'failed', detail: t(message) }
-                : row,
-            ),
-          );
-          setError(
-            L(
-              '处理已停止。已完成页面保留，后续页没有调用模型。',
-              'Processing stopped. Completed pages are preserved; later pages were not sent to the model.',
-            ),
-          );
-          break;
-        }
-      }
+      if (action === 'cancel') requestId.current = crypto.randomUUID();
+      setView(
+        await api<OcrBatchView>('/api/ocr-batches', {
+          id: view.batch.id,
+          action,
+        }),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? t(e.message) : 'Unable to update batch');
     } finally {
-      if (alive.current) setBusy(false);
+      setBusy(false);
     }
   }
+  async function start() {
+    setBusy(true);
+    setError('');
+    try {
+      let next = view;
+      if (
+        !next?.batch ||
+        ['completed', 'cancelled', 'stale'].includes(next.batch.status)
+      ) {
+        next = await api<OcrBatchView>('/api/ocr-batches', {
+          action: 'create',
+          id: requestId.current,
+          project_id: version.project_id,
+          version_id: version.id,
+          connection_id: modelId,
+          pages: selectedPages(
+            selection,
+            version.pages.map((p) => p.page),
+            OCR_BATCH_PAGES,
+          ),
+          budget_usd: Number(budget),
+          locale,
+        });
+        if (alive.current) setView(next);
+      }
+      if (!next.batch) throw new Error('Batch unavailable');
+      for (const row of next.pages) {
+        if (!alive.current) return;
+        if (row.status !== 'pending') continue;
+        setUploading(row.page);
+        const image = await imageForPage(row.page);
+        if (!alive.current) return;
+        await api('/api/ocr-batches', {
+          action: 'stage',
+          id: next.batch.id,
+          page: row.page,
+          image,
+        });
+      }
+      if (!alive.current) return;
+      const queued = await api<OcrBatchView>('/api/ocr-batches', {
+        action: 'start',
+        id: next.batch.id,
+      });
+      setView(queued);
+      requestId.current = crypto.randomUUID();
+    } catch (e) {
+      if (alive.current)
+        setError(e instanceof Error ? t(e.message) : 'Unable to prepare batch');
+    } finally {
+      if (alive.current) {
+        setBusy(false);
+        setUploading(0);
+      }
+    }
+  }
+  const newBatch =
+    !state || ['completed', 'cancelled', 'stale'].includes(state);
+  const labels: Record<string, [string, string]> = {
+    staging: ['等待上传', 'Waiting for page images'],
+    queued: ['已排队，可关闭页面', 'Queued; safe to close'],
+    running: ['后台转录中，可关闭页面', 'Transcribing in background'],
+    paused: ['已暂停', 'Paused'],
+    cancelled: ['已取消', 'Cancelled'],
+    completed: ['候选已就绪，等待人工核查', 'Candidates ready for review'],
+    attention: ['需要处理', 'Needs attention'],
+    stale: ['材料版本已变化', 'Source version changed'],
+    pending: ['未上传', 'Not uploaded'],
+    staged: ['已上传', 'Uploaded'],
+    review: ['查看候选', 'Review candidate'],
+  };
+  const label = (s: string) => (labels[s] ? L(...labels[s]) : s);
   return (
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open) {
-          stop.current = true;
-          onClose();
-        }
+        if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {L('批量转录与核查', 'Batch transcription and review')}
           </DialogTitle>
           <DialogDescription>
             {L(
-              '每次最多 10 页，按项目预算逐页处理。候选不会覆盖原文；已有候选会复用。请保持页面打开，关闭会停止后续页。',
-              'Process up to 10 pages sequentially within the project budget. Candidates never replace source text; saved candidates are reused. Keep this page open. Closing stops subsequent pages.',
+              '先上传选定页图像，之后可关闭浏览器。后台按本批与项目预算逐页处理，已有候选会复用；原文不会被自动覆盖。',
+              'Upload selected page images first, then close your browser. Background processing respects batch and project budgets and reuses saved candidates. Source text is never replaced automatically.',
             )}
           </DialogDescription>
         </DialogHeader>
-        <Field label={L('要处理的页码', 'Pages to process')}>
-          <Input
-            value={selection}
-            onChange={(e) => setSelection(e.target.value)}
-            placeholder="1-3, 8"
-            disabled={busy}
-          />
-        </Field>
-        <p className="settings-hint">
-          {L(
-            '优先选择没有文字的页。如需重新转录已有候选，请使用阅读页的单页转录。重试失败页可能再次产生费用，请先核对记录。',
-            'Pages without text are preselected. Use single-page transcription to replace an existing candidate. Retrying failed pages may incur another charge; check their records first.',
+        {newBatch && (
+          <>
+            <Field label={L('页码（最多 100 页）', 'Pages (up to 100)')}>
+              <Input
+                value={selection}
+                onChange={(e) => setSelection(e.target.value)}
+                disabled={busy}
+              />
+            </Field>
+            <Field
+              label={L('本批费用上限（美元）', 'Batch spending limit (USD)')}
+            >
+              <Input
+                type="number"
+                min="0.01"
+                max="100"
+                step="0.01"
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+                disabled={busy}
+              />
+            </Field>
+          </>
+        )}
+        {view?.batch && (
+          <output className="settings-feedback">
+            <strong>{label(view.batch.status)}</strong>
+            <p>
+              {view.pages.filter((p) => p.status === 'review').length} /{' '}
+              {view.pages.length}{' '}
+              {L(
+                '页候选已保存；仍需对照原件核查。',
+                'page candidates saved; check them against the originals.',
+              )}
+            </p>
+            <p>
+              {L('已计入／预留', 'Committed / reserved')}: $
+              {(view.committed_units / 1e6).toFixed(4)} / $
+              {(view.batch.budget_units / 1e6).toFixed(2)}
+            </p>
+            {view.batch.detail && <p>{t(view.batch.detail)}</p>}
+          </output>
+        )}
+        {uploading > 0 && (
+          <output>
+            <Loader2 className="inline animate-spin" size={16} />{' '}
+            {L(
+              `正在上传第 ${uploading} 页，请暂时保持页面打开。`,
+              `Uploading page ${uploading}; keep this page open for now.`,
+            )}
+          </output>
+        )}
+        {error && (
+          <p className="settings-feedback" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {(newBatch || (state === 'staging' && view?.controllable)) && (
+            <Button
+              disabled={busy || !modelId || !view}
+              onClick={() => void start()}
+            >
+              <Play size={16} />
+              {state === 'staging'
+                ? L('继续上传并开始', 'Continue upload and start')
+                : L('准备并开始', 'Prepare and start')}
+            </Button>
           )}
-        </p>
-        {error && <p role="alert">{error}</p>}
-        <ol className="transcription-checkpoints">
-          {rows.map((row) => (
-            <li key={row.page}>
-              <span>
-                {row.status === 'running' ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : row.status === 'review' ? (
-                  <CheckCircle2 size={16} />
-                ) : null}
-                {L('第 ' + row.page + ' 页', 'Page ' + row.page)}
-              </span>
-              <span>
-                {row.status === 'waiting'
-                  ? L('尚未开始', 'Not started')
-                  : row.status === 'running'
-                    ? L('正在转录', 'Transcribing')
-                    : row.status === 'review'
-                      ? L(
-                          '候选已保存 · 待核查',
-                          'Candidate saved · review required',
-                        )
-                      : L('需要处理', 'Needs attention')}
-              </span>
-              {row.detail && <p>{row.detail}</p>}
-              {row.status === 'review' && (
+          {view?.controllable && (
+            <>
+              {['queued', 'running'].includes(state || '') && (
                 <Button
-                  variant="ghost"
-                  size="sm"
+                  variant="outline"
                   disabled={busy}
-                  onClick={() => {
-                    onClose();
-                    onPage(row.page);
-                  }}
+                  onClick={() => void control('pause')}
                 >
-                  {L('去核查', 'Review page')}
+                  <Pause size={16} />
+                  {L('处理本页后暂停', 'Pause after this page')}
                 </Button>
               )}
-            </li>
-          ))}
-        </ol>
-        <div className="form-actions">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              stop.current = true;
-              onClose();
-            }}
-          >
+              {['paused', 'attention'].includes(state || '') && (
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void control('resume')}
+                >
+                  <RefreshCw size={16} />
+                  {L('核对后继续', 'Continue after checking')}
+                </Button>
+              )}
+              {!newBatch && (
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void control('cancel')}
+                >
+                  <Square size={16} />
+                  {L('取消后续页', 'Cancel remaining pages')}
+                </Button>
+              )}
+            </>
+          )}
+          <Button variant="ghost" onClick={onClose}>
             {L('关闭', 'Close')}
           </Button>
-          {busy ? (
-            <Button
-              variant="outline"
-              disabled={stopping}
-              onClick={() => {
-                stop.current = true;
-                setStopping(true);
-              }}
-            >
-              <Square size={14} />
-              {stopping
-                ? L('当前页结束后停止…', 'Stopping after this page…')
-                : L('本页结束后停止', 'Stop after this page')}
-            </Button>
-          ) : (
-            <Button onClick={() => void start()}>
-              <Play size={14} />
-              {rows.length
-                ? L('处理尚未完成的页', 'Process unfinished pages')
-                : L('开始逐页转录', 'Start transcription')}
-            </Button>
-          )}
         </div>
+        {!!view?.pages.length && (
+          <div
+            className="max-h-64 overflow-y-auto divide-y"
+            aria-label={L('逐页进度', 'Page progress')}
+          >
+            {view.pages.map((row) => (
+              <div
+                key={row.page}
+                className="flex items-center justify-between gap-3 py-2"
+              >
+                <div>
+                  <span>
+                    {L(`第 ${row.page} 页`, `Page ${row.page}`)} ·{' '}
+                    {label(row.status)}
+                  </span>
+                  {row.detail && (
+                    <p className="text-sm text-muted-foreground">
+                      {t(row.detail)}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    onPage(row.page);
+                    onClose();
+                  }}
+                >
+                  {L('查看原页', 'Open page')}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -1,3 +1,4 @@
+import { evaluationMetrics } from './evaluation-metrics';
 import type { Evaluation } from './evaluation';
 import type { MissionView, MissionTask } from './types';
 import { agentRecipe, extractionSchema } from './research-recipes';
@@ -120,8 +121,8 @@ export function methodReportMarkdown(
         ),
     '',
     L(
-      '仅使用每个固定页最新且仍适用的人工评估，旧评估排除。错误类别可能重叠，不能相加作为准确率。时间由研究者填写，不包含模型等待、准备及整理耗时，不能等同端到端提速。独立试读是流程阶段，不保证盲测；样本不能代表整个资料集。',
-      'Only the latest applicable manual evaluation per fixed page is included; obsolete evaluations are excluded. Error categories may overlap and do not constitute accuracy. Researcher-entered timing excludes model waits, preparation and organization, so it is not end-to-end acceleration. Held-out denotes the workflow phase, not guaranteed blind testing; sampled pages do not represent the corpus.',
+      '仅使用每个固定页最新且仍适用的人工评估，旧评估排除。错误类别可能重叠，不能相加作为准确率。时间由研究者填写。上述核查时间对照不包含准备和整理；逐页完整人工耗时仅在所有项目均测量时计算，模型等待另列，不代表受控实验。独立试读是流程阶段，不保证盲测；样本不能代表整个资料集。',
+      'Only the latest applicable manual evaluation per fixed page is included; obsolete evaluations are excluded. Error categories may overlap and do not constitute accuracy. The review-time comparison above excludes preparation and organization, so it is not end-to-end acceleration. Per-page full human effort is calculated only when every timing field is measured; model waits are separate. Self-reported ratios are not controlled experimental results. Held-out denotes the workflow phase, not guaranteed blind testing; sampled pages do not represent the corpus.',
     ),
     '',
   );
@@ -133,6 +134,13 @@ export function methodReportMarkdown(
       `[${L('查看核查步骤', 'Review step')}](${href}) · [${L('回到原文', 'Original source')}](${original})`,
       `${L('评估时间', 'Evaluated')}: ${p.evaluation.created_at}`,
       p.evaluation.metrics.notes,
+      (() => {
+        const m = evaluationMetrics(p.evaluation.metrics);
+        return L(
+          `记录收录精确率：${m.precision ?? '未测量'}；召回率：${m.recall ?? '未测量'}；完整人工分钟：${m.human_minutes ?? '未测量'}；等待分钟：${m.waiting_minutes ?? '未测量'}；人工对照比：${m.manual_speedup ?? '未测量'}；ChatGPT 对照比：${m.chatgpt_speedup ?? '未测量'}。`,
+          `Record inclusion precision: ${m.precision ?? 'unmeasured'}; recall: ${m.recall ?? 'unmeasured'}; complete human minutes: ${m.human_minutes ?? 'unmeasured'}; wait minutes: ${m.waiting_minutes ?? 'unmeasured'}; manual ratio: ${m.manual_speedup ?? 'unmeasured'}; ChatGPT ratio: ${m.chatgpt_speedup ?? 'unmeasured'}.`,
+        );
+      })(),
       '',
     );
   }

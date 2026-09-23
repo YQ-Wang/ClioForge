@@ -9,12 +9,16 @@ import { executeJob, recoverAndDispatch, type JobsEnv } from '../lib/jobs';
 import { executeMissionTask, recoverMissions } from '../lib/platform/execute';
 import { checkWatches } from '../lib/watches';
 import { runMaintenanceSteps } from '../lib/background-maintenance';
+import { executeOcrBatch, recoverOcrBatches } from '../lib/ocr-batches';
 export default {
   fetch() {
     return new Response('Not found', { status: 404 });
   },
   async queue(
-    batch: MessageBatch<{ id: string; kind?: 'mission' | 'preparation' }>,
+    batch: MessageBatch<{
+      id: string;
+      kind?: 'mission' | 'preparation' | 'ocr';
+    }>,
     env: JobsEnv,
   ) {
     for (const message of batch.messages) {
@@ -27,7 +31,9 @@ export default {
         continue;
       }
       try {
-        if (message.body.kind === 'preparation')
+        if (message.body.kind === 'ocr')
+          await executeOcrBatch(env, message.body.id);
+        else if (message.body.kind === 'preparation')
           await executePreparation(env, message.body.id);
         else if (message.body.kind === 'mission')
           await executeMissionTask(env, message.body.id);
@@ -60,10 +66,11 @@ export default {
       { name: 'research_jobs', run: () => recoverAndDispatch(env) },
       { name: 'research_plans', run: () => recoverMissions(env) },
       { name: 'material_preparation', run: () => recoverPreparations(env) },
+      { name: 'batch_transcription', run: () => recoverOcrBatches(env) },
       { name: 'source_watches', run: () => checkWatches(env) },
     ]);
   },
 } satisfies ExportedHandler<
   JobsEnv,
-  { id: string; kind?: 'mission' | 'preparation' }
+  { id: string; kind?: 'mission' | 'preparation' | 'ocr' }
 >;

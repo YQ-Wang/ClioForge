@@ -1,4 +1,5 @@
 'use client';
+import SourceDiscovery from './source-discovery';
 import { useI18n } from '@/lib/i18n/provider';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -191,6 +192,12 @@ export default function ArgumentPanel({
               <p>{q.detail}</p>
             </div>
             <div className="question-actions">
+              <SourceDiscovery
+                projectId={projectId}
+                disabled={!canWrite}
+                initialQuery={q.title}
+                variant="outline"
+              />
               <Link
                 className="claim-draft-link"
                 href={`${projectPath(projectId, 'notes')}&question=${encodeURIComponent(q.id)}`}

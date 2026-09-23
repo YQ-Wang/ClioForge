@@ -122,7 +122,7 @@ test('AI source search remains available in source management and renders persis
       return;
     }
     if (
-      url.pathname === '/api/source-discovery' &&
+      url.pathname === '/api/agent-source-discovery' &&
       request.method() === 'POST'
     ) {
       const body = request.postDataJSON();
@@ -136,7 +136,7 @@ test('AI source search remains available in source management and renders persis
       });
       return;
     }
-    if (url.pathname === '/api/source-discovery') {
+    if (url.pathname === '/api/agent-source-discovery') {
       polls += 1;
       const complete = polls > 1;
       await route.fulfill({

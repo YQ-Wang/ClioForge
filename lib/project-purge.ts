@@ -77,6 +77,8 @@ export async function purgeProject(
     'DELETE FROM source_search_candidates WHERE project_id=?',
     'DELETE FROM source_search_runs WHERE project_id=?',
     ...[
+      'source_derivations',
+      'ocr_batches',
       'agent_credentials',
       'project_invitations',
       'claim_evidence',

@@ -2919,3 +2919,272 @@
   color: var(--muted-foreground);
   white-space: pre-wrap;
 }
+
+/* Literature discovery follows the project dialog and card vocabulary. */
+.literature-path {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  list-style: none;
+  padding: 12px 16px;
+  margin: 0;
+  border-radius: 12px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.literature-path li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.literature-path li > span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+.literature-path li[data-current='true'] {
+  color: var(--primary);
+  font-weight: 500;
+}
+.literature-path li[data-current='true'] > span {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+}
+.literature-dialog {
+  max-width: min(760px, calc(100vw - 24px)) !important;
+  scroll-padding-top: 24px;
+  overflow-anchor: none;
+}
+.literature-dialog .platform-form > p {
+  margin: 0;
+  font-size: 13px;
+}
+.literature-dialog .platform-form label {
+  font-size: 14px;
+  color: var(--foreground);
+}
+.literature-dialog .platform-form textarea {
+  min-height: 96px;
+}
+.literature-dialog .literature-cost-note {
+  text-align: center;
+}
+.literature-dialog .platform-form > .literature-query-error {
+  color: var(--destructive);
+}
+.literature-options {
+  display: grid;
+  gap: 12px;
+}
+.literature-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.literature-dialog .literature-options label {
+  display: flex;
+  line-height: 1.5;
+  font-size: 13px;
+}
+.literature-options label:has(input:disabled) {
+  color: var(--muted-foreground);
+  cursor: default;
+}
+.literature-options input {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.literature-settings {
+  border-top: 1px solid var(--border);
+  padding: 10px 0 0;
+  min-width: 0;
+}
+.literature-settings summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+.literature-settings > summary {
+  margin-bottom: 0;
+}
+.literature-settings[open] > summary {
+  margin-bottom: 12px;
+}
+.literature-settings label {
+  display: grid;
+  gap: 6px;
+}
+.literature-search-details > summary,
+.literature-candidate-details > summary {
+  font-size: 13px;
+  cursor: pointer;
+}
+.literature-search-details .muted {
+  margin: 8px 0 0;
+}
+.literature-history {
+  display: flex;
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  justify-content: space-between;
+  white-space: normal;
+  text-align: left;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+.literature-history small {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.literature-history > span {
+  min-width: 0;
+}
+.literature-history + .literature-history {
+  border-top: 1px solid var(--border);
+}
+.literature-dialog a {
+  overflow-wrap: anywhere;
+}
+.literature-results-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+}
+.literature-query {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--primary);
+  background: var(--muted);
+  border-radius: 0 8px 8px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.literature-results .research-candidates {
+  margin-top: 20px;
+}
+.literature-result-heading h3 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+.literature-result-heading h3 > span {
+  border-radius: 6px;
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  padding: 2px 7px;
+  font-size: 12px;
+}
+.literature-result-heading p {
+  margin: 8px 0 16px;
+}
+.literature-result-heading .literature-partial-notice {
+  border-left: 3px solid var(--primary);
+  padding: 8px 12px;
+  background: var(--muted);
+  border-radius: 0 8px 8px 0;
+}
+.literature-weak-matches {
+  margin: 12px 0;
+  padding: 12px;
+  background: var(--muted);
+  border-radius: 10px;
+}
+.literature-weak-matches p {
+  margin: 0 0 6px;
+}
+.literature-candidate-title {
+  font-size: 15px;
+  line-height: 1.65;
+  margin: 0;
+}
+.literature-candidate-title svg {
+  display: inline;
+  margin-left: 6px;
+  vertical-align: baseline;
+}
+.research-candidates article > p {
+  margin: 6px 0 10px;
+}
+.literature-candidate-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.literature-candidate-tags > span {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.literature-candidate-details {
+  overflow-wrap: anywhere;
+}
+.literature-save-feedback {
+  display: block;
+  margin-top: 12px;
+}
+.literature-next-step {
+  margin-top: 24px;
+  padding: 16px;
+  background: var(--muted);
+  border-radius: 12px;
+}
+.literature-next-step p {
+  color: var(--muted-foreground);
+  line-height: 1.7;
+  margin: 8px 0 12px;
+}
+.literature-progress {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+@media (max-width: 600px) {
+  .literature-dialog {
+    padding: 20px;
+    border-radius: 20px;
+  }
+  .literature-path {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px 12px;
+    padding: 10px;
+  }
+  .literature-path li {
+    flex-direction: column;
+    text-align: center;
+    font-size: 12px;
+    gap: 5px;
+  }
+  .literature-path li > span {
+    width: 20px;
+    height: 20px;
+  }
+  .literature-history {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding-block: 10px;
+  }
+  .literature-results-toolbar [data-slot='button'],
+  .literature-results-toolbar > a {
+    padding-inline: 12px;
+  }
+}

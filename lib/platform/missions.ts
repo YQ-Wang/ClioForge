@@ -477,6 +477,7 @@ export class MissionStore extends ResearchStore {
       checkExtraction(
         result,
         z.array(z.string()).parse(task.input.parameters.fields),
+        task.input.parameters.completeness_contract === 1,
       );
     if (task.input.parameters.shortlist === true)
       result.data = validateShortlist(
@@ -572,6 +573,10 @@ export class MissionStore extends ResearchStore {
       ...checks,
     ].slice(0, 100);
     const status =
+      (task.input.parameters.extraction === true &&
+        (result.data as { completeness?: { status?: string } } | undefined)
+          ?.completeness?.status !== 'complete' &&
+        task.input.parameters.completeness_contract === 1) ||
       task.executor === 'human' ||
       task.kind === 'review' ||
       task.kind === 'publish'

@@ -16,7 +16,7 @@ import { recoverDirectRuns } from './direct-research';
 export type JobsEnv = {
   DB: D1Database;
   FILES?: R2Bucket;
-  JOB_QUEUE?: Queue<{ id: string; kind?: 'mission' | 'preparation' }>;
+  JOB_QUEUE?: Queue<{ id: string; kind?: 'mission' | 'preparation' | 'ocr' }>;
   FOLIOTRACE_ENCRYPTION_KEY?: string;
   BRAVE_SEARCH_API_KEY?: string;
   TAVILY_API_KEY?: string;
