@@ -40,6 +40,16 @@ npx wrangler secret put FOLIOTRACE_ENCRYPTION_KEY --config dist/server/wrangler.
 npx wrangler secret put FOLIOTRACE_ENCRYPTION_KEY --config "$CLIOFORGE_JOBS_CONFIG"
 ```
 
+Agentic source search works with public catalogs alone. To offer optional web search or DPLA from the background Worker, set only the provider secrets you intend to use:
+
+```sh
+npx wrangler secret put BRAVE_SEARCH_API_KEY --config "$CLIOFORGE_JOBS_CONFIG"
+npx wrangler secret put TAVILY_API_KEY --config "$CLIOFORGE_JOBS_CONFIG"
+npx wrangler secret put DPLA_API_KEY --config "$CLIOFORGE_JOBS_CONFIG"
+```
+
+Do not place these values in Wrangler JSON, Git, browser configuration or the application Worker. See [agentic source search](source-search-agent.md) for connector and safe-import behavior.
+
 Generate independent high-entropy authentication and encryption secrets. The **encryption key must be identical in the two workers**. Back it up securely; losing or replacing it prevents decrypting saved model credentials. `.dev.vars` is local configuration and does not set production secrets.
 
 After reviewing your selected account and configuration:

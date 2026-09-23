@@ -7,8 +7,11 @@ import {
   Loader2,
   Search,
   Trash2,
+  ExternalLink,
+  X,
 } from 'lucide-react';
 import { api } from '@/lib/client-api';
+import { projectPath } from '@/lib/navigation';
 import type { Source, SourceGroup, SourceOrganization } from '@/lib/types';
 import { useI18n } from '@/lib/i18n/provider';
 import { Button } from '@/components/ui/button';
@@ -30,6 +33,16 @@ type ManagementData = {
   sources: Source[];
   groups: SourceGroup[];
   organization: SourceOrganization[];
+  leads: {
+    id: string;
+    title: string;
+    creators: string[];
+    issued_date: string;
+    institution: string;
+    landing_url: string;
+    access_note: string;
+    relevance_reason: string;
+  }[];
 };
 
 export default function SourceManagement({
@@ -147,6 +160,10 @@ export default function SourceManagement({
               projectId={projectId}
               disabled={busy || !canWrite}
               variant="default"
+              onSourcesChanged={async () => {
+                await load();
+                await onSourcesChanged();
+              }}
             />
           )}
           <Button
@@ -205,6 +222,59 @@ export default function SourceManagement({
             {L('建立分组', 'Create group')}
           </Button>
         </form>
+      )}
+
+      {!showTrash && !!data?.leads.length && (
+        <section
+          className="research-candidates"
+          aria-labelledby="source-leads-title"
+        >
+          <h2 id="source-leads-title">
+            {L('待补资料', 'Sources needing files')}
+          </h2>
+          <p>
+            {L(
+              '助手确认这些目录记录可能相关，但没有找到可安全自动下载的公开原件。打开馆藏记录取得文件后，可在「资料与阅读」中导入。',
+              'The agent found potentially relevant catalog records but no safely downloadable public original. Open the record, obtain the file, then import it under Sources & reading.',
+            )}
+          </p>
+          {data.leads.map((lead) => (
+            <article key={lead.id}>
+              <a href={lead.landing_url} target="_blank" rel="noreferrer">
+                {lead.title} <ExternalLink size={12} />
+              </a>
+              <small>
+                {[lead.creators.join(', '), lead.institution, lead.issued_date]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </small>
+              <p>{lead.relevance_reason}</p>
+              <p>{lead.access_note}</p>
+              {canWrite && (
+                <>
+                  <a href={projectPath(projectId, 'sources')}>
+                    {L('导入取得的原件', 'Import acquired file')}
+                  </a>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      void mutate({
+                        action: 'dismiss_source_lead',
+                        project_id: projectId,
+                        id: lead.id,
+                      }).catch(() => {})
+                    }
+                  >
+                    <X size={14} />
+                    {L('不再显示', 'Dismiss')}
+                  </Button>
+                </>
+              )}
+            </article>
+          ))}
+        </section>
       )}
 
       <div className="source-management-filter">

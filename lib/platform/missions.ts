@@ -212,7 +212,8 @@ export class MissionStore extends ResearchStore {
           task.kind,
         ) &&
         task.input.version_ids.length === 0 &&
-        task.dependencies.length === 0
+        task.dependencies.length === 0 &&
+        task.input.parameters.source_search !== true
       )
         throw new HttpError(400, '请为任务固定资料版本或上游任务。');
       if (
@@ -447,6 +448,20 @@ export class MissionStore extends ResearchStore {
     }
     if (task.input.parameters.agent_stage === 'decision')
       validateResearchAction(result);
+    if (task.input.parameters.source_agent_stage === 'decision') {
+      const dependencyTasks = (
+        await this.db
+          .prepare(
+            'SELECT p.* FROM task_dependencies d JOIN mission_tasks p ON p.id=d.depends_on WHERE d.task_id=?',
+          )
+          .bind(task.id)
+          .all()
+      ).results.map(decodeTask);
+      const { priorSourceSearch, validateSourceSearchAction } =
+        await import('../harness/source-search-tools');
+      const memory = priorSourceSearch(dependencyTasks);
+      if (!memory.stopped) validateSourceSearchAction(result, memory);
+    }
     if (task.input.parameters.agent_stage === 'report') {
       const dependencyTasks = (
         await this.db

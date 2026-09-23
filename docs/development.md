@@ -22,6 +22,8 @@ The Vite Cloudflare plugin runs the application and research worker together loc
 
 `npm run check` runs the English-comment check, TypeScript and lint. `npm run format:check` enforces formatting. `npm test` includes local Worker integration tests; the emulator needs permission to open local ports. Tests use synthetic records and public fixtures, not live model services or production secrets.
 
+`npm run test:e2e` builds the application and runs the source-management browser regression in locally installed Chrome. `npm run eval:source-search:live` is an explicit operator-only network evaluation and requires `FIREWORKS_API_KEY` in that shell; it is not part of CI. See the [source-search guide](source-search-agent.md) and its [dated validation report](source-search-validation-2026-09-11.md).
+
 The default suite restores a [frozen synthetic v1 backup](../tests/fixtures/README.md) as well as testing current export/import round trips. This compatibility regression runs in CI without private files. Setting `CLIOFORGE_BACKUP_TEST_FILE=/absolute/path/to/backup.zip` adds a separate operator-provided archive check; never commit such an account export.
 
 `npm run check:migrations -- origin/main` protects existing SQL from edits, removal or reordering and checks newly added migration numbers. Fetch the target branch first. `npm run audit:dependencies` queries npm's current advisory registry for production and development dependencies; it fails on moderate or higher advisories. See [maintenance](maintenance.md) for handling findings and releases.

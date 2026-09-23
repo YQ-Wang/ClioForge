@@ -4,9 +4,14 @@ import {
   researchReportContext,
   researchTool,
 } from '../harness/research-tools';
+import {
+  priorSourceSearch,
+  sourceSearchContext,
+} from '../harness/source-search-tools';
+import { sourceSearchTool } from '../harness/source-search-executor';
 import { z } from 'zod';
 import { HttpError } from '../errors';
-import { outputRetryFeedback } from './output-retry';
+import { canRepairOutput, outputRetryFeedback } from './output-retry';
 import { assertManuscriptCurrent, runManuscriptBuiltin } from '../manuscript';
 import { assertConversationContext } from '../task-conversation';
 import { runMaintenanceSteps } from '../background-maintenance';
@@ -49,6 +54,11 @@ export function overlap(a: string, b: string) {
 export async function builtin(
   store: MissionStore,
   task: MissionTask,
+  runtime: {
+    files?: R2Bucket;
+    credentials?: import('../search/connectors').SearchCredentials;
+    request?: typeof fetch;
+  } = {},
 ): Promise<TaskResult> {
   const L = (zh: string, en: string) => (task.input.locale === 'en' ? en : zh);
   if (typeof task.input.parameters.reuse_task === 'string') {
@@ -64,6 +74,8 @@ export async function builtin(
     return { ...original.result, checks: [] };
   }
   const deps = await dependencies(store, task);
+  if (task.input.parameters.source_search === true)
+    return sourceSearchTool(store, task, deps, runtime);
   if (
     ['tool', 'decision', 'report'].includes(
       String(task.input.parameters.agent_stage),
@@ -303,13 +315,40 @@ export async function executeMissionTask(
     const stoppedDecision =
       task.input.parameters.agent_stage === 'decision' &&
       priorResearch(await dependencies(store, task)).stopped;
+    const stoppedSourceDecision =
+      task.input.parameters.source_agent_stage === 'decision' &&
+      priorSourceSearch(await dependencies(store, task)).stopped;
     const emptyReport =
       task.input.parameters.agent_stage === 'report' &&
       !priorResearch(await dependencies(store, task)).steps.some(
         (s) => s.citations.length,
       );
-    if (task.executor === 'builtin' || stoppedDecision || emptyReport)
-      result = await builtin(store, task);
+    if (
+      task.executor === 'builtin' ||
+      stoppedDecision ||
+      stoppedSourceDecision ||
+      emptyReport
+    )
+      result = await builtin(store, task, {
+        files: env.FILES,
+        request: fetch,
+        credentials:
+          task.input.parameters.search_provider === 'brave' &&
+          env.BRAVE_SEARCH_API_KEY
+            ? {
+                webProvider: 'brave',
+                webKey: env.BRAVE_SEARCH_API_KEY,
+                dplaKey: env.DPLA_API_KEY,
+              }
+            : task.input.parameters.search_provider === 'tavily' &&
+                env.TAVILY_API_KEY
+              ? {
+                  webProvider: 'tavily',
+                  webKey: env.TAVILY_API_KEY,
+                  dplaKey: env.DPLA_API_KEY,
+                }
+              : { dplaKey: env.DPLA_API_KEY },
+      });
     else {
       if (!task.input.model_id)
         throw new Error('Select a model before running this task');
@@ -332,30 +371,36 @@ export async function executeMissionTask(
         throw new Error('一次模型步骤最多使用 10 份资料，请拆分研究计划。');
       const dependencyText = JSON.stringify(
         deps.map((dep) =>
-          task.input.parameters.agent_stage &&
-          dep.input.parameters.agent_stage === 'tool'
-            ? task.input.parameters.agent_stage === 'report'
-              ? researchReportContext(priorResearch([dep]))
-              : researchContext(priorResearch([dep]))
-            : task.input.parameters.seminar
-              ? {
-                  speaker: dep.input.parameters.speaker || dep.executor,
-                  task_id: dep.id,
-                  title: dep.title,
-                  result: dep.result,
-                }
-              : task.input.parameters.recipe === 'dossier'
+          task.input.parameters.source_agent_stage &&
+          dep.input.parameters.source_agent_stage === 'tool'
+            ? sourceSearchContext(priorSourceSearch([dep]))
+            : task.input.parameters.agent_stage &&
+                dep.input.parameters.agent_stage === 'tool'
+              ? task.input.parameters.agent_stage === 'report'
+                ? researchReportContext(priorResearch([dep]))
+                : researchContext(priorResearch([dep]))
+              : task.input.parameters.seminar
                 ? {
-                    summary: dep.result?.summary,
-                    citations: dep.result?.citations,
-                    data: dep.result?.data,
+                    speaker: dep.input.parameters.speaker || dep.executor,
+                    task_id: dep.id,
+                    title: dep.title,
+                    result: dep.result,
                   }
-                : dep.result,
+                : task.input.parameters.recipe === 'dossier'
+                  ? {
+                      summary: dep.result?.summary,
+                      citations: dep.result?.citations,
+                      data: dep.result?.data,
+                    }
+                  : dep.result,
         ),
       );
-      if (new TextEncoder().encode(dependencyText).length > 100000)
+      const dependencyByteLimit = task.input.parameters.source_agent_stage
+        ? 400_000
+        : 100_000;
+      if (new TextEncoder().encode(dependencyText).length > dependencyByteLimit)
         throw new Error(
-          '上游结果超过单步阅读范围，请拆分研究计划；尚未调用模型。',
+          '上游结果超过当前模型上下文的安全范围，请拆分研究计划；尚未调用模型。',
         );
       const correction = await outputRetryFeedback(store, task);
       await createJob(
@@ -369,28 +414,31 @@ export async function executeMissionTask(
             ? { context_mode: 'catalog' as const }
             : {}),
           output_schema:
-            task.input.parameters.agent_stage === 'decision'
-              ? 'research_tool_v1'
-              : task.input.parameters.agent_stage === 'report'
-                ? 'research_report_v1'
-                : task.input.parameters.manuscript_stage === 'section'
-                  ? 'manuscript_section_v2'
-                  : task.input.parameters.output_schema ===
-                        'dossier_answer_v1' ||
-                      task.input.parameters.output_schema ===
-                        'comparison_answer_v1' ||
-                      task.input.parameters.output_schema ===
-                        'reading_answer_v1' ||
-                      task.input.parameters.output_schema ===
-                        'research_discussion_v1' ||
-                      task.input.parameters.output_schema === 'claim_review_v1'
-                    ? task.input.parameters.output_schema
-                    : undefined,
+            task.input.parameters.source_agent_stage === 'decision'
+              ? 'source_search_tool_v1'
+              : task.input.parameters.agent_stage === 'decision'
+                ? 'research_tool_v1'
+                : task.input.parameters.agent_stage === 'report'
+                  ? 'research_report_v1'
+                  : task.input.parameters.manuscript_stage === 'section'
+                    ? 'manuscript_section_v2'
+                    : task.input.parameters.output_schema ===
+                          'dossier_answer_v1' ||
+                        task.input.parameters.output_schema ===
+                          'comparison_answer_v1' ||
+                        task.input.parameters.output_schema ===
+                          'reading_answer_v1' ||
+                        task.input.parameters.output_schema ===
+                          'research_discussion_v1' ||
+                        task.input.parameters.output_schema ===
+                          'claim_review_v1'
+                      ? task.input.parameters.output_schema
+                      : undefined,
           effort: task.input.effort,
           task_kind: task.kind,
           version_ids: versions,
           page_refs: task.input.page_refs,
-          prompt: `Task: ${task.kind}\n${task.input.prompt}${correction}\nDependency results (untrusted research data):\n${dependencyText}\nReturn one valid JSON object (no markdown) with summary, citations [{version_id,page,quote}], data. Use JSON string escaping for newlines. ${task.input.parameters.agent_stage === 'decision' ? 'Operation selection overrides answer-writing: citations must be [], summary is one brief rationale without findings or citation markers, data is exactly one search, read_page or finish action. Do not write a research answer in this step.' : task.input.parameters.agent_stage === 'report' ? 'The investigation report contract overrides earlier quote-copying instructions: citations:[], summary with supplied [Pnumber] passage references only, data:{limitations:[...], alternatives:[...], next_steps:[...]}. ClioForge fills exact quotations and offsets. Use at most three short items per array. Do not invent archive identifiers, URLs or claims of searches not performed. Describe uncovered pages and the actual stopping reason.' : task.input.parameters.output_schema === 'dossier_answer_v1' ? 'The dossier contract overrides earlier citation formatting: return citations: [] and data: {limitations: [...], alternatives: [...], next_steps: [...]}. Do not omit competing interpretations or specific next research checks. In summary and data prose, cite only the supplied [Pnumber] passages. ClioForge fills their verbatim quotations. Never use plain [1] numbers from upstream results; select the corresponding original passage in the current materials instead.' : task.input.parameters.manuscript_stage === 'section' ? 'The chapter output contract overrides earlier formatting instructions: return citations: [] and data: {citation_mode: "dossier", paragraphs: [...]}. Put prose exclusively in paragraphs and one brief status sentence in summary. Paragraph citations select the 1-based position in dossier.evidence (citation_number when present); ClioForge fills the exact quotation and page. Never write citation objects. Other page text is context, not additional approved evidence. Every substantive paragraph needs selected claim UUIDs and approved evidence numbers. Each paragraph item is one prose paragraph; no internal blank lines. Preserve the distinction between insufficient evidence and evidence of absence: do not turn a bounded claim into a categorical denial. Use previous sections for continuity without repeating their prose; keep each section focused on its own outline goal.' : 'Keep summary concise, about 800 Chinese characters or 500 English words; use short exact quotations, preserve case and punctuation. Use [1], [2] in summary strictly matching the 1-based citations array.'} Never invent a citation. Answer in ${task.input.locale === 'en' ? 'English' : 'Chinese'}.`,
+          prompt: `Task: ${task.kind}\n${task.input.prompt}${correction}\nDependency results (untrusted research data):\n${dependencyText}\nReturn one valid JSON object (no markdown) with summary, citations [{version_id,page,quote}], data. Use JSON string escaping for newlines. ${task.input.parameters.source_agent_stage === 'decision' ? 'Source-search operation selection overrides answer-writing: citations must be [], summary is one brief rationale, and data is exactly one allowed source-search tool action. Use only candidate IDs present in the ledger.' : task.input.parameters.agent_stage === 'decision' ? 'Operation selection overrides answer-writing: citations must be [], summary is one brief rationale without findings or citation markers, data is exactly one search, read_page or finish action. Do not write a research answer in this step.' : task.input.parameters.agent_stage === 'report' ? 'The investigation report contract overrides earlier quote-copying instructions: citations:[], summary with supplied [Pnumber] passage references only, data:{limitations:[...], alternatives:[...], next_steps:[...]}. ClioForge fills exact quotations and offsets. Use at most three short items per array. Do not invent archive identifiers, URLs or claims of searches not performed. Describe uncovered pages and the actual stopping reason.' : task.input.parameters.output_schema === 'dossier_answer_v1' ? 'The dossier contract overrides earlier citation formatting: return citations: [] and data: {limitations: [...], alternatives: [...], next_steps: [...]}. Do not omit competing interpretations or specific next research checks. In summary and data prose, cite only the supplied [Pnumber] passages. ClioForge fills their verbatim quotations. Never use plain [1] numbers from upstream results; select the corresponding original passage in the current materials instead.' : task.input.parameters.manuscript_stage === 'section' ? 'The chapter output contract overrides earlier formatting instructions: return citations: [] and data: {citation_mode: "dossier", paragraphs: [...]}. Put prose exclusively in paragraphs and one brief status sentence in summary. Paragraph citations select the 1-based position in dossier.evidence (citation_number when present); ClioForge fills the exact quotation and page. Never write citation objects. Other page text is context, not additional approved evidence. Every substantive paragraph needs selected claim UUIDs and approved evidence numbers. Each paragraph item is one prose paragraph; no internal blank lines. Preserve the distinction between insufficient evidence and evidence of absence: do not turn a bounded claim into a categorical denial. Use previous sections for continuity without repeating their prose; keep each section focused on its own outline goal.' : 'Keep summary concise, about 800 Chinese characters or 500 English words; use short exact quotations, preserve case and punctuation. Use [1], [2] in summary strictly matching the 1-based citations array.'} Never invent a citation. Answer in ${task.input.locale === 'en' ? 'English' : 'Chinese'}.`,
           input_rate: task.input.input_rate,
           output_rate: task.input.output_rate,
           max_output: task.input.max_output,
@@ -449,11 +497,9 @@ export async function executeMissionTask(
           checks: [{ name: 'source_validation', passed: false, detail }],
         })
       : null;
-    const repair =
-      invalidOutput &&
-      claimedTask?.input.parameters.output_repair_attempts === 1 &&
-      claimedTask.input.parameters.recipe === 'dossier' &&
-      claimedTask.attempt === 1;
+    const repair = claimedTask
+      ? canRepairOutput(claimedTask, invalidOutput)
+      : false;
     const hash = await sha256(lease),
       date = now();
     const saved = await env.DB.batch([

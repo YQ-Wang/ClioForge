@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import ResearchCandidates from './research-candidates';
+import AgentSourceDiscovery from './agent-source-discovery';
 
 type Connection = {
   provider: 'exa' | 'openalex';
@@ -46,11 +47,13 @@ export default function SourceDiscovery({
   disabled = false,
   variant = 'secondary',
   initialQuery = '',
+  onSourcesChanged,
 }: {
   projectId: string;
   disabled?: boolean;
   variant?: 'default' | 'secondary' | 'outline' | 'ghost';
   initialQuery?: string;
+  onSourcesChanged?: () => Promise<unknown> | void;
 }) {
   const { locale, t } = useI18n();
   const L = (zh: string, en: string) => (locale === 'en' ? en : zh);
@@ -223,6 +226,13 @@ export default function SourceDiscovery({
         <Search size={16} />
         {L('补充资料', 'Find more sources')}
       </Button>
+      <AgentSourceDiscovery
+        projectId={projectId}
+        disabled={disabled}
+        variant={variant}
+        initialQuery={initialQuery}
+        onSourcesChanged={onSourcesChanged}
+      />
       <Dialog
         open={open}
         onOpenChange={(value) => {

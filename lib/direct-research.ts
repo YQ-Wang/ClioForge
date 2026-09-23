@@ -26,7 +26,7 @@ export async function directPrice(
     return {
       input_rate: GLM_PRICE_CEILING.input,
       output_rate: GLM_PRICE_CEILING.output,
-      max_output: 4096,
+      max_output: 16384,
     };
   throw new HttpError(
     409,
