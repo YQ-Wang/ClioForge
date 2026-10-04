@@ -315,21 +315,24 @@ export async function invoke(
     });
   };
   diagnostic('request', 'started');
+  const resolvedEffort = resolveEffort(
+    input.provider,
+    input.model,
+    input.taskKind,
+    input.effort,
+  );
+  const timeoutMs =
+    input.taskKind === 'search' && resolvedEffort === 'max'
+      ? 300_000
+      : resolvedEffort === 'low'
+        ? 90_000
+        : 150_000;
   const response = await fetcher(request.url, {
     method: 'POST',
     headers: request.headers,
     body: JSON.stringify(request.body),
     redirect: 'manual',
-    signal: AbortSignal.timeout(
-      resolveEffort(
-        input.provider,
-        input.model,
-        input.taskKind,
-        input.effort,
-      ) === 'low'
-        ? 90_000
-        : 150_000,
-    ),
+    signal: AbortSignal.timeout(timeoutMs),
   }).catch((error: unknown) => {
     const code = error instanceof Error ? error.name : 'unknown';
     diagnostic(

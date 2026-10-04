@@ -704,6 +704,198 @@ void test('batch triage accepts known unique candidates and rejects duplicate or
       memory,
     ),
   );
+  assert.throws(
+    () =>
+      validateSourceSearchAction(
+        result([
+          {
+            result_id: candidate.id,
+            decision: 'shortlist',
+            reason: 'Metadata fields were combined.',
+            evidence: 'Known candidate; Synthetic Historian',
+          },
+        ]),
+        memory,
+      ),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.message.includes(candidate.id) &&
+      error.message.includes('Known candidate'),
+  );
+});
+
+void test('batch triage ignores identical prior dispositions while preserving new decisions', () => {
+  const candidate = (id: string, title: string) => ({
+    id,
+    provider: 'web' as const,
+    external_id: id,
+    title,
+    creators: [],
+    issued_date: '',
+    material_type: '',
+    languages: [],
+    institution: '',
+    collection: '',
+    doi: '',
+    handle: '',
+    ark: '',
+    oclc: '',
+    landing_url: `https://example.org/${id}`,
+    manifest_url: '',
+    download_url: '',
+    rights: '',
+    license: '',
+    access_status: 'public' as const,
+    snippet: '',
+    verification_level: 'metadata' as const,
+  });
+  const repeated = candidate('web:repeated', 'Repeated result');
+  const fresh = candidate('web:fresh', 'Fresh result');
+  const memory: SourceSearchMemory = {
+    version: 1,
+    stopped: false,
+    stop_reason: '',
+    steps: [
+      {
+        action: { tool: 'search', query: 'first query', providers: ['web'] },
+        outcome: 'found',
+        candidates: [repeated],
+        status: 'completed',
+      },
+      {
+        action: {
+          tool: 'triage_results',
+          decisions: [
+            {
+              result_id: repeated.id,
+              decision: 'reject',
+              reason: 'Noise.',
+              evidence: repeated.title,
+            },
+          ],
+        },
+        outcome: 'rejected',
+        candidates: [repeated],
+        status: 'completed',
+      },
+      {
+        action: { tool: 'search', query: 'second query', providers: ['web'] },
+        outcome: 'found',
+        candidates: [repeated, fresh],
+        status: 'completed',
+      },
+    ],
+  };
+  const action = validateSourceSearchAction(
+    {
+      summary: '',
+      citations: [],
+      checks: [],
+      data: {
+        tool: 'triage_results',
+        decisions: [
+          {
+            result_id: repeated.id,
+            decision: 'reject',
+            reason: 'Same noise.',
+            evidence: repeated.title,
+          },
+          {
+            result_id: fresh.id,
+            decision: 'shortlist',
+            reason: 'Relevant.',
+            evidence: fresh.title,
+          },
+        ],
+      },
+    },
+    memory,
+  );
+  assert.equal(action.tool, 'triage_results');
+  if (action.tool === 'triage_results')
+    assert.deepEqual(
+      action.decisions.map((item) => item.result_id),
+      [fresh.id],
+    );
+  assert.throws(() =>
+    validateSourceSearchAction(
+      {
+        summary: '',
+        citations: [],
+        checks: [],
+        data: {
+          tool: 'triage_results',
+          decisions: [
+            {
+              result_id: repeated.id,
+              decision: 'shortlist',
+              reason: 'Contradiction.',
+              evidence: repeated.title,
+            },
+          ],
+        },
+      },
+      memory,
+    ),
+  );
+});
+
+void test('unknown source IDs retain exact query parameters in correction feedback', () => {
+  const id = 'web:https://repository.example.test/file.pdf?sequence=1';
+  const memory: SourceSearchMemory = {
+    version: 1,
+    stopped: false,
+    stop_reason: '',
+    steps: [
+      {
+        action: { tool: 'search', query: 'repository PDF', providers: ['web'] },
+        outcome: 'found',
+        candidates: [
+          {
+            id,
+            provider: 'web',
+            external_id: id,
+            title: 'Repository PDF',
+            creators: [],
+            issued_date: '',
+            material_type: '',
+            languages: [],
+            institution: '',
+            collection: '',
+            doi: '',
+            handle: '',
+            ark: '',
+            oclc: '',
+            landing_url: 'https://repository.example.test/file.pdf?sequence=1',
+            manifest_url: '',
+            download_url: '',
+            rights: '',
+            license: '',
+            access_status: 'public',
+            snippet: '',
+            verification_level: 'metadata',
+          },
+        ],
+        status: 'completed',
+      },
+    ],
+  };
+  assert.throws(
+    () =>
+      validateSourceSearchAction(
+        {
+          summary: '',
+          citations: [],
+          checks: [],
+          data: {
+            tool: 'inspect_result',
+            result_id: 'web:https://repository.example.test/file.pdf',
+          },
+        },
+        memory,
+      ),
+    (error: unknown) => error instanceof Error && error.message.includes(id),
+  );
 });
 
 void test('agent context keeps a bounded recent candidate window and bounded snippets', () => {
