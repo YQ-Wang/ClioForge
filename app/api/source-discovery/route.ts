@@ -64,6 +64,7 @@ export async function GET(request: Request) {
     return failure(error);
   }
 }
+
 export async function POST(request: Request) {
   let pending:
     | { literature: LiteratureStore; project: string; id: string }
@@ -174,7 +175,6 @@ export async function POST(request: Request) {
 
     let called = false;
     try {
-      // Recheck access immediately before the cost-bearing model call.
       await store.project(input.project_id, 'write');
       called = true;
       const response = await invoke({

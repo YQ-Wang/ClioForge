@@ -4,13 +4,14 @@ const input = z.object({
   model_id: z.uuid(),
   input_rate: z.number().positive().max(10000),
   output_rate: z.number().positive().max(10000),
+  max_output: z.number().int().min(128),
 });
 export async function GET(request: Request) {
   try {
     const { store } = await authenticate(request);
     const rows = await store.db
       .prepare(
-        "SELECT model_id,input_rate,output_rate FROM model_policies WHERE owner_id=? AND task_kind='ocr'",
+        "SELECT model_id,input_rate,output_rate,max_output FROM model_policies WHERE owner_id=? AND task_kind='ocr'",
       )
       .bind(store.owner)
       .all();
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       ['ocr', 'analysis'].map((kind) =>
         store.db
           .prepare(
-            'INSERT INTO model_policies(id,owner_id,task_kind,model_id,input_rate,output_rate,max_output,created_at) VALUES(?,?,?,?,?,?,4096,?) ON CONFLICT(owner_id,task_kind) DO UPDATE SET model_id=excluded.model_id,input_rate=excluded.input_rate,output_rate=excluded.output_rate,max_output=excluded.max_output',
+            'INSERT INTO model_policies(id,owner_id,task_kind,model_id,input_rate,output_rate,max_output,created_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(owner_id,task_kind) DO UPDATE SET model_id=excluded.model_id,input_rate=excluded.input_rate,output_rate=excluded.output_rate,max_output=excluded.max_output',
           )
           .bind(
             crypto.randomUUID(),
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
             value.model_id,
             value.input_rate,
             value.output_rate,
+            value.max_output,
             new Date().toISOString(),
           ),
       ),

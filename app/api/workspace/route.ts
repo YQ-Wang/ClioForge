@@ -58,6 +58,9 @@ export async function POST(request: Request) {
     const input = workspaceInput.parse(await jsonBody(request, 2100000));
     let result;
     switch (input.action) {
+      case 'dismiss_source_lead':
+        result = await store.dismissSourceLead(input.project_id, input.id);
+        break;
       case 'update_project':
         result = await store.updateProject(input);
         break;

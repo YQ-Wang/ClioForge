@@ -95,6 +95,7 @@ export type Job = {
     output_schema?:
       | 'research_report_v1'
       | 'research_tool_v1'
+      | 'source_search_tool_v1'
       | 'dossier_answer_v1'
       | 'comparison_answer_v1'
       | 'reading_answer_v1'

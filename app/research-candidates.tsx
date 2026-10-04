@@ -63,6 +63,7 @@ export default function ResearchCandidates({
           query: z.string(),
           catalog: z.string(),
           returned: z.number(),
+          filtered: z.number().optional().default(0),
           cap: z.number(),
           status: z.string(),
           cached: z.boolean().optional(),

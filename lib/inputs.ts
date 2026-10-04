@@ -33,6 +33,11 @@ export const researchInput = z.object({
 });
 export const workspaceInput = z.discriminatedUnion('action', [
   z.object({
+    action: z.literal('dismiss_source_lead'),
+    project_id: uuid,
+    id: uuid,
+  }),
+  z.object({
     action: z.literal('create_source_group'),
     project_id: uuid,
     name: z.string().trim().min(1).max(100),

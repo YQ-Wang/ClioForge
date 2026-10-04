@@ -43,6 +43,78 @@ export type SourceDiscoveryInput = {
   locale: 'zh-CN' | 'en';
 };
 
+const genericCatalogTerms = new Set([
+  'article',
+  'book',
+  'catalog',
+  'china',
+  'chinese',
+  'court',
+  'faction',
+  'history',
+  'journal',
+  'paper',
+  'politics',
+  'primary',
+  'research',
+  'scholarly',
+  'source',
+  'studies',
+  'study',
+  '中国',
+  '中文',
+  '历史',
+  '原文',
+  '史料',
+  '学术',
+  '政治',
+  '相关',
+  '研究',
+  '英文',
+  '论文',
+  '资料',
+]);
+
+function normalizedCatalogText(value: string) {
+  return value
+    .normalize('NFKC')
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+function catalogQueryTerms(query: string) {
+  const terms = new Map<string, number>();
+  const add = (value: string, weight: number) => {
+    const normalized = normalizedCatalogText(value);
+    if (!normalized || genericCatalogTerms.has(normalized)) return;
+    terms.set(normalized, Math.max(terms.get(normalized) || 0, weight));
+  };
+  for (const match of query.matchAll(/["“”]([^"“”]+)["“”]/g)) add(match[1], 3);
+  for (const token of query.match(/[\p{L}\p{N}]+/gu) || []) {
+    if (/^\p{Script=Han}+$/u.test(token)) {
+      if (token.length >= 2) add(token, 2);
+      if (/(?:党|皇帝|之争)$/.test(token) && token.length > 2)
+        add(token.slice(0, 2), 2);
+    } else if (/^\d{3,4}$/.test(token)) add(token, 1);
+    else if (token.length >= 4)
+      add(token, /^[A-Z][\p{Ll}]/u.test(token) ? 2 : 1);
+  }
+  return [...terms];
+}
+
+export function catalogRecordMatches(query: string, title: string) {
+  const terms = catalogQueryTerms(query);
+  if (!terms.length) return false;
+  const normalizedTitle = normalizedCatalogText(title);
+  const score = terms.reduce(
+    (total, [term, weight]) =>
+      total + (normalizedTitle.includes(term) ? weight : 0),
+    0,
+  );
+  return score >= (terms.length === 1 ? 1 : 3);
+}
+
 // This is the bounded search tool used by both the lightweight search agent
 // and the longer research-plan recipe. Keeping the network search here makes
 // it possible to enrich one search agent without coupling it to mission UI.
@@ -64,6 +136,7 @@ export async function searchSourceCandidates(
     query: string;
     catalog: string;
     returned: number;
+    filtered: number;
     cap: number;
     status: string;
     searched_at: string;
@@ -105,6 +178,7 @@ export async function searchSourceCandidates(
         query,
         catalog: 'project',
         returned: hits.length,
+        filtered: 0,
         cap: 10,
         status: 'completed',
         searched_at: new Date().toISOString(),
@@ -137,6 +211,7 @@ export async function searchSourceCandidates(
         query,
         catalog,
         returned: result.candidates.length,
+        filtered: 0,
         cap: 5,
         status: result.status,
         searched_at: new Date().toISOString(),
