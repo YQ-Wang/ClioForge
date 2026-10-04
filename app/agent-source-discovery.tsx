@@ -66,9 +66,9 @@ export default function AgentSourceDiscovery({
   );
   const [effort, setEffort] = useState<'low' | 'high' | 'max'>('max');
   const [maxSteps, setMaxSteps] = useState('32');
-  const [provider, setProvider] = useState<'catalogs' | 'brave' | 'tavily'>(
-    'catalogs',
-  );
+  const [provider, setProvider] = useState<
+    'catalogs' | 'brave' | 'tavily' | 'exa'
+  >('catalogs');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [state, setState] = useState<SearchState | null>(null);
@@ -223,7 +223,11 @@ export default function AgentSourceDiscovery({
                   value={provider}
                   onChange={(event) =>
                     setProvider(
-                      event.target.value as 'catalogs' | 'brave' | 'tavily',
+                      event.target.value as
+                        | 'catalogs'
+                        | 'brave'
+                        | 'tavily'
+                        | 'exa',
                     )
                   }
                 >
@@ -235,6 +239,9 @@ export default function AgentSourceDiscovery({
                   </NativeSelectOption>
                   <NativeSelectOption value="tavily">
                     Tavily + catalogs
+                  </NativeSelectOption>
+                  <NativeSelectOption value="exa">
+                    Exa + catalogs
                   </NativeSelectOption>
                 </NativeSelect>
               </label>

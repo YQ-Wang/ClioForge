@@ -73,6 +73,21 @@ SOURCE_SEARCH_STEPS=64 npm run eval:source-search:live -- --case=ming-succession
 SOURCE_SELECTION_CRITERIA='Require primary sources and university-press scholarship; exclude material after 1912.' npm run eval:source-search:live -- --case=ming-succession-donglin
 ```
 
+For a controlled retrieval comparison, run the same case, model, effort and
+operation ceiling once with catalogs only and once with Exa. Exa is the default;
+the explicit flags make the artifacts unambiguous:
+
+```sh
+npm run eval:source-search:live -- --web=catalogs --case=ming-succession-donglin
+npm run eval:source-search:live -- --web=exa --case=ming-succession-donglin
+npm run eval:source-search:compare -- artifacts/source-search-evaluations/kimi-k3-catalogs-max-*.json artifacts/source-search-evaluations/kimi-k3-exa-max-*.json
+```
+
+Pass the two concrete artifact paths to the comparison command if a wildcard
+matches more than one run. The report shows deltas but does not declare
+historical quality automatically; review titles, snippets, decisions and
+resolution outcomes before deciding that one retrieval path is better.
+
 `EXA_API_KEY` is required by this live evaluator. Kimi controls the search sequence while Exa provides up to ten highlighted web results per web query; Crossref, OpenAlex and the institutional connectors remain available in the same loop. `DPLA_API_KEY` optionally enables DPLA. The runner immediately prints a `.partial.json` path, streams a structured event before and after every model/tool call, and atomically refreshes that checkpoint after model completion, validation rejection and operation completion. The checkpoint records `web_provider: "exa"`, raw model output, actions, candidate IDs/titles, resolver results, cumulative usage, metrics and the complete current ledger; it never stores credentials, request headers or prompts containing credentials. On success the complete trace moves into a `kimi-k3-exa-max-*.json` report and the partial checkpoint is removed. Reports are written under ignored `artifacts/source-search-evaluations/`.
 
 Review every report for query refinement, false positives, unexplained rejection, access claims and institution diversity. Feed failures back into selection criteria, connector normalization and the deterministic evaluation cases before changing the agent prompt.

@@ -45,6 +45,7 @@ Agentic source search works with public catalogs alone. To offer optional web se
 ```sh
 npx wrangler secret put BRAVE_SEARCH_API_KEY --config "$CLIOFORGE_JOBS_CONFIG"
 npx wrangler secret put TAVILY_API_KEY --config "$CLIOFORGE_JOBS_CONFIG"
+npx wrangler secret put EXA_API_KEY --config "$CLIOFORGE_JOBS_CONFIG"
 npx wrangler secret put DPLA_API_KEY --config "$CLIOFORGE_JOBS_CONFIG"
 ```
 

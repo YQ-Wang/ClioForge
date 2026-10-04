@@ -20,6 +20,7 @@ export type JobsEnv = {
   FOLIOTRACE_ENCRYPTION_KEY?: string;
   BRAVE_SEARCH_API_KEY?: string;
   TAVILY_API_KEY?: string;
+  EXA_API_KEY?: string;
   DPLA_API_KEY?: string;
 };
 export const researchSystem =

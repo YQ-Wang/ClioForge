@@ -347,7 +347,14 @@ export async function executeMissionTask(
                   webKey: env.TAVILY_API_KEY,
                   dplaKey: env.DPLA_API_KEY,
                 }
-              : { dplaKey: env.DPLA_API_KEY },
+              : task.input.parameters.search_provider === 'exa' &&
+                  env.EXA_API_KEY
+                ? {
+                    webProvider: 'exa',
+                    webKey: env.EXA_API_KEY,
+                    dplaKey: env.DPLA_API_KEY,
+                  }
+                : { dplaKey: env.DPLA_API_KEY },
       });
     else {
       if (!task.input.model_id)

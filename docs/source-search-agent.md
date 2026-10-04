@@ -46,6 +46,7 @@ The agent context retains operation history plus the 60 most recent unique candi
 | DPLA                               | Aggregated US cultural-heritage metadata                | `DPLA_API_KEY`         |
 | Brave web search                   | Optional broad/domain-restricted discovery              | `BRAVE_SEARCH_API_KEY` |
 | Tavily web search                  | Optional broad/domain-restricted discovery              | `TAVILY_API_KEY`       |
+| Exa web search                     | Optional semantic web search with highlighted passages  | `EXA_API_KEY`          |
 
 The normalized schema retains provider/external ID, title, creators, date, material type, languages, institution, collection, DOI/Handle/ARK/OCLC fields, landing and file URLs, rights/license, access state, snippet and verification level. Crossref documents its public metadata API and its distinction between metadata and publisher content in the [Crossref REST API guide](https://www.crossref.org/documentation/retrieve-metadata/rest-api/). The other integrations follow the [OpenAlex API](https://docs.openalex.org/), [Library of Congress JSON/YAML API](https://www.loc.gov/apis/json-and-yaml/), [Harvard LibraryCloud API](https://librarycloud.harvard.edu/), [DPLA API](https://pro.dp.la/developers/api-codex), [CONTENTdm API](https://help.oclc.org/Metadata_Services/CONTENTdm/Advanced_website_customization/API_Reference/CONTENTdm_API/CONTENTdm_Server_API_Functions_-_dmwebservices) and [DSpace REST contract](https://github.com/DSpace/RestContract).
 
@@ -66,6 +67,7 @@ Catalog-only search works without search-provider credentials. Optional provider
 ```sh
 npx wrangler secret put BRAVE_SEARCH_API_KEY --config "$CLIOFORGE_JOBS_CONFIG"
 npx wrangler secret put TAVILY_API_KEY --config "$CLIOFORGE_JOBS_CONFIG"
+npx wrangler secret put EXA_API_KEY --config "$CLIOFORGE_JOBS_CONFIG"
 npx wrangler secret put DPLA_API_KEY --config "$CLIOFORGE_JOBS_CONFIG"
 ```
 

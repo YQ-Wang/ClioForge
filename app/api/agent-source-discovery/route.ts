@@ -17,7 +17,9 @@ const inputSchema = z.object({
   locale: z.enum(['zh-CN', 'en']).default('zh-CN'),
   effort: z.enum(['low', 'high', 'max']).default('max'),
   max_steps: z.number().int().min(2).max(64).default(32),
-  search_provider: z.enum(['catalogs', 'brave', 'tavily']).default('catalogs'),
+  search_provider: z
+    .enum(['catalogs', 'brave', 'tavily', 'exa'])
+    .default('catalogs'),
 });
 
 export async function POST(request: Request) {

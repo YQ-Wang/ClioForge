@@ -395,8 +395,9 @@ async function exa(
       body: JSON.stringify({
         query: action.query,
         type: 'auto',
+        // One search result page intentionally matches the agent's ten-item
+        // batch-triage contract.
         numResults: 10,
-        ...(action.domains?.length ? { includeDomains: action.domains } : {}),
         contents: { highlights: true },
       }),
     },
@@ -412,10 +413,7 @@ async function exa(
         creators: strings(item?.author),
         issued_date: text(item?.publishedDate),
         institution: new URL(landing).hostname,
-        snippet: [text(item?.summary), highlights]
-          .filter(Boolean)
-          .join(' ')
-          .slice(0, 8000),
+        snippet: highlights.slice(0, 8000),
         access_status: 'public',
         verification_level: highlights ? 'abstract' : 'metadata',
       }),

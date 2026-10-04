@@ -17,6 +17,7 @@ import { runConnectorSearch } from '../lib/search/connectors';
 import { safePublicUrl } from '../lib/search/safe-fetch';
 import { sourceSearchSystem } from '../lib/harness/source-search-prompt';
 import { resolveSourceCandidate } from '../lib/harness/source-search-executor';
+import { sourceSearchRecipe } from '../lib/platform/source-search-recipe';
 import {
   canRepairOutput,
   outputRetryFeedback,
@@ -48,6 +49,27 @@ void test('Fireworks Kimi source-search decisions use max reasoning and a strict
   assert.equal(body.response_format.json_schema.name, 'source_search_tool_v1');
   assert.equal(body.response_format.json_schema.strict, true);
   assert.ok(!JSON.stringify(body).includes('synthetic-key'));
+});
+
+void test('production source-search recipes expose Exa without granting model-generated domain filters', () => {
+  const draft = sourceSearchRecipe({
+    request: '万历国本之争与癸巳京察',
+    locale: 'zh-CN',
+    model_id: '11111111-1111-4111-8111-111111111111',
+    input_rate: 1,
+    output_rate: 1,
+    search_provider: 'exa',
+    max_steps: 2,
+  });
+  const decision = draft.tasks.find(
+    (task) => task.input.parameters.source_agent_stage === 'decision',
+  );
+  assert.equal(decision?.input.parameters.search_provider, 'exa');
+  assert.match(decision?.input.prompt || '', /Exa/);
+  assert.match(
+    decision?.input.prompt || '',
+    /do not invent hard domain filters/,
+  );
 });
 
 void test('source agent must inspect, resolve, and use known IDs before import or lead creation', () => {
@@ -264,7 +286,6 @@ void test('Exa web search keeps its key in a header and returns highlights for K
         query: '万历 癸巳京察 东林',
         type: 'auto',
         numResults: 10,
-        includeDomains: ['zjujournals.com'],
         contents: { highlights: true },
       },
     );

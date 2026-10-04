@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 const projectId = '11111111-1111-4111-8111-111111111111';
 const runId = '22222222-2222-4222-8222-222222222222';
 const date = '2026-09-11T00:00:00.000Z';
+const origin = `http://127.0.0.1:${process.env.E2E_PORT || '8788'}`;
 const project = {
   id: projectId,
   title: '国本之争与东林党',
@@ -85,7 +86,7 @@ test('AI source search remains available in source management and renders persis
     {
       name: 'clioforge_locale',
       value: 'zh-CN',
-      url: 'http://127.0.0.1:8788',
+      url: origin,
     },
   ]);
   await page.route('**/api/**', async (route) => {
@@ -128,6 +129,7 @@ test('AI source search remains available in source management and renders persis
       const body = request.postDataJSON();
       expect(body.effort).toBe('max');
       expect(body.max_steps).toBe(32);
+      expect(body.search_provider).toBe('exa');
       expect(body.query).toContain('癸巳京察');
       expect(body.selection_criteria).toContain('一手史料');
       await route.fulfill({
@@ -255,6 +257,8 @@ test('AI source search remains available in source management and renders persis
     .first()
     .fill('检索万历国本之争、癸巳京察与东林群体形成，排除古罗马材料。');
   await expect(page.getByLabel('推理强度').first()).toHaveValue('max');
+  await page.getByLabel('网页检索').first().selectOption('exa');
+  await expect(page.getByLabel('网页检索').first()).toHaveValue('exa');
   await page.getByRole('button', { name: '开始代理检索' }).first().click();
   await expect(page.getByText('已核查候选').first()).toBeVisible();
   await expect(page.getByText('待补资料').first()).toBeVisible();

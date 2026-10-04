@@ -26,8 +26,12 @@ if (!apiKey)
   throw new Error(
     'Set FIREWORKS_API_KEY in this shell before running the live evaluation.',
   );
+const webMode =
+  process.argv.find((value) => value.startsWith('--web='))?.slice(6) || 'exa';
+if (!['exa', 'catalogs'].includes(webMode))
+  throw new Error('Use --web=exa or --web=catalogs.');
 const exaKey = process.env.EXA_API_KEY;
-if (!exaKey)
+if (webMode === 'exa' && !exaKey)
   throw new Error(
     'Set EXA_API_KEY in this shell before running the Kimi + Exa evaluation.',
   );
@@ -39,8 +43,9 @@ const cases = selected
   : sourceSearchCases;
 if (!cases.length) throw new Error(`Unknown source-search case: ${selected}`);
 
-const webProvider = 'exa' as const;
-const webKey = exaKey;
+const webProvider = webMode === 'exa' ? ('exa' as const) : undefined;
+const webKey = webProvider ? exaKey : undefined;
+const providerLabel = webProvider || 'catalogs';
 const model =
   process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/kimi-k3';
 const maxSteps = Math.min(
@@ -56,10 +61,13 @@ const stamp = new Date()
   .replaceAll(':', '-')
   .replaceAll('.', '-');
 const directory = path.resolve('artifacts/source-search-evaluations');
-const target = path.join(directory, `kimi-k3-exa-max-${stamp}.json`);
+const target = path.join(
+  directory,
+  `kimi-k3-${providerLabel}-max-${stamp}.json`,
+);
 const checkpointTarget = path.join(
   directory,
-  `kimi-k3-exa-max-${stamp}.partial.json`,
+  `kimi-k3-${providerLabel}-max-${stamp}.partial.json`,
 );
 const checkpointTemporary = `${checkpointTarget}.tmp`;
 const startedAt = new Date().toISOString();
@@ -77,7 +85,7 @@ async function writeCheckpoint() {
         updated_at: new Date().toISOString(),
         model,
         effort: 'max',
-        web_provider: webProvider,
+        web_provider: providerLabel,
         max_steps: maxSteps,
         credential_policy:
           'Credentials came from process environment and are never stored in logs or artifacts.',
@@ -357,7 +365,7 @@ await fs.writeFile(
       generated_at: new Date().toISOString(),
       model,
       effort: 'max',
-      web_provider: webProvider,
+      web_provider: providerLabel,
       credential_policy:
         'Credentials came from process environment and are not stored in this artifact.',
       reports,

@@ -12,7 +12,9 @@ const optionsSchema = z.object({
   max_output: z.number().int().min(512).default(16384),
   max_steps: z.number().int().min(2).max(64).default(32),
   effort: z.enum(['low', 'high', 'max']).default('max'),
-  search_provider: z.enum(['catalogs', 'brave', 'tavily']).default('catalogs'),
+  search_provider: z
+    .enum(['catalogs', 'brave', 'tavily', 'exa'])
+    .default('catalogs'),
 });
 
 export type SourceSearchOptions = z.input<typeof optionsSchema>;
@@ -92,7 +94,7 @@ export function sourceSearchRecipe(raw: SourceSearchOptions): MissionDraft {
         output_schema: 'source_search_tool_v1',
         output_repair_attempts: 1,
       },
-      `${sourceSearchSystem}\n\nResearch request:\n${options.request}\n\nResearcher-controlled source selection criteria (mandatory):\n${criteria}\n\nConfigured search mode: ${options.search_provider}. When it is "catalogs", do not choose the web provider. When it is "brave" or "tavily", web search is available in addition to catalogs.\n\nChoose exactly one next operation. The application executes it and returns a new ledger.`,
+      `${sourceSearchSystem}\n\nResearch request:\n${options.request}\n\nResearcher-controlled source selection criteria (mandatory):\n${criteria}\n\nConfigured search mode: ${options.search_provider}. When it is "catalogs", do not choose the web provider. When it is "brave", "tavily", or "exa", web search is available in addition to catalogs. For Exa, express source preferences in a focused natural-language query; do not invent hard domain filters.\n\nChoose exactly one next operation. The application executes it and returns a new ledger.`,
     );
     previous = add(
       L(
